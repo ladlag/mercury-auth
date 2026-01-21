@@ -8,8 +8,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -17,7 +20,7 @@ import java.util.UUID;
 public class CaptchaService {
 
     private final StringRedisTemplate redisTemplate;
-    private final SecureRandom random = new SecureRandom();
+    private static final ThreadLocal<SecureRandom> RANDOM = ThreadLocal.withInitial(SecureRandom::new);
 
     @Value("${security.captcha.threshold:3}")
     private long threshold;
@@ -53,6 +56,7 @@ public class CaptchaService {
     }
 
     public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
+        SecureRandom random = RANDOM.get();
         int left = random.nextInt(9) + 1;
         int right = random.nextInt(9) + 1;
         String question = left + " + " + right + " = ?";
@@ -72,7 +76,11 @@ public class CaptchaService {
         if (storedAnswer == null) {
             return false;
         }
-        boolean matches = storedAnswer.trim().equalsIgnoreCase(answer.trim());
+        String normalizedAnswer = answer.trim().toLowerCase(Locale.ROOT);
+        String normalizedStored = storedAnswer.trim().toLowerCase(Locale.ROOT);
+        boolean matches = MessageDigest.isEqual(
+                normalizedStored.getBytes(StandardCharsets.UTF_8),
+                normalizedAnswer.getBytes(StandardCharsets.UTF_8));
         if (matches) {
             redisTemplate.delete(key);
         }
