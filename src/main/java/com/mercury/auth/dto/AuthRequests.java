@@ -128,6 +128,15 @@ public class AuthRequests {
 
     @Data
     @EqualsAndHashCode(callSuper = true)
+    public static class CaptchaRequest extends BaseTenantRequest {
+        @NotBlank
+        private String action;
+        @NotBlank
+        private String identifier;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class WeChatLogin extends BaseTenantRequest {
         @NotBlank
         private String openId;
