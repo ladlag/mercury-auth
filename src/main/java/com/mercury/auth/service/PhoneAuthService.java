@@ -23,9 +23,9 @@ public class PhoneAuthService {
     private final UserMapper userMapper;
     private final JwtService jwtService;
     private final RateLimitService rateLimitService;
+    private final AuthLogService authLogService;
     @Value("${security.code.phone-ttl-minutes:5}")
     private long phoneTtlMinutes;
-    private final AuthLogService authLogService;
 
     public String sendPhoneCode(String tenantId, String phone, AuthRequests.VerificationPurpose purpose) {
         rateLimitService.check(buildRateLimitKey("phone-code", tenantId, phone));

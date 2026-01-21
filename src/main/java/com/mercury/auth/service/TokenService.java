@@ -62,16 +62,20 @@ public class TokenService {
     }
 
     public AuthResponse refreshToken(String tenantId, String token) {
+        if (isBlacklisted(token)) {
+            recordFailure(tenantId, null, "REFRESH_TOKEN");
+            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
+        }
         Claims claims = parseClaims(token);
         String tokenTenant = requireTenantMatch(tenantId, claims);
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
-        if (isBlacklisted(token)) {
-            recordFailure(tenantId, userId, "REFRESH_TOKEN");
-            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
-        }
         String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
+        Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
+        if (!ttl.isNegative() && !ttl.isZero()) {
+            redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+        }
         safeRecord(buildLog(tenantId, userId, "REFRESH_TOKEN", true));
         return new AuthResponse(newToken, jwtService.getTtlSeconds());
     }

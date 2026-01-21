@@ -31,28 +31,13 @@ public class AuthService {
 
     public void registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
-        if (!StringUtils.hasText(req.getPassword()) || !req.getPassword().equals(req.getConfirmPassword())) {
-            throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
+        User user;
+        try {
+            user = createUser(req);
+        } catch (ApiException ex) {
+            recordFailure(req.getTenantId(), null, "REGISTER_PASSWORD");
+            throw ex;
         }
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
-        if (userMapper.selectCount(wrapper) > 0) {
-            throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
-        }
-        if (StringUtils.hasText(req.getEmail()) && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
-        }
-        if (StringUtils.hasText(req.getPhone()) && existsByTenantAndPhone(req.getTenantId(), req.getPhone())) {
-            throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
-        }
-        User user = new User();
-        user.setTenantId(req.getTenantId());
-        user.setUsername(req.getUsername());
-        user.setEmail(req.getEmail());
-        user.setPhone(req.getPhone());
-        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
-        user.setEnabled(true);
-        userMapper.insert(user);
         safeRecord(buildLog(req.getTenantId(), user.getId(), "REGISTER_PASSWORD", true));
     }
 
@@ -115,8 +100,14 @@ public class AuthService {
         pr.setPassword(req.getPassword());
         pr.setConfirmPassword(req.getConfirmPassword());
         pr.setEmail(req.getEmail());
-        registerPassword(pr);
-        safeRecord(buildLog(req.getTenantId(), null, "REGISTER_EMAIL", true));
+        User user;
+        try {
+            user = createUser(pr);
+        } catch (ApiException ex) {
+            recordFailure(req.getTenantId(), null, "REGISTER_EMAIL");
+            throw ex;
+        }
+        safeRecord(buildLog(req.getTenantId(), user.getId(), "REGISTER_EMAIL", true));
     }
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
@@ -218,6 +209,32 @@ public class AuthService {
 
     private void recordFailure(String tenantId, Long userId, String action) {
         safeRecord(buildLog(tenantId, userId, action, false));
+    }
+
+    private User createUser(AuthRequests.PasswordRegister req) {
+        if (!StringUtils.hasText(req.getPassword()) || !req.getPassword().equals(req.getConfirmPassword())) {
+            throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
+        }
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
+        if (userMapper.selectCount(wrapper) > 0) {
+            throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
+        }
+        if (StringUtils.hasText(req.getEmail()) && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+            throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
+        }
+        if (StringUtils.hasText(req.getPhone()) && existsByTenantAndPhone(req.getTenantId(), req.getPhone())) {
+            throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
+        }
+        User user = new User();
+        user.setTenantId(req.getTenantId());
+        user.setUsername(req.getUsername());
+        user.setEmail(req.getEmail());
+        user.setPhone(req.getPhone());
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setEnabled(true);
+        userMapper.insert(user);
+        return user;
     }
 
     private void safeRecord(AuthLogRequest request) {
