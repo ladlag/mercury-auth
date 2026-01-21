@@ -1,17 +1,21 @@
 package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.mercury.auth.dto.AuthLogRequest;
+import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.entity.TokenBlacklist;
 import com.mercury.auth.security.JwtService;
+import com.mercury.auth.store.TokenBlacklistMapper;
 import com.mercury.auth.store.UserMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,21 +24,25 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
 public class TokenService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
     private final JwtService jwtService;
     private final StringRedisTemplate redisTemplate;
     private final UserMapper userMapper;
     private final TenantService tenantService;
     private final AuthLogService authLogService;
+    private final TokenBlacklistMapper tokenBlacklistMapper;
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
         if (isBlacklisted(token)) {
-            recordFailure(tenantId, null, "VERIFY_TOKEN");
+            logger.warn("verifyToken blacklisted tenant={}", tenantId);
+            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
@@ -42,7 +50,7 @@ public class TokenService {
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
-        safeRecord(buildLog(tenantId, userId, "VERIFY_TOKEN", true));
+        safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
         return new TokenVerifyResponse(tokenTenant, userId, user.getUsername());
     }
 
@@ -54,16 +62,28 @@ public class TokenService {
         loadActiveUser(tokenTenant, userId);
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (ttl.isNegative() || ttl.isZero()) {
-            recordFailure(tenantId, userId, "LOGOUT");
+            logger.warn("logout token expired tenant={} userId={}", tenantId, userId);
+            recordFailure(tenantId, userId, AuthAction.LOGOUT);
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
         redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
-        safeRecord(buildLog(tenantId, userId, "LOGOUT", true));
+        TokenBlacklist entry = new TokenBlacklist();
+        entry.setTokenHash(hashToken(token));
+        entry.setTenantId(tokenTenant);
+        entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
+        entry.setCreatedAt(LocalDateTime.now());
+        try {
+            tokenBlacklistMapper.insert(entry);
+        } catch (Exception ex) {
+            logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+        }
+        safeRecord(tenantId, userId, AuthAction.LOGOUT, true);
     }
 
     public AuthResponse refreshToken(String tenantId, String token) {
         if (isBlacklisted(token)) {
-            recordFailure(tenantId, null, "REFRESH_TOKEN");
+            logger.warn("refreshToken blacklisted tenant={}", tenantId);
+            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
@@ -75,8 +95,18 @@ public class TokenService {
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (!ttl.isNegative() && !ttl.isZero()) {
             redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+            TokenBlacklist entry = new TokenBlacklist();
+            entry.setTokenHash(hashToken(token));
+            entry.setTenantId(tokenTenant);
+            entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
+            entry.setCreatedAt(LocalDateTime.now());
+            try {
+                tokenBlacklistMapper.insert(entry);
+            } catch (Exception ex) {
+                logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+            }
         }
-        safeRecord(buildLog(tenantId, userId, "REFRESH_TOKEN", true));
+        safeRecord(tenantId, userId, AuthAction.REFRESH_TOKEN, true);
         return new AuthResponse(newToken, jwtService.getTtlSeconds());
     }
 
@@ -127,32 +157,25 @@ public class TokenService {
         wrapper.eq("tenant_id", tenantId).eq("id", userId);
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
-            recordFailure(tenantId, userId, "TOKEN_USER_LOOKUP");
+            logger.warn("token user not found tenant={} userId={}", tenantId, userId);
+            recordFailure(tenantId, userId, AuthAction.TOKEN_USER_LOOKUP);
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
-            recordFailure(tenantId, userId, "TOKEN_USER_DISABLED");
+            logger.warn("token user disabled tenant={} userId={}", tenantId, userId);
+            recordFailure(tenantId, userId, AuthAction.TOKEN_USER_DISABLED);
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         return user;
     }
 
-    private AuthLogRequest buildLog(String tenantId, Long userId, String action, boolean success) {
-        AuthLogRequest request = new AuthLogRequest();
-        request.setTenantId(tenantId);
-        request.setUserId(userId);
-        request.setAction(action);
-        request.setSuccess(success);
-        return request;
+    private void recordFailure(String tenantId, Long userId, AuthAction action) {
+        safeRecord(tenantId, userId, action, false);
     }
 
-    private void recordFailure(String tenantId, Long userId, String action) {
-        safeRecord(buildLog(tenantId, userId, action, false));
-    }
-
-    private void safeRecord(AuthLogRequest request) {
+    private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
-            authLogService.record(request);
+            authLogService.record(tenantId, userId, action, success);
         } catch (Exception ignored) {
             // ignore logging failures
         }

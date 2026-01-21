@@ -34,6 +34,7 @@ public class AuthRequests {
         private String username;
         @NotBlank
         private String password;
+        private String captcha;
     }
 
     @Data
@@ -69,6 +70,7 @@ public class AuthRequests {
         private String email;
         @NotBlank
         private String code;
+        private String captcha;
     }
 
     @Data
@@ -107,6 +109,7 @@ public class AuthRequests {
         private String phone;
         @NotBlank
         private String code;
+        private String captcha;
     }
 
     @Data

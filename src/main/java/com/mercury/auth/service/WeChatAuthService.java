@@ -1,7 +1,7 @@
 package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.mercury.auth.dto.AuthLogRequest;
+import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
@@ -9,6 +9,8 @@ import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.store.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -16,6 +18,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class WeChatAuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(WeChatAuthService.class);
     private final UserMapper userMapper;
     private final JwtService jwtService;
     private final TenantService tenantService;
@@ -40,30 +43,22 @@ public class WeChatAuthService {
             userMapper.insert(user);
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
-            recordFailure(tenantId, user.getId(), "LOGIN_WECHAT");
+            logger.warn("wechat login disabled tenant={} username={}", tenantId, effectiveUsername);
+            recordFailure(tenantId, user.getId(), AuthAction.LOGIN_WECHAT);
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         String token = jwtService.generate(tenantId, user.getId(), user.getUsername());
-        safeRecord(buildLog(tenantId, user.getId(), "LOGIN_WECHAT", true));
+        safeRecord(tenantId, user.getId(), AuthAction.LOGIN_WECHAT, true);
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
-    private AuthLogRequest buildLog(String tenantId, Long userId, String action, boolean success) {
-        AuthLogRequest request = new AuthLogRequest();
-        request.setTenantId(tenantId);
-        request.setUserId(userId);
-        request.setAction(action);
-        request.setSuccess(success);
-        return request;
+    private void recordFailure(String tenantId, Long userId, AuthAction action) {
+        safeRecord(tenantId, userId, action, false);
     }
 
-    private void recordFailure(String tenantId, Long userId, String action) {
-        safeRecord(buildLog(tenantId, userId, action, false));
-    }
-
-    private void safeRecord(AuthLogRequest request) {
+    private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
-            authLogService.record(request);
+            authLogService.record(tenantId, userId, action, success);
         } catch (Exception ignored) {
             // ignore logging failures
         }

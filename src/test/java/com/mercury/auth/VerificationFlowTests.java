@@ -7,6 +7,7 @@ import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthService;
 import com.mercury.auth.service.AuthLogService;
+import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.TokenService;
@@ -35,6 +36,7 @@ public class VerificationFlowTests {
     private TokenService tokenService;
     private TenantService tenantService;
     private AuthLogService authLogService;
+    private CaptchaService captchaService;
     private AuthService authService;
 
     @BeforeEach
@@ -50,7 +52,8 @@ public class VerificationFlowTests {
         tokenService = Mockito.mock(TokenService.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService);
+        captchaService = Mockito.mock(CaptchaService.class);
+        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService, captchaService);
     }
 
     @Test

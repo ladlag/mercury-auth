@@ -59,7 +59,7 @@ public class AuthController {
 
     @PostMapping("/login-phone")
     public ResponseEntity<AuthResponse> loginPhone(@Validated @RequestBody AuthRequests.PhoneLogin req) {
-        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode()));
+        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptcha()));
     }
 
     @PostMapping("/register-phone")

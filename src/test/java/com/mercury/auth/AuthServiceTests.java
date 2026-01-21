@@ -7,6 +7,7 @@ import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthService;
 import com.mercury.auth.service.AuthLogService;
+import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.TokenService;
@@ -30,6 +31,7 @@ public class AuthServiceTests {
     private TokenService tokenService;
     private TenantService tenantService;
     private AuthLogService authLogService;
+    private CaptchaService captchaService;
     private AuthService authService;
 
     @BeforeEach
@@ -42,7 +44,8 @@ public class AuthServiceTests {
         tokenService = Mockito.mock(TokenService.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService);
+        captchaService = Mockito.mock(CaptchaService.class);
+        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService, captchaService);
     }
 
     @Test
@@ -59,6 +62,7 @@ public class AuthServiceTests {
     @Test
     void loginPassword_success() {
         Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
         AuthRequests.PasswordLogin req = new AuthRequests.PasswordLogin();
         req.setTenantId("t1");
         req.setUsername("u1");

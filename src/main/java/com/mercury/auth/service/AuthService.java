@@ -1,7 +1,7 @@
 package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.mercury.auth.dto.AuthLogRequest;
+import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
@@ -11,6 +11,8 @@ import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.store.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,6 +22,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -28,6 +31,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final TenantService tenantService;
     private final AuthLogService authLogService;
+    private final CaptchaService captchaService;
 
     public void registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
@@ -35,32 +39,42 @@ public class AuthService {
         try {
             user = createUser(req);
         } catch (ApiException ex) {
-            recordFailure(req.getTenantId(), null, "REGISTER_PASSWORD");
+            logger.warn("registerPassword failed tenant={} username={} code={}",
+                    req.getTenantId(), req.getUsername(), ex.getCode());
+            recordFailure(req.getTenantId(), null, AuthAction.REGISTER_PASSWORD);
             throw ex;
         }
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "REGISTER_PASSWORD", true));
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_PASSWORD, true);
     }
 
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
         tenantService.requireEnabled(req.getTenantId());
         rateLimitService.check(buildRateLimitKey("login-password", req.getTenantId(), req.getUsername()));
+        ensureCaptcha("login-password", req.getTenantId(), req.getUsername(), req.getCaptcha());
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
-            recordFailure(req.getTenantId(), null, "LOGIN_PASSWORD");
+            logger.warn("loginPassword user not found tenant={} username={}", req.getTenantId(), req.getUsername());
+            recordFailure(req.getTenantId(), null, AuthAction.LOGIN_PASSWORD);
+            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
-            recordFailure(req.getTenantId(), user.getId(), "LOGIN_PASSWORD");
+            logger.warn("loginPassword user disabled tenant={} username={}", req.getTenantId(), req.getUsername());
+            recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
+            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
-            recordFailure(req.getTenantId(), user.getId(), "LOGIN_PASSWORD");
+            logger.warn("loginPassword bad credentials tenant={} username={}", req.getTenantId(), req.getUsername());
+            recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
+            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "LOGIN_PASSWORD", true));
+        captchaService.reset(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD, true);
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
@@ -73,25 +87,28 @@ public class AuthService {
         }
         if (AuthRequests.VerificationPurpose.REGISTER.equals(purpose)
                 && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            recordFailure(req.getTenantId(), null, "SEND_EMAIL_CODE");
+            logger.warn("sendEmailCode duplicate email tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
             throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
         }
         if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)
                 && !existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            recordFailure(req.getTenantId(), null, "SEND_EMAIL_CODE");
+            logger.warn("sendEmailCode user not found tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         String code = verificationService.generateCode();
         verificationService.storeCode(buildEmailKey(req.getTenantId(), req.getEmail()), code, verificationService.defaultTtl());
         verificationService.sendEmailCode(req.getEmail(), code);
-        safeRecord(buildLog(req.getTenantId(), null, "SEND_EMAIL_CODE", true));
+        safeRecord(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE, true);
         return "OK";
     }
 
     public void registerEmail(AuthRequests.EmailRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
-            recordFailure(req.getTenantId(), null, "REGISTER_EMAIL");
+            logger.warn("registerEmail invalid code tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), null, AuthAction.REGISTER_EMAIL);
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         AuthRequests.PasswordRegister pr = new AuthRequests.PasswordRegister();
@@ -104,33 +121,54 @@ public class AuthService {
         try {
             user = createUser(pr);
         } catch (ApiException ex) {
-            recordFailure(req.getTenantId(), null, "REGISTER_EMAIL");
+            logger.warn("registerEmail failed tenant={} username={} code={}",
+                    req.getTenantId(), req.getUsername(), ex.getCode());
+            recordFailure(req.getTenantId(), null, AuthAction.REGISTER_EMAIL);
             throw ex;
         }
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "REGISTER_EMAIL", true));
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_EMAIL, true);
     }
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         tenantService.requireEnabled(req.getTenantId());
         rateLimitService.check(buildRateLimitKey("login-email", req.getTenantId(), req.getEmail()));
+        ensureCaptcha("login-email", req.getTenantId(), req.getEmail(), req.getCaptcha());
         if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
-            recordFailure(req.getTenantId(), null, "LOGIN_EMAIL");
+            logger.warn("loginEmail invalid code tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), null, AuthAction.LOGIN_EMAIL);
+            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("email", req.getEmail());
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
-            recordFailure(req.getTenantId(), null, "LOGIN_EMAIL");
+            logger.warn("loginEmail user not found tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), null, AuthAction.LOGIN_EMAIL);
+            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
-            recordFailure(req.getTenantId(), user.getId(), "LOGIN_EMAIL");
+            logger.warn("loginEmail user disabled tenant={} email={}", req.getTenantId(), req.getEmail());
+            recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_EMAIL);
+            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "LOGIN_EMAIL", true));
+        captchaService.reset(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.LOGIN_EMAIL, true);
         return new AuthResponse(token, jwtService.getTtlSeconds());
+    }
+
+    private void ensureCaptcha(String action, String tenantId, String identifier, String captcha) {
+        String key = buildCaptchaKey(action, tenantId, identifier);
+        if (captchaService.isRequired(key) && (captcha == null || captcha.trim().isEmpty())) {
+            throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
+        }
+    }
+
+    private String buildCaptchaKey(String action, String tenantId, String identifier) {
+        return captchaService.buildKey(action, tenantId, identifier);
     }
 
     public TokenVerifyResponse verifyToken(AuthRequests.TokenVerify req) {
@@ -152,11 +190,12 @@ public class AuthService {
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
+            logger.warn("updateUserStatus user not found tenant={} username={}", req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         user.setEnabled(req.isEnabled());
         userMapper.updateById(user);
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "UPDATE_USER_STATUS", true));
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.UPDATE_USER_STATUS, true);
     }
 
     public void changePassword(AuthRequests.ChangePassword req) {
@@ -168,23 +207,16 @@ public class AuthService {
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
+            logger.warn("changePassword user not found tenant={} username={}", req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (!passwordEncoder.matches(req.getOldPassword(), user.getPasswordHash())) {
+            logger.warn("changePassword bad credentials tenant={} username={}", req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userMapper.updateById(user);
-        safeRecord(buildLog(req.getTenantId(), user.getId(), "CHANGE_PASSWORD", true));
-    }
-
-    private AuthLogRequest buildLog(String tenantId, Long userId, String action, boolean success) {
-        AuthLogRequest request = new AuthLogRequest();
-        request.setTenantId(tenantId);
-        request.setUserId(userId);
-        request.setAction(action);
-        request.setSuccess(success);
-        return request;
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.CHANGE_PASSWORD, true);
     }
 
     private String buildEmailKey(String tenantId, String email) {
@@ -207,8 +239,8 @@ public class AuthService {
         return "rate:" + action + ":" + tenantId + ":" + identifier;
     }
 
-    private void recordFailure(String tenantId, Long userId, String action) {
-        safeRecord(buildLog(tenantId, userId, action, false));
+    private void recordFailure(String tenantId, Long userId, AuthAction action) {
+        safeRecord(tenantId, userId, action, false);
     }
 
     private User createUser(AuthRequests.PasswordRegister req) {
@@ -218,12 +250,15 @@ public class AuthService {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         if (userMapper.selectCount(wrapper) > 0) {
+            logger.warn("createUser duplicate username tenant={} username={}", req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
         }
         if (StringUtils.hasText(req.getEmail()) && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+            logger.warn("createUser duplicate email tenant={} email={}", req.getTenantId(), req.getEmail());
             throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
         }
         if (StringUtils.hasText(req.getPhone()) && existsByTenantAndPhone(req.getTenantId(), req.getPhone())) {
+            logger.warn("createUser duplicate phone tenant={} phone={}", req.getTenantId(), req.getPhone());
             throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
         }
         User user = new User();
@@ -237,9 +272,9 @@ public class AuthService {
         return user;
     }
 
-    private void safeRecord(AuthLogRequest request) {
+    private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
-            authLogService.record(request);
+            authLogService.record(tenantId, userId, action, success);
         } catch (Exception ignored) {
             // ignore logging failures
         }
