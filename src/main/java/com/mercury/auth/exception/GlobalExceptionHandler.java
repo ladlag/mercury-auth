@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    private static final String INTERNAL_ERROR_MESSAGE = "Internal server error";
     private static final String INVALID_FIELD_MESSAGE = "invalid";
 
     @ExceptionHandler(ApiException.class)
