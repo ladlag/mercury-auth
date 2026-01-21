@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 
@@ -82,9 +83,9 @@ public class PhoneAuthService {
         safeRecord(tenantId, user.getId(), AuthAction.REGISTER_PHONE, true);
     }
 
-    public AuthResponse loginPhone(String tenantId, String phone, String code, String captcha) {
+    public AuthResponse loginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
         rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PHONE, tenantId, phone));
-        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone, captcha);
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
             logger.warn("loginPhone invalid code tenant={} phone={}", tenantId, phone);
             recordFailure(tenantId, null, AuthAction.LOGIN_PHONE);
@@ -130,10 +131,17 @@ public class PhoneAuthService {
         safeRecord(tenantId, userId, action, false);
     }
 
-    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captcha) {
+    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captchaId, String captcha) {
         String key = buildCaptchaKey(action, tenantId, identifier);
-        if (captchaService.isRequired(key) && (captcha == null || captcha.trim().isEmpty())) {
+        if (!captchaService.isRequired(key)) {
+            return;
+        }
+        if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
             throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
+        }
+        if (!captchaService.verifyChallenge(action, tenantId, identifier, captchaId, captcha)) {
+            captchaService.recordFailure(key);
+            throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
         }
     }
 

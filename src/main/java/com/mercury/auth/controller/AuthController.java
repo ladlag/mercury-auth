@@ -1,9 +1,14 @@
 package com.mercury.auth.controller;
 
+import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.CaptchaChallenge;
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.PhoneAuthService;
 import com.mercury.auth.service.WeChatAuthService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final PhoneAuthService phoneAuthService;
     private final WeChatAuthService weChatAuthService;
+    private final CaptchaService captchaService;
 
     @PostMapping("/register-password")
     public ResponseEntity<Void> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
@@ -59,7 +65,26 @@ public class AuthController {
 
     @PostMapping("/login-phone")
     public ResponseEntity<AuthResponse> loginPhone(@Validated @RequestBody AuthRequests.PhoneLogin req) {
-        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptcha()));
+        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha()));
+    }
+
+    @PostMapping("/captcha")
+    public ResponseEntity<CaptchaChallenge> getCaptcha(@Validated @RequestBody AuthRequests.CaptchaRequest req) {
+        AuthAction action;
+        try {
+            action = AuthAction.valueOf(req.getAction());
+        } catch (IllegalArgumentException ex) {
+            StringBuilder validActions = new StringBuilder();
+            for (AuthAction value : AuthAction.values()) {
+                if (validActions.length() > 0) {
+                    validActions.append(", ");
+                }
+                validActions.append(value.name());
+            }
+            throw new ApiException(ErrorCodes.VALIDATION_FAILED,
+                    "invalid captcha action. valid actions: " + validActions);
+        }
+        return ResponseEntity.ok(captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier()));
     }
 
     @PostMapping("/register-phone")

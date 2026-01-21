@@ -50,7 +50,7 @@ public class PhoneAuthServiceTests {
         Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(u);
         Mockito.when(jwtService.generate("t1", 3L, "u3")).thenReturn("tkn3");
         Mockito.when(jwtService.getTtlSeconds()).thenReturn(30L);
-        AuthResponse resp = phoneAuthService.loginPhone("t1", "138", "111111", null);
+        AuthResponse resp = phoneAuthService.loginPhone("t1", "138", "111111", null, null);
         assertThat(resp.getAccessToken()).isEqualTo("tkn3");
     }
 
@@ -58,7 +58,7 @@ public class PhoneAuthServiceTests {
     void loginPhone_invalid_code() {
         Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
         Mockito.when(verificationService.verifyAndConsume("phone:t1:138", "000000")).thenReturn(false);
-        assertThatThrownBy(() -> phoneAuthService.loginPhone("t1", "138", "000000", null)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> phoneAuthService.loginPhone("t1", "138", "000000", null, null)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
