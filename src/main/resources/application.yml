@@ -1,46 +1,11 @@
+server:
+  port: 10000
+  servlet:
+    context-path: /auth
+  shutdown: graceful
+
 spring:
   application:
-    name: mercury-auth
-  datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  redis:
-    host: localhost
-    port: 6379
-    database: 0
-  mail:
-    host: smtp.example.com
-    port: 25
-    username: user
-    password: pass
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false
-
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-
-security:
-  jwt:
-    secret: "change-me-please-32-bytes-min"
-    ttl-seconds: 7200
-  code:
-    ttl-minutes: 10
-    phone-ttl-minutes: 5
-  rate-limit:
-    max-attempts: 10
-    window-minutes: 1
-  captcha:
-    threshold: 3
-    ttl-minutes: 5
-
-mail:
-  from: "no-reply@example.com"
-
-# Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml
+    name: auth
+  profiles:
+    active: dev
