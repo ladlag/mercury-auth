@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCode(), ex.getMessage()));
+        return ResponseEntity.badRequest().body(new ApiError(ErrorCodes.toNumeric(ex.getCode()), ex.getCode()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,19 +43,21 @@ public class GlobalExceptionHandler {
                 .map(error -> {
                     if (error instanceof FieldError) {
                         FieldError fieldError = (FieldError) error;
-                        return new ApiError.FieldError(fieldError.getField(), fieldError.getDefaultMessage());
+                        logger.warn("validation field={} message={}", fieldError.getField(), fieldError.getDefaultMessage());
+                        return new ApiError.FieldError(fieldError.getField(), "invalid");
                     }
-                    return new ApiError.FieldError("general", error.getDefaultMessage());
+                    logger.warn("validation error={}", error.getDefaultMessage());
+                    return new ApiError.FieldError("general", "invalid");
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED, "Validation failed", errors));
+                .body(new ApiError(ErrorCodes.toNumeric(ErrorCodes.VALIDATION_FAILED), ErrorCodes.VALIDATION_FAILED, errors));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR, ex.getMessage()));
+                .body(new ApiError(ErrorCodes.toNumeric(ErrorCodes.INTERNAL_ERROR), ErrorCodes.INTERNAL_ERROR));
     }
 }

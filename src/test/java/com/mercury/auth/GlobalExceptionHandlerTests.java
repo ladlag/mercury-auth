@@ -26,12 +26,12 @@ public class GlobalExceptionHandlerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED);
-        assertThat(body.getMessage()).isEqualTo("Validation failed");
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.toNumeric(ErrorCodes.VALIDATION_FAILED));
+        assertThat(body.getMessage()).isEqualTo(ErrorCodes.VALIDATION_FAILED);
         assertThat(body.getErrors())
                 .extracting("field", "message")
                 .containsExactlyInAnyOrder(
-                        tuple("password", "too short"),
-                        tuple("confirmPassword", "too short"));
+                        tuple("password", "invalid"),
+                        tuple("confirmPassword", "invalid"));
     }
 }
