@@ -25,8 +25,8 @@ public class GlobalExceptionHandlerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getCode()).isEqualTo(ErrorCodes.BAD_CREDENTIALS.name());
-        assertThat(body.getMessage()).isEqualTo(ErrorCodes.BAD_CREDENTIALS.name());
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.BAD_CREDENTIALS.getCode());
+        assertThat(body.getMessage()).isEqualTo(ErrorCodes.BAD_CREDENTIALS.getMessage());
     }
 
     @Test
@@ -41,8 +41,8 @@ public class GlobalExceptionHandlerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.name());
-        assertThat(body.getMessage()).isEqualTo(ErrorCodes.VALIDATION_FAILED.name());
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
+        assertThat(body.getMessage()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getMessage());
         assertThat(body.getErrors())
                 .extracting("field", "message")
                 .containsExactlyInAnyOrder(

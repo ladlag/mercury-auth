@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCode().name(), ex.getCode().name()));
+        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), ex.getCodeMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -52,13 +52,13 @@ public class GlobalExceptionHandler {
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.name(), ErrorCodes.VALIDATION_FAILED.name(), errors));
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), ErrorCodes.VALIDATION_FAILED.getMessage(), errors));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.name(), INTERNAL_ERROR_MESSAGE));
+                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), INTERNAL_ERROR_MESSAGE));
     }
 }

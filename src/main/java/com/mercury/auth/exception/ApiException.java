@@ -10,4 +10,12 @@ public class ApiException extends RuntimeException {
         super(message);
         this.code = code;
     }
+
+    public String getCodeValue() {
+        return code == null ? null : code.getCode();
+    }
+
+    public String getCodeMessage() {
+        return code == null ? null : code.getMessage();
+    }
 }
