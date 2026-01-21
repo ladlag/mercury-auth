@@ -21,7 +21,7 @@ public class GlobalExceptionHandlerTests {
         ex.addError(new FieldError("passwordRegister", "password", "too short"));
         ex.addError(new FieldError("passwordRegister", "confirmPassword", "too short"));
 
-        ResponseEntity<ApiError> response = handler.handleValidation(ex);
+        ResponseEntity<ApiError> response = handler.handleBindValidation(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         ApiError body = response.getBody();

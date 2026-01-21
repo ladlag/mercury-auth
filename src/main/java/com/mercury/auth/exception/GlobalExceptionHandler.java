@@ -12,7 +12,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,32 +26,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiError(ex.getCode(), ex.getMessage()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public ResponseEntity<ApiError> handleValidation(Exception ex) {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
         logger.warn("validation error: {}", ex.getMessage());
-        List<ApiError.FieldError> errors = extractFieldErrors(ex);
-        return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED, "Validation failed", errors));
+        return buildValidationResponse(ex.getBindingResult().getAllErrors());
     }
 
-    private List<ApiError.FieldError> extractFieldErrors(Exception ex) {
-        List<ObjectError> objectErrors;
-        if (ex instanceof MethodArgumentNotValidException) {
-            objectErrors = ((MethodArgumentNotValidException) ex).getBindingResult().getAllErrors();
-        } else if (ex instanceof BindException) {
-            objectErrors = ((BindException) ex).getBindingResult().getAllErrors();
-        } else {
-            return Collections.emptyList();
-        }
-        return objectErrors.stream()
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiError> handleBindValidation(BindException ex) {
+        logger.warn("validation error: {}", ex.getMessage());
+        return buildValidationResponse(ex.getBindingResult().getAllErrors());
+    }
+
+    private ResponseEntity<ApiError> buildValidationResponse(List<ObjectError> objectErrors) {
+        List<ApiError.FieldError> errors = objectErrors.stream()
                 .map(error -> {
                     if (error instanceof FieldError) {
                         FieldError fieldError = (FieldError) error;
                         return new ApiError.FieldError(fieldError.getField(), fieldError.getDefaultMessage());
                     }
-                    return new ApiError.FieldError(error.getObjectName(), error.getDefaultMessage());
+                    return new ApiError.FieldError("general", error.getDefaultMessage());
                 })
                 .collect(Collectors.toList());
+        return ResponseEntity.badRequest()
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED, "Validation failed", errors));
     }
 
     @ExceptionHandler(Exception.class)
