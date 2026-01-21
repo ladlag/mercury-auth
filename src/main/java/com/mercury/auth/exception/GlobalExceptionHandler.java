@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String INTERNAL_ERROR_MESSAGE = "Internal server error";
+    private static final String INVALID_FIELD_MESSAGE = "invalid";
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
@@ -45,10 +46,10 @@ public class GlobalExceptionHandler {
                     if (error instanceof FieldError) {
                         FieldError fieldError = (FieldError) error;
                         logger.warn("validation field={} message={}", fieldError.getField(), fieldError.getDefaultMessage());
-                        return new ApiError.FieldError(fieldError.getField(), "invalid");
+                        return new ApiError.FieldError(fieldError.getField(), INVALID_FIELD_MESSAGE);
                     }
                     logger.warn("validation error={}", error.getDefaultMessage());
-                    return new ApiError.FieldError("general", "invalid");
+                    return new ApiError.FieldError("general", INVALID_FIELD_MESSAGE);
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest()
@@ -59,6 +60,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), INTERNAL_ERROR_MESSAGE));
+                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), ErrorCodes.INTERNAL_ERROR.getMessage()));
     }
 }
