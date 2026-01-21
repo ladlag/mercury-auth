@@ -10,22 +10,6 @@ spring:
     host: localhost
     port: 6379
     database: 0
-
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-
-security:
-  jwt:
-    secret: "change-me-please-32-bytes-min"
-    ttl-seconds: 7200
-  code:
-    ttl-minutes: 10
-
-mail:
-  from: "no-reply@example.com"
-
-spring:
   mail:
     host: smtp.example.com
     port: 25
@@ -38,7 +22,26 @@ spring:
           starttls:
             enable: false
 
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+security:
+  jwt:
+    secret: "change-me-please-32-bytes-min"
+    ttl-seconds: 7200
+  code:
+    ttl-minutes: 10
+    phone-ttl-minutes: 5
+  rate-limit:
+    max-attempts: 10
+    window-minutes: 1
+
+mail:
+  from: "no-reply@example.com"
+
 # dev
+---
 spring:
   config:
     activate:
@@ -50,6 +53,7 @@ spring:
     port: 6379
 
 # test
+---
 spring:
   config:
     activate:

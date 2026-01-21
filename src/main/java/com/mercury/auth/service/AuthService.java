@@ -3,6 +3,7 @@ package com.mercury.auth.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
@@ -13,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +23,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final VerificationService verificationService;
+    private final RateLimitService rateLimitService;
+    private final TokenService tokenService;
 
     public void registerPassword(AuthRequests.PasswordRegister req) {
         if (!StringUtils.hasText(req.getPassword()) || !req.getPassword().equals(req.getConfirmPassword())) {
@@ -32,6 +34,12 @@ public class AuthService {
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         if (userMapper.selectCount(wrapper) > 0) {
             throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
+        }
+        if (StringUtils.hasText(req.getEmail()) && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+            throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
+        }
+        if (StringUtils.hasText(req.getPhone()) && existsByTenantAndPhone(req.getTenantId(), req.getPhone())) {
+            throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
         }
         User user = new User();
         user.setTenantId(req.getTenantId());
@@ -44,6 +52,7 @@ public class AuthService {
     }
 
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
+        rateLimitService.check(buildRateLimitKey("login-password", req.getTenantId(), req.getUsername()));
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
@@ -61,14 +70,27 @@ public class AuthService {
     }
 
     public String sendEmailCode(AuthRequests.SendEmailCode req) {
+        rateLimitService.check(buildRateLimitKey("email-code", req.getTenantId(), req.getEmail()));
+        AuthRequests.VerificationPurpose purpose = req.getPurpose();
+        if (purpose == null) {
+            purpose = AuthRequests.VerificationPurpose.REGISTER;
+        }
+        if (AuthRequests.VerificationPurpose.REGISTER.equals(purpose)
+                && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+            throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
+        }
+        if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)
+                && !existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        }
         String code = verificationService.generateCode();
         verificationService.storeCode(buildEmailKey(req.getTenantId(), req.getEmail()), code, verificationService.defaultTtl());
         verificationService.sendEmailCode(req.getEmail(), code);
-        return code;
+        return "OK";
     }
 
     public void registerEmail(AuthRequests.EmailRegister req) {
-        if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
+        if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         AuthRequests.PasswordRegister pr = new AuthRequests.PasswordRegister();
@@ -81,7 +103,8 @@ public class AuthService {
     }
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
-        if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
+        rateLimitService.check(buildRateLimitKey("login-email", req.getTenantId(), req.getEmail()));
+        if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
@@ -97,7 +120,31 @@ public class AuthService {
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
+    public TokenVerifyResponse verifyToken(AuthRequests.TokenVerify req) {
+        return tokenService.verifyToken(req.getTenantId(), req.getToken());
+    }
+
+    public void logout(AuthRequests.TokenLogout req) {
+        tokenService.blacklistToken(req.getTenantId(), req.getToken());
+    }
+
     private String buildEmailKey(String tenantId, String email) {
         return "email:" + tenantId + ":" + email;
+    }
+
+    private boolean existsByTenantAndEmail(String tenantId, String email) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId).eq("email", email);
+        return userMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean existsByTenantAndPhone(String tenantId, String phone) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId).eq("phone", phone);
+        return userMapper.selectCount(wrapper) > 0;
+    }
+
+    private String buildRateLimitKey(String action, String tenantId, String identifier) {
+        return "rate:" + action + ":" + tenantId + ":" + identifier;
     }
 }

@@ -1,9 +1,11 @@
 package com.mercury.auth;
 
+import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.PhoneAuthService;
+import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ public class PhoneAuthServiceTests {
     private VerificationService verificationService;
     private UserMapper userMapper;
     private JwtService jwtService;
+    private RateLimitService rateLimitService;
     private PhoneAuthService phoneAuthService;
 
     @BeforeEach
@@ -25,12 +28,13 @@ public class PhoneAuthServiceTests {
         verificationService = Mockito.mock(VerificationService.class);
         userMapper = Mockito.mock(UserMapper.class);
         jwtService = Mockito.mock(JwtService.class);
-        phoneAuthService = new PhoneAuthService(verificationService, userMapper, jwtService);
+        rateLimitService = Mockito.mock(RateLimitService.class);
+        phoneAuthService = new PhoneAuthService(verificationService, userMapper, jwtService, rateLimitService);
     }
 
     @Test
     void loginPhone_valid() {
-        Mockito.when(verificationService.verify("phone:t1:138", "111111")).thenReturn(true);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:138", "111111")).thenReturn(true);
         User u = new User();
         u.setId(3L);
         u.setTenantId("t1");
@@ -45,7 +49,23 @@ public class PhoneAuthServiceTests {
 
     @Test
     void loginPhone_invalid_code() {
-        Mockito.when(verificationService.verify("phone:t1:138", "000000")).thenReturn(false);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:138", "000000")).thenReturn(false);
         assertThatThrownBy(() -> phoneAuthService.loginPhone("t1", "138", "000000")).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void sendPhoneCode_returns_ok() {
+        Mockito.when(verificationService.generateCode()).thenReturn("123456");
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
+        String result = phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER);
+        assertThat(result).isEqualTo("OK");
+        Mockito.verify(verificationService).storeCode(Mockito.eq("phone:t1:138"), Mockito.eq("123456"), Mockito.any());
+    }
+
+    @Test
+    void sendPhoneCode_register_duplicate_phone() {
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(1L);
+        assertThatThrownBy(() -> phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER))
+                .isInstanceOf(RuntimeException.class);
     }
 }

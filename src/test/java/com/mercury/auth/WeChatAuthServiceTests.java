@@ -37,4 +37,18 @@ public class WeChatAuthServiceTests {
         AuthResponse resp = weChatAuthService.loginOrRegister("t1", "openid", "wxu");
         assertThat(resp.getAccessToken()).isEqualTo("tk5");
     }
+
+    @Test
+    void loginOrRegister_defaults_username_when_missing() {
+        Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(null);
+        Mockito.doAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(6L);
+            return null;
+        }).when(userMapper).insert(Mockito.any());
+        Mockito.when(jwtService.generate("t1", 6L, "wx_open")).thenReturn("tk6");
+        Mockito.when(jwtService.getTtlSeconds()).thenReturn(40L);
+        AuthResponse resp = weChatAuthService.loginOrRegister("t1", "open", null);
+        assertThat(resp.getAccessToken()).isEqualTo("tk6");
+    }
 }

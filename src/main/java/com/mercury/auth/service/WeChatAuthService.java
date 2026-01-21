@@ -9,6 +9,7 @@ import com.mercury.auth.security.JwtService;
 import com.mercury.auth.store.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -19,13 +20,17 @@ public class WeChatAuthService {
 
     // Stub for OAuth2 callback handling: openId is trusted input for demo
     public AuthResponse loginOrRegister(String tenantId, String openId, String username) {
+        String effectiveUsername = username;
+        if (!StringUtils.hasText(effectiveUsername)) {
+            effectiveUsername = "wx_" + openId;
+        }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", tenantId).eq("username", username);
+        wrapper.eq("tenant_id", tenantId).eq("username", effectiveUsername);
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
             user = new User();
             user.setTenantId(tenantId);
-            user.setUsername(username);
+            user.setUsername(effectiveUsername);
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
