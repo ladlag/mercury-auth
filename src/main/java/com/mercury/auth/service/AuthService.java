@@ -49,38 +49,38 @@ public class AuthService {
 
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
         tenantService.requireEnabled(req.getTenantId());
-        rateLimitService.check(buildRateLimitKey("login-password", req.getTenantId(), req.getUsername()));
-        ensureCaptcha("login-password", req.getTenantId(), req.getUsername(), req.getCaptcha());
+        rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername(), req.getCaptcha());
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
             logger.warn("loginPassword user not found tenant={} username={}", req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_PASSWORD);
-            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
             logger.warn("loginPassword user disabled tenant={} username={}", req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
-            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
             logger.warn("loginPassword bad credentials tenant={} username={}", req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
-            captchaService.recordFailure(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
-        captchaService.reset(buildCaptchaKey("login-password", req.getTenantId(), req.getUsername()));
+        captchaService.reset(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
         safeRecord(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD, true);
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
     public String sendEmailCode(AuthRequests.SendEmailCode req) {
         tenantService.requireEnabled(req.getTenantId());
-        rateLimitService.check(buildRateLimitKey("email-code", req.getTenantId(), req.getEmail()));
+        rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()));
         AuthRequests.VerificationPurpose purpose = req.getPurpose();
         if (purpose == null) {
             purpose = AuthRequests.VerificationPurpose.REGISTER;
@@ -131,12 +131,12 @@ public class AuthService {
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         tenantService.requireEnabled(req.getTenantId());
-        rateLimitService.check(buildRateLimitKey("login-email", req.getTenantId(), req.getEmail()));
-        ensureCaptcha("login-email", req.getTenantId(), req.getEmail(), req.getCaptcha());
+        rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail(), req.getCaptcha());
         if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
             logger.warn("loginEmail invalid code tenant={} email={}", req.getTenantId(), req.getEmail());
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_EMAIL);
-            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
@@ -145,29 +145,29 @@ public class AuthService {
         if (user == null) {
             logger.warn("loginEmail user not found tenant={} email={}", req.getTenantId(), req.getEmail());
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_EMAIL);
-            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
             logger.warn("loginEmail user disabled tenant={} email={}", req.getTenantId(), req.getEmail());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_EMAIL);
-            captchaService.recordFailure(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
+            captchaService.recordFailure(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
-        captchaService.reset(buildCaptchaKey("login-email", req.getTenantId(), req.getEmail()));
+        captchaService.reset(buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
         safeRecord(req.getTenantId(), user.getId(), AuthAction.LOGIN_EMAIL, true);
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
-    private void ensureCaptcha(String action, String tenantId, String identifier, String captcha) {
+    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captcha) {
         String key = buildCaptchaKey(action, tenantId, identifier);
         if (captchaService.isRequired(key) && (captcha == null || captcha.trim().isEmpty())) {
             throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
         }
     }
 
-    private String buildCaptchaKey(String action, String tenantId, String identifier) {
+    private String buildCaptchaKey(AuthAction action, String tenantId, String identifier) {
         return captchaService.buildKey(action, tenantId, identifier);
     }
 
@@ -235,8 +235,8 @@ public class AuthService {
         return userMapper.selectCount(wrapper) > 0;
     }
 
-    private String buildRateLimitKey(String action, String tenantId, String identifier) {
-        return "rate:" + action + ":" + tenantId + ":" + identifier;
+    private String buildRateLimitKey(AuthAction action, String tenantId, String identifier) {
+        return "rate:" + action.name() + ":" + tenantId + ":" + identifier;
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {

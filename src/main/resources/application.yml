@@ -43,40 +43,4 @@ security:
 mail:
   from: "no-reply@example.com"
 
-# dev
----
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-  redis:
-    host: localhost
-    port: 6379
-
-# test
----
-spring:
-  config:
-    activate:
-      on-profile: test
-  datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-  redis:
-    host: localhost
-    port: 6379
-
----
-# prod (docker)
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: jdbc:mysql://mysql:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-    username: root
-    password: root
-  redis:
-    host: redis
-    port: 6379
+# Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml

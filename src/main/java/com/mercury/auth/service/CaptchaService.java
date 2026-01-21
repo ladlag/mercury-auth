@@ -1,5 +1,6 @@
 package com.mercury.auth.service;
 
+import com.mercury.auth.dto.AuthAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -42,7 +43,7 @@ public class CaptchaService {
         }
     }
 
-    public String buildKey(String action, String tenantId, String identifier) {
-        return "captcha:" + action + ":" + tenantId + ":" + identifier;
+    public String buildKey(AuthAction action, String tenantId, String identifier) {
+        return "captcha:" + action.name() + ":" + tenantId + ":" + identifier;
     }
 }

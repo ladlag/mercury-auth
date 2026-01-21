@@ -13,7 +13,7 @@ Spring Boot multi-tenant auth service with JWT, email/phone verification, token 
 - Rate limiting and captcha gating after repeated failures
 
 ## Configuration
-Key properties (see `application.yml`):
+Key properties (see `application.yml`, with overrides in `application-dev.yml`, `application-test.yml`, `application-prod.yml`):
 - `security.jwt.secret`, `security.jwt.ttl-seconds`
 - `security.code.ttl-minutes`, `security.code.phone-ttl-minutes`
 - `security.rate-limit.max-attempts`, `security.rate-limit.window-minutes`
