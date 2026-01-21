@@ -1,6 +1,8 @@
 package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mercury.auth.dto.AuthLogRequest;
+import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
@@ -27,28 +29,51 @@ public class TokenService {
     private final JwtService jwtService;
     private final StringRedisTemplate redisTemplate;
     private final UserMapper userMapper;
+    private final TenantService tenantService;
+    private final AuthLogService authLogService;
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
         if (isBlacklisted(token)) {
+            recordFailure(tenantId, null, "VERIFY_TOKEN");
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
         String tokenTenant = requireTenantMatch(tenantId, claims);
+        tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
+        safeRecord(buildLog(tenantId, userId, "VERIFY_TOKEN", true));
         return new TokenVerifyResponse(tokenTenant, userId, user.getUsername());
     }
 
     public void blacklistToken(String tenantId, String token) {
         Claims claims = parseClaims(token);
         String tokenTenant = requireTenantMatch(tenantId, claims);
+        tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
         loadActiveUser(tokenTenant, userId);
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (ttl.isNegative() || ttl.isZero()) {
+            recordFailure(tenantId, userId, "LOGOUT");
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
         redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+        safeRecord(buildLog(tenantId, userId, "LOGOUT", true));
+    }
+
+    public AuthResponse refreshToken(String tenantId, String token) {
+        Claims claims = parseClaims(token);
+        String tokenTenant = requireTenantMatch(tenantId, claims);
+        tenantService.requireEnabled(tokenTenant);
+        Long userId = requireUserId(claims);
+        User user = loadActiveUser(tokenTenant, userId);
+        if (isBlacklisted(token)) {
+            recordFailure(tenantId, userId, "REFRESH_TOKEN");
+            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
+        }
+        String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
+        safeRecord(buildLog(tenantId, userId, "REFRESH_TOKEN", true));
+        return new AuthResponse(newToken, jwtService.getTtlSeconds());
     }
 
     private boolean isBlacklisted(String token) {
@@ -98,11 +123,34 @@ public class TokenService {
         wrapper.eq("tenant_id", tenantId).eq("id", userId);
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
+            recordFailure(tenantId, userId, "TOKEN_USER_LOOKUP");
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
+            recordFailure(tenantId, userId, "TOKEN_USER_DISABLED");
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         return user;
+    }
+
+    private AuthLogRequest buildLog(String tenantId, Long userId, String action, boolean success) {
+        AuthLogRequest request = new AuthLogRequest();
+        request.setTenantId(tenantId);
+        request.setUserId(userId);
+        request.setAction(action);
+        request.setSuccess(success);
+        return request;
+    }
+
+    private void recordFailure(String tenantId, Long userId, String action) {
+        safeRecord(buildLog(tenantId, userId, action, false));
+    }
+
+    private void safeRecord(AuthLogRequest request) {
+        try {
+            authLogService.record(request);
+        } catch (Exception ignored) {
+            // ignore logging failures
+        }
     }
 }

@@ -78,9 +78,26 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyToken(req));
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@Validated @RequestBody AuthRequests.TokenRefresh req) {
+        return ResponseEntity.ok(authService.refreshToken(req));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
         authService.logout(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/user-status")
+    public ResponseEntity<Void> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
+        authService.updateUserStatus(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
+        authService.changePassword(req);
         return ResponseEntity.ok().build();
     }
 }

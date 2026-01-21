@@ -81,6 +81,27 @@ public class AuthRequests {
 
     @Data
     @EqualsAndHashCode(callSuper = true)
+    public static class UserStatusUpdate extends BaseTenantRequest {
+        @NotBlank
+        private String username;
+        private boolean enabled;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class ChangePassword extends BaseTenantRequest {
+        @NotBlank
+        private String username;
+        @NotBlank
+        private String oldPassword;
+        @Size(min = 8)
+        private String newPassword;
+        @Size(min = 8)
+        private String confirmPassword;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class PhoneLogin extends BaseTenantRequest {
         @NotBlank
         private String phone;
@@ -117,6 +138,13 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenLogout extends BaseTenantRequest {
+        @NotBlank
+        private String token;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class TokenRefresh extends BaseTenantRequest {
         @NotBlank
         private String token;
     }

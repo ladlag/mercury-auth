@@ -4,6 +4,7 @@ import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
+import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.PhoneAuthService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.VerificationService;
@@ -21,6 +22,7 @@ public class PhoneAuthServiceTests {
     private UserMapper userMapper;
     private JwtService jwtService;
     private RateLimitService rateLimitService;
+    private AuthLogService authLogService;
     private PhoneAuthService phoneAuthService;
 
     @BeforeEach
@@ -29,7 +31,8 @@ public class PhoneAuthServiceTests {
         userMapper = Mockito.mock(UserMapper.class);
         jwtService = Mockito.mock(JwtService.class);
         rateLimitService = Mockito.mock(RateLimitService.class);
-        phoneAuthService = new PhoneAuthService(verificationService, userMapper, jwtService, rateLimitService);
+        authLogService = Mockito.mock(AuthLogService.class);
+        phoneAuthService = new PhoneAuthService(verificationService, userMapper, jwtService, rateLimitService, authLogService);
     }
 
     @Test

@@ -1,8 +1,11 @@
 package com.mercury.auth;
 
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
+import com.mercury.auth.service.AuthLogService;
+import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.WeChatAuthService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,17 +18,22 @@ public class WeChatAuthServiceTests {
 
     private UserMapper userMapper;
     private JwtService jwtService;
+    private TenantService tenantService;
+    private AuthLogService authLogService;
     private WeChatAuthService weChatAuthService;
 
     @BeforeEach
     void setup() {
         userMapper = Mockito.mock(UserMapper.class);
         jwtService = Mockito.mock(JwtService.class);
-        weChatAuthService = new WeChatAuthService(userMapper, jwtService);
+        tenantService = Mockito.mock(TenantService.class);
+        authLogService = Mockito.mock(AuthLogService.class);
+        weChatAuthService = new WeChatAuthService(userMapper, jwtService, tenantService, authLogService);
     }
 
     @Test
     void loginOrRegister_creates_user_if_missing() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(null);
         Mockito.doAnswer(invocation -> {
             User u = invocation.getArgument(0);
@@ -40,6 +48,7 @@ public class WeChatAuthServiceTests {
 
     @Test
     void loginOrRegister_defaults_username_when_missing() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(null);
         Mockito.doAnswer(invocation -> {
             User u = invocation.getArgument(0);

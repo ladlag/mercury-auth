@@ -10,3 +10,20 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uniq_tenant_email (tenant_id, email),
   UNIQUE KEY uniq_tenant_phone (tenant_id, phone)
 );
+
+CREATE TABLE IF NOT EXISTS tenants (
+  tenant_id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS auth_logs (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  user_id BIGINT,
+  action VARCHAR(64) NOT NULL,
+  success TINYINT(1) NOT NULL,
+  ip VARCHAR(64),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

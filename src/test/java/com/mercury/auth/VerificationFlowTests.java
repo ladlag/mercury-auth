@@ -2,10 +2,13 @@ package com.mercury.auth;
 
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.RateLimitService;
+import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.TokenService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
@@ -30,6 +33,8 @@ public class VerificationFlowTests {
     private VerificationService verificationService;
     private RateLimitService rateLimitService;
     private TokenService tokenService;
+    private TenantService tenantService;
+    private AuthLogService authLogService;
     private AuthService authService;
 
     @BeforeEach
@@ -43,11 +48,14 @@ public class VerificationFlowTests {
         verificationService = Mockito.mock(VerificationService.class);
         rateLimitService = Mockito.mock(RateLimitService.class);
         tokenService = Mockito.mock(TokenService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService);
+        tenantService = Mockito.mock(TenantService.class);
+        authLogService = Mockito.mock(AuthLogService.class);
+        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService);
     }
 
     @Test
     void sendEmailCode_stores_code() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         AuthRequests.SendEmailCode req = new AuthRequests.SendEmailCode();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
@@ -63,6 +71,7 @@ public class VerificationFlowTests {
 
     @Test
     void loginEmail_valid_code_generates_token() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         Mockito.when(verificationService.verifyAndConsume("email:t1:a@b.com", "123456")).thenReturn(true);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
@@ -83,6 +92,7 @@ public class VerificationFlowTests {
 
     @Test
     void loginEmail_invalid_code_throws() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         Mockito.when(verificationService.verifyAndConsume("email:t1:a@b.com", "000000")).thenReturn(false);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
