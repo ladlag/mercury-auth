@@ -24,6 +24,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CaptchaService {
 
+    private static final String CHALLENGE_OPERATOR = "+";
+    private static final char CHALLENGE_DELIMITER = ' ';
+    private static final int INVALID_ANSWER = -1;
     private final StringRedisTemplate redisTemplate;
     @Value("${security.captcha.threshold:3}")
     private long threshold;
@@ -32,7 +35,7 @@ public class CaptchaService {
     private long ttlMinutes;
 
     @Value("${security.captcha.length:4}")
-    private int captchaLength;
+    private int questionNumberBound;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -51,19 +54,24 @@ public class CaptchaService {
                 || isRequired(buildRiskKey(action, tenantId, ipAddress));
     }
 
-    public CaptchaChallenge createChallenge(String tenantId, String identifier) {
-        String answer = generateAnswer();
+    public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
+        String question = generateQuestion();
+        int evaluated = evaluateQuestion(question);
+        if (evaluated == INVALID_ANSWER) {
+            evaluated = 0;
+        }
+        String answer = String.valueOf(evaluated);
         String captchaId = UUID.randomUUID().toString();
         Duration ttl = Duration.ofMinutes(ttlMinutes);
-        redisTemplate.opsForValue().set(buildCaptchaKey(captchaId), answer, ttl);
-        return new CaptchaChallenge(captchaId, renderImage(answer), ttl.getSeconds());
+        redisTemplate.opsForValue().set(buildChallengeKey(action, tenantId, identifier, captchaId), answer, ttl);
+        return new CaptchaChallenge(captchaId, question, renderImage(answer), ttl.getSeconds());
     }
 
-    public boolean verifyChallenge(String captchaId, String answer) {
+    public boolean verifyChallenge(AuthAction action, String tenantId, String identifier, String captchaId, String answer) {
         if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(answer)) {
             return false;
         }
-        String key = buildCaptchaKey(captchaId);
+        String key = buildChallengeKey(action, tenantId, identifier, captchaId);
         String storedAnswer = redisTemplate.opsForValue().get(key);
         if (storedAnswer == null) {
             return false;
@@ -77,14 +85,20 @@ public class CaptchaService {
         return matches;
     }
 
-    private void recordFailure(String key) {
+    public void recordFailure(String key) {
+        if (!StringUtils.hasText(key)) {
+            return;
+        }
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {
             redisTemplate.expire(key, Duration.ofMinutes(ttlMinutes));
         }
     }
 
-    private boolean isRequired(String key) {
+    public boolean isRequired(String key) {
+        if (!StringUtils.hasText(key)) {
+            return false;
+        }
         String value = redisTemplate.opsForValue().get(key);
         if (value == null) {
             return false;
@@ -94,6 +108,18 @@ public class CaptchaService {
         } catch (NumberFormatException ex) {
             return false;
         }
+    }
+
+    public void reset(String key) {
+        if (!StringUtils.hasText(key)) {
+            return;
+        }
+        redisTemplate.delete(key);
+    }
+
+    public String buildKey(AuthAction action, String tenantId, String identifier) {
+        String safeIdentifier = identifier == null ? "unknown" : identifier;
+        return "captcha:fail:" + action.name() + ":" + tenantId + ":" + safeIdentifier;
     }
 
     private String buildRiskKey(AuthAction action, String tenantId, String identifier, String ipAddress) {
@@ -107,8 +133,9 @@ public class CaptchaService {
         return "captcha:fail:" + action.name() + ":" + tenantId + ":ip:" + safeIp;
     }
 
-    private String buildCaptchaKey(String captchaId) {
-        return "captcha:" + captchaId;
+    private String buildChallengeKey(AuthAction action, String tenantId, String identifier, String captchaId) {
+        String safeIdentifier = identifier == null ? "unknown" : identifier;
+        return "captcha:challenge:" + action.name() + ":" + tenantId + ":" + safeIdentifier + ":" + captchaId;
     }
 
     private String normalizeAnswer(String answer) {
@@ -122,13 +149,31 @@ public class CaptchaService {
         return ipAddress.trim().toLowerCase(Locale.ROOT);
     }
 
-    private String generateAnswer() {
-        int length = Math.max(4, captchaLength);
-        StringBuilder builder = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            builder.append(random.nextInt(10));
+    private String generateQuestion() {
+        int bound = Math.max(1, questionNumberBound);
+        int left = random.nextInt(bound) + 1;
+        int right = random.nextInt(bound) + 1;
+        return String.format("%d%c%s%c%d", left, CHALLENGE_DELIMITER, CHALLENGE_OPERATOR, CHALLENGE_DELIMITER, right);
+    }
+
+    private int evaluateQuestion(String question) {
+        int firstSpace = question.indexOf(CHALLENGE_DELIMITER);
+        int secondSpace = question.indexOf(CHALLENGE_DELIMITER, firstSpace + 1);
+        int minOperatorEnd = firstSpace + 1 + CHALLENGE_OPERATOR.length();
+        if (firstSpace < 0 || secondSpace < minOperatorEnd) {
+            return INVALID_ANSWER;
         }
-        return builder.toString();
+        String operator = question.substring(firstSpace + 1, secondSpace);
+        if (!CHALLENGE_OPERATOR.equals(operator)) {
+            return INVALID_ANSWER;
+        }
+        try {
+            int left = Integer.parseInt(question.substring(0, firstSpace));
+            int right = Integer.parseInt(question.substring(secondSpace + 1));
+            return left + right;
+        } catch (NumberFormatException parseException) {
+            return INVALID_ANSWER;
+        }
     }
 
     private String renderImage(String text) {
