@@ -9,9 +9,7 @@ import javax.validation.constraints.Size;
 public class AuthRequests {
 
     @Data
-    public static class PasswordRegister {
-        @NotBlank
-        private String tenantId;
+    public static class PasswordRegister extends BaseTenantRequest {
         @NotBlank
         private String username;
         @Size(min = 8)
@@ -23,9 +21,7 @@ public class AuthRequests {
     }
 
     @Data
-    public static class PasswordLogin {
-        @NotBlank
-        private String tenantId;
+    public static class PasswordLogin extends BaseTenantRequest {
         @NotBlank
         private String username;
         @NotBlank
@@ -33,17 +29,13 @@ public class AuthRequests {
     }
 
     @Data
-    public static class SendEmailCode {
-        @NotBlank
-        private String tenantId;
+    public static class SendEmailCode extends BaseTenantRequest {
         @Email
         private String email;
     }
 
     @Data
-    public static class EmailRegister {
-        @NotBlank
-        private String tenantId;
+    public static class EmailRegister extends BaseTenantRequest {
         @Email
         private String email;
         @NotBlank
@@ -57,9 +49,7 @@ public class AuthRequests {
     }
 
     @Data
-    public static class EmailLogin {
-        @NotBlank
-        private String tenantId;
+    public static class EmailLogin extends BaseTenantRequest {
         @Email
         private String email;
         @NotBlank

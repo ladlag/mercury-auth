@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -18,6 +20,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final VerificationService verificationService;
 
     public void registerPassword(AuthRequests.PasswordRegister req) {
         if (!StringUtils.hasText(req.getPassword()) || !req.getPassword().equals(req.getConfirmPassword())) {
@@ -50,5 +53,42 @@ public class AuthService {
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
         return new AuthResponse(token, jwtService.getTtlSeconds());
+    }
+
+    public String sendEmailCode(AuthRequests.SendEmailCode req) {
+        String code = verificationService.generateCode();
+        verificationService.storeCode(buildEmailKey(req.getTenantId(), req.getEmail()), code, Duration.ofMinutes(10));
+        return code; // in production, this would be sent via mail; returned here for testability
+    }
+
+    public void registerEmail(AuthRequests.EmailRegister req) {
+        if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
+            throw new IllegalArgumentException("invalid code");
+        }
+        AuthRequests.PasswordRegister pr = new AuthRequests.PasswordRegister();
+        pr.setTenantId(req.getTenantId());
+        pr.setUsername(req.getUsername());
+        pr.setPassword(req.getPassword());
+        pr.setConfirmPassword(req.getConfirmPassword());
+        pr.setEmail(req.getEmail());
+        registerPassword(pr);
+    }
+
+    public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
+        if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
+            throw new IllegalArgumentException("invalid code");
+        }
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", req.getTenantId()).eq("email", req.getEmail());
+        User user = userMapper.selectOne(wrapper);
+        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
+            throw new IllegalArgumentException("user not found or disabled");
+        }
+        String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
+        return new AuthResponse(token, jwtService.getTtlSeconds());
+    }
+
+    private String buildEmailKey(String tenantId, String email) {
+        return "email:" + tenantId + ":" + email;
     }
 }

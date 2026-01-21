@@ -28,4 +28,20 @@ public class AuthController {
     public ResponseEntity<AuthResponse> loginPassword(@Validated @RequestBody AuthRequests.PasswordLogin req) {
         return ResponseEntity.ok(authService.loginPassword(req));
     }
+
+    @PostMapping("/send-email-code")
+    public ResponseEntity<String> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
+        return ResponseEntity.ok(authService.sendEmailCode(req));
+    }
+
+    @PostMapping("/register-email")
+    public ResponseEntity<Void> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
+        authService.registerEmail(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/login-email")
+    public ResponseEntity<AuthResponse> loginEmail(@Validated @RequestBody AuthRequests.EmailLogin req) {
+        return ResponseEntity.ok(authService.loginEmail(req));
+    }
 }

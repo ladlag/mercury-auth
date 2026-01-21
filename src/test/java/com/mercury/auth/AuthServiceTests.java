@@ -5,6 +5,7 @@ import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ public class AuthServiceTests {
     private UserMapper userMapper;
     private PasswordEncoder passwordEncoder;
     private JwtService jwtService;
+    private VerificationService verificationService;
     private AuthService authService;
 
     @BeforeEach
@@ -26,7 +28,8 @@ public class AuthServiceTests {
         userMapper = Mockito.mock(UserMapper.class);
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
         jwtService = Mockito.mock(JwtService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService);
+        verificationService = Mockito.mock(VerificationService.class);
+        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService);
     }
 
     @Test
