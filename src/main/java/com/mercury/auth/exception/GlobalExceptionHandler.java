@@ -19,11 +19,12 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String INVALID_FIELD_MESSAGE = "invalid";
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCode(), ex.getMessage()));
+        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), ex.getCodeMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,19 +44,21 @@ public class GlobalExceptionHandler {
                 .map(error -> {
                     if (error instanceof FieldError) {
                         FieldError fieldError = (FieldError) error;
-                        return new ApiError.FieldError(fieldError.getField(), fieldError.getDefaultMessage());
+                        logger.warn("validation field={} message={}", fieldError.getField(), fieldError.getDefaultMessage());
+                        return new ApiError.FieldError(fieldError.getField(), INVALID_FIELD_MESSAGE);
                     }
-                    return new ApiError.FieldError("general", error.getDefaultMessage());
+                    logger.warn("validation error={}", error.getDefaultMessage());
+                    return new ApiError.FieldError("general", INVALID_FIELD_MESSAGE);
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED, "Validation failed", errors));
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), ErrorCodes.VALIDATION_FAILED.getMessage(), errors));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR, ex.getMessage()));
+                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), ErrorCodes.INTERNAL_ERROR.getMessage()));
     }
 }
