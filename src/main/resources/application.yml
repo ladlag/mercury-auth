@@ -10,22 +10,6 @@ spring:
     host: localhost
     port: 6379
     database: 0
-
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-
-security:
-  jwt:
-    secret: "change-me-please-32-bytes-min"
-    ttl-seconds: 7200
-  code:
-    ttl-minutes: 10
-
-mail:
-  from: "no-reply@example.com"
-
-spring:
   mail:
     host: smtp.example.com
     port: 25
@@ -38,38 +22,25 @@ spring:
           starttls:
             enable: false
 
-# dev
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-  redis:
-    host: localhost
-    port: 6379
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
 
-# test
-spring:
-  config:
-    activate:
-      on-profile: test
-  datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-  redis:
-    host: localhost
-    port: 6379
+security:
+  jwt:
+    secret: "change-me-please-32-bytes-min"
+    ttl-seconds: 7200
+  code:
+    ttl-minutes: 10
+    phone-ttl-minutes: 5
+  rate-limit:
+    max-attempts: 10
+    window-minutes: 1
+  captcha:
+    threshold: 3
+    ttl-minutes: 5
 
----
-# prod (docker)
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: jdbc:mysql://mysql:3306/mercury_auth?useSSL=false&serverTimezone=UTC
-    username: root
-    password: root
-  redis:
-    host: redis
-    port: 6379
+mail:
+  from: "no-reply@example.com"
+
+# Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml

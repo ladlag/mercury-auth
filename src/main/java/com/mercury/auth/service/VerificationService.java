@@ -7,8 +7,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +20,7 @@ public class VerificationService {
     private String mailFrom;
     @Value("${security.code.ttl-minutes:10}")
     private long ttlMinutes;
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     public String generateCode() {
         int code = 100000 + random.nextInt(900000);
@@ -34,6 +34,14 @@ public class VerificationService {
     public boolean verify(String key, String code) {
         String val = redisTemplate.opsForValue().get(key);
         return val != null && val.equals(code);
+    }
+
+    public boolean verifyAndConsume(String key, String code) {
+        if (verify(key, code)) {
+            redisTemplate.delete(key);
+            return true;
+        }
+        return false;
     }
 
     public void sendEmailCode(String to, String code) {

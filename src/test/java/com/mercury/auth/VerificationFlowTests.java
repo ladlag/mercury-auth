@@ -2,9 +2,15 @@ package com.mercury.auth;
 
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.AuthLogService;
+import com.mercury.auth.service.CaptchaService;
+import com.mercury.auth.service.RateLimitService;
+import com.mercury.auth.service.TenantService;
+import com.mercury.auth.service.TokenService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +32,11 @@ public class VerificationFlowTests {
     private JwtService jwtService;
     private StringRedisTemplate redisTemplate;
     private VerificationService verificationService;
+    private RateLimitService rateLimitService;
+    private TokenService tokenService;
+    private TenantService tenantService;
+    private AuthLogService authLogService;
+    private CaptchaService captchaService;
     private AuthService authService;
 
     @BeforeEach
@@ -37,24 +48,34 @@ public class VerificationFlowTests {
         ValueOperations<String, String> valueOps = Mockito.mock(ValueOperations.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
         verificationService = Mockito.mock(VerificationService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService);
+        rateLimitService = Mockito.mock(RateLimitService.class);
+        tokenService = Mockito.mock(TokenService.class);
+        tenantService = Mockito.mock(TenantService.class);
+        authLogService = Mockito.mock(AuthLogService.class);
+        captchaService = Mockito.mock(CaptchaService.class);
+        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService, captchaService);
     }
 
     @Test
     void sendEmailCode_stores_code() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
         AuthRequests.SendEmailCode req = new AuthRequests.SendEmailCode();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
+        req.setPurpose(AuthRequests.VerificationPurpose.REGISTER);
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
         Mockito.when(verificationService.generateCode()).thenReturn("123456");
         Mockito.when(verificationService.defaultTtl()).thenReturn(Duration.ofMinutes(10));
         String code = authService.sendEmailCode(req);
         Mockito.verify(verificationService).storeCode(Mockito.eq("email:t1:a@b.com"), Mockito.eq("123456"), Mockito.any());
         Mockito.verify(verificationService).sendEmailCode("a@b.com", "123456");
+        assertThat(code).isEqualTo("OK");
     }
 
     @Test
     void loginEmail_valid_code_generates_token() {
-        Mockito.when(verificationService.verify("email:t1:a@b.com", "123456")).thenReturn(true);
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(verificationService.verifyAndConsume("email:t1:a@b.com", "123456")).thenReturn(true);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
@@ -74,7 +95,8 @@ public class VerificationFlowTests {
 
     @Test
     void loginEmail_invalid_code_throws() {
-        Mockito.when(verificationService.verify("email:t1:a@b.com", "000000")).thenReturn(false);
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(verificationService.verifyAndConsume("email:t1:a@b.com", "000000")).thenReturn(false);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
         req.setEmail("a@b.com");

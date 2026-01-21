@@ -11,6 +11,8 @@ import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -26,17 +28,21 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes");
+        }
+        this.key = Keys.hmacShaKeyFor(secretBytes);
     }
 
     public String generate(String tenantId, Long userId, String username) {
         Instant now = Instant.now();
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tenantId", tenantId);
+        claims.put("userId", userId);
+        claims.put("username", username);
         return Jwts.builder()
-                .setClaims(Map.of(
-                        "tenantId", tenantId,
-                        "userId", userId,
-                        "username", username
-                ))
+                .setClaims(claims)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plusSeconds(ttlSeconds)))
                 .signWith(key, SignatureAlgorithm.HS256)

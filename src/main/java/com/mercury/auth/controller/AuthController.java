@@ -2,6 +2,7 @@ package com.mercury.auth.controller;
 
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.service.AuthService;
 import com.mercury.auth.service.PhoneAuthService;
 import com.mercury.auth.service.WeChatAuthService;
@@ -34,8 +35,9 @@ public class AuthController {
     }
 
     @PostMapping("/send-email-code")
-    public ResponseEntity<String> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
-        return ResponseEntity.ok(authService.sendEmailCode(req));
+    public ResponseEntity<Void> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
+        authService.sendEmailCode(req);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/register-email")
@@ -50,13 +52,14 @@ public class AuthController {
     }
 
     @PostMapping("/send-phone-code")
-    public ResponseEntity<String> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
-        return ResponseEntity.ok(phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone()));
+    public ResponseEntity<Void> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
+        phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone(), req.getPurpose());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/login-phone")
     public ResponseEntity<AuthResponse> loginPhone(@Validated @RequestBody AuthRequests.PhoneLogin req) {
-        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode()));
+        return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptcha()));
     }
 
     @PostMapping("/register-phone")
@@ -68,5 +71,33 @@ public class AuthController {
     @PostMapping("/wechat-login")
     public ResponseEntity<AuthResponse> wechatLogin(@Validated @RequestBody AuthRequests.WeChatLogin req) {
         return ResponseEntity.ok(weChatAuthService.loginOrRegister(req.getTenantId(), req.getOpenId(), req.getUsername()));
+    }
+
+    @PostMapping("/verify-token")
+    public ResponseEntity<TokenVerifyResponse> verifyToken(@Validated @RequestBody AuthRequests.TokenVerify req) {
+        return ResponseEntity.ok(authService.verifyToken(req));
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@Validated @RequestBody AuthRequests.TokenRefresh req) {
+        return ResponseEntity.ok(authService.refreshToken(req));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
+        authService.logout(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/user-status")
+    public ResponseEntity<Void> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
+        authService.updateUserStatus(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
+        authService.changePassword(req);
+        return ResponseEntity.ok().build();
     }
 }
