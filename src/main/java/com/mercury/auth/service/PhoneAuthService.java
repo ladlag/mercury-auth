@@ -38,7 +38,7 @@ public class PhoneAuthService {
             resolvedPurpose = AuthRequests.VerificationPurpose.REGISTER;
         }
         if (AuthRequests.VerificationPurpose.REGISTER.equals(resolvedPurpose) && existsByTenantAndPhone(tenantId, phone)) {
-            logger.warn("sendPhoneCode duplicate phone tenant={} phone={}", tenantId, phone);
+        logger.warn("sendPhoneCode duplicate phone tenant={} phone={}", tenantId, phone);
             recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
             throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
         }

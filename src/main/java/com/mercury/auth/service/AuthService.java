@@ -40,7 +40,7 @@ public class AuthService {
             user = createUser(req);
         } catch (ApiException ex) {
             logger.warn("registerPassword failed tenant={} username={} code={}",
-                    req.getTenantId(), req.getUsername(), ex.getCode());
+                    req.getTenantId(), req.getUsername(), ex.getCode().name());
             recordFailure(req.getTenantId(), null, AuthAction.REGISTER_PASSWORD);
             throw ex;
         }
@@ -122,7 +122,7 @@ public class AuthService {
             user = createUser(pr);
         } catch (ApiException ex) {
             logger.warn("registerEmail failed tenant={} username={} code={}",
-                    req.getTenantId(), req.getUsername(), ex.getCode());
+                    req.getTenantId(), req.getUsername(), ex.getCode().name());
             recordFailure(req.getTenantId(), null, AuthAction.REGISTER_EMAIL);
             throw ex;
         }
