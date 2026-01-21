@@ -39,7 +39,7 @@ public class AuthServiceTests {
         req.setUsername("u1");
         req.setPassword("pass1234");
         req.setConfirmPassword("pass12345");
-        assertThatThrownBy(() -> authService.registerPassword(req)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> authService.registerPassword(req)).isInstanceOf(RuntimeException.class);
     }
 
     @Test

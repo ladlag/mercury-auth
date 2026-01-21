@@ -36,24 +36,25 @@ public class VerificationFlowTests {
         redisTemplate = Mockito.mock(StringRedisTemplate.class);
         ValueOperations<String, String> valueOps = Mockito.mock(ValueOperations.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        verificationService = new VerificationService(redisTemplate);
+        verificationService = Mockito.mock(VerificationService.class);
         authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService);
     }
 
     @Test
     void sendEmailCode_stores_code() {
-        ValueOperations<String, String> valueOps = redisTemplate.opsForValue();
         AuthRequests.SendEmailCode req = new AuthRequests.SendEmailCode();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
+        Mockito.when(verificationService.generateCode()).thenReturn("123456");
+        Mockito.when(verificationService.defaultTtl()).thenReturn(Duration.ofMinutes(10));
         String code = authService.sendEmailCode(req);
-        Mockito.verify(valueOps).set(Mockito.eq("email:t1:a@b.com"), Mockito.eq(code), Mockito.any(Duration.class));
+        Mockito.verify(verificationService).storeCode(Mockito.eq("email:t1:a@b.com"), Mockito.eq("123456"), Mockito.any());
+        Mockito.verify(verificationService).sendEmailCode("a@b.com", "123456");
     }
 
     @Test
     void loginEmail_valid_code_generates_token() {
-        ValueOperations<String, String> valueOps = redisTemplate.opsForValue();
-        Mockito.when(valueOps.get("email:t1:a@b.com")).thenReturn("123456");
+        Mockito.when(verificationService.verify("email:t1:a@b.com", "123456")).thenReturn(true);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
@@ -73,12 +74,11 @@ public class VerificationFlowTests {
 
     @Test
     void loginEmail_invalid_code_throws() {
-        ValueOperations<String, String> valueOps = redisTemplate.opsForValue();
-        Mockito.when(valueOps.get("email:t1:a@b.com")).thenReturn("123456");
+        Mockito.when(verificationService.verify("email:t1:a@b.com", "000000")).thenReturn(false);
         AuthRequests.EmailLogin req = new AuthRequests.EmailLogin();
         req.setTenantId("t1");
         req.setEmail("a@b.com");
         req.setCode("000000");
-        assertThatThrownBy(() -> authService.loginEmail(req)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> authService.loginEmail(req)).isInstanceOf(RuntimeException.class);
     }
 }

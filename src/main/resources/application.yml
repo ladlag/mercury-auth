@@ -19,6 +19,24 @@ security:
   jwt:
     secret: "change-me-please-32-bytes-min"
     ttl-seconds: 7200
+  code:
+    ttl-minutes: 10
+
+mail:
+  from: "no-reply@example.com"
+
+spring:
+  mail:
+    host: smtp.example.com
+    port: 25
+    username: user
+    password: pass
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 # dev
 spring:

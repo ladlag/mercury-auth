@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.store.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +26,12 @@ public class AuthService {
 
     public void registerPassword(AuthRequests.PasswordRegister req) {
         if (!StringUtils.hasText(req.getPassword()) || !req.getPassword().equals(req.getConfirmPassword())) {
-            throw new IllegalArgumentException("password mismatch");
+            throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         if (userMapper.selectCount(wrapper) > 0) {
-            throw new IllegalArgumentException("username exists");
+            throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
         }
         User user = new User();
         user.setTenantId(req.getTenantId());
@@ -45,11 +47,14 @@ public class AuthService {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
-        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
-            throw new IllegalArgumentException("user not found or disabled");
+        if (user == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        }
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("bad credentials");
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
         return new AuthResponse(token, jwtService.getTtlSeconds());
@@ -57,13 +62,14 @@ public class AuthService {
 
     public String sendEmailCode(AuthRequests.SendEmailCode req) {
         String code = verificationService.generateCode();
-        verificationService.storeCode(buildEmailKey(req.getTenantId(), req.getEmail()), code, Duration.ofMinutes(10));
-        return code; // in production, this would be sent via mail; returned here for testability
+        verificationService.storeCode(buildEmailKey(req.getTenantId(), req.getEmail()), code, verificationService.defaultTtl());
+        verificationService.sendEmailCode(req.getEmail(), code);
+        return code;
     }
 
     public void registerEmail(AuthRequests.EmailRegister req) {
         if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
-            throw new IllegalArgumentException("invalid code");
+            throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         AuthRequests.PasswordRegister pr = new AuthRequests.PasswordRegister();
         pr.setTenantId(req.getTenantId());
@@ -76,13 +82,16 @@ public class AuthService {
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         if (!verificationService.verify(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
-            throw new IllegalArgumentException("invalid code");
+            throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("email", req.getEmail());
         User user = userMapper.selectOne(wrapper);
-        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
-            throw new IllegalArgumentException("user not found or disabled");
+        if (user == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        }
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
         return new AuthResponse(token, jwtService.getTtlSeconds());

@@ -1,0 +1,12 @@
+package com.mercury.auth.exception;
+
+public interface ErrorCodes {
+    String USER_NOT_FOUND = "USER_NOT_FOUND";
+    String USER_DISABLED = "USER_DISABLED";
+    String BAD_CREDENTIALS = "BAD_CREDENTIALS";
+    String DUPLICATE_USERNAME = "DUPLICATE_USERNAME";
+    String PASSWORD_MISMATCH = "PASSWORD_MISMATCH";
+    String INVALID_CODE = "INVALID_CODE";
+    String VALIDATION_FAILED = "VALIDATION_FAILED";
+    String INTERNAL_ERROR = "INTERNAL_ERROR";
+}

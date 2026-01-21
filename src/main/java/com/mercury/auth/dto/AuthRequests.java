@@ -55,4 +55,36 @@ public class AuthRequests {
         @NotBlank
         private String code;
     }
+
+    @Data
+    public static class SendPhoneCode extends BaseTenantRequest {
+        @NotBlank
+        private String phone;
+    }
+
+    @Data
+    public static class PhoneLogin extends BaseTenantRequest {
+        @NotBlank
+        private String phone;
+        @NotBlank
+        private String code;
+    }
+
+    @Data
+    public static class PhoneRegister extends BaseTenantRequest {
+        @NotBlank
+        private String phone;
+        @NotBlank
+        private String code;
+        @NotBlank
+        private String username;
+    }
+
+    @Data
+    public static class WeChatLogin extends BaseTenantRequest {
+        @NotBlank
+        private String openId;
+        @NotBlank
+        private String username;
+    }
 }
