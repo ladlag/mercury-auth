@@ -1,7 +1,7 @@
 # Spring Boot JWT 用户认证与授权服务需求
 
 ## 1. 概要
-- 基于 Spring Boot 2.7.x（JDK8）+ Spring Security + JWT 的 REST 服务。
+- 基于 Spring Boot 2.7.x（JDK 8）+ Spring Security + JWT 的 REST 服务。
 - 面向多租户，提供注册/登录、Token 签发与验证、黑名单注销、日志与健康检查。
 
 ## 2. 核心场景
@@ -39,13 +39,13 @@
 - 健康检查：服务、数据库、Redis 状态。
 
 ## 3. 技术栈与约束
-- Spring Boot 2.7.x，JDK8；MySQL 5.7+；Redis 6.0+；MyBatis-Plus；JJWT；Springfox Swagger；BCrypt；HikariCP。
+- Spring Boot 2.7.x，JDK 8；MySQL 5.7+；Redis 6.0+；MyBatis-Plus；JJWT；Springfox Swagger；BCrypt；HikariCP。
 - 全部组件需开源可商用；RESTful JSON；支持 CORS。
 
 ## 4. 安全与性能
 - 密码加密存储，HTTPS 传输；Token 密钥可轮换、可配置过期（默认 ≤2h）。
 - Token 携带必要声明，敏感信息加密；接口参数校验防注入/XSS；登录/验证码发送限流（如单 IP 每分钟≤10次）。
-- 性能：普通查询/校验 ≤100ms，Token 生成/验证码发送 ≤500ms；单机并发≥500，Token 校验 QPS≥1000；Redis 命中率≥90%。
+- 性能：普通查询/校验 ≤100ms，Token 生成/验证码发送 ≤500ms；单机并发用户数≥500，Token 校验 QPS≥1000；Redis 命中率≥90%。
 - 可靠性：可用性≥99.9%；验证码发送失败重试≤3次，间隔1s；数据库/Redis 异常需友好错误处理与事务保证。
 
 ## 5. 配置与可扩展
