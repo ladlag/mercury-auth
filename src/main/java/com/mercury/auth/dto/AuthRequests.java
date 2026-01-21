@@ -34,6 +34,7 @@ public class AuthRequests {
         private String username;
         @NotBlank
         private String password;
+        private String captchaId;
         private String captcha;
     }
 
@@ -70,6 +71,7 @@ public class AuthRequests {
         private String email;
         @NotBlank
         private String code;
+        private String captchaId;
         private String captcha;
     }
 
@@ -109,6 +111,7 @@ public class AuthRequests {
         private String phone;
         @NotBlank
         private String code;
+        private String captchaId;
         private String captcha;
     }
 
@@ -150,5 +153,14 @@ public class AuthRequests {
     public static class TokenRefresh extends BaseTenantRequest {
         @NotBlank
         private String token;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class CaptchaRequest extends BaseTenantRequest {
+        @NotBlank
+        private String identifier;
+        @NotBlank
+        private String action;
     }
 }

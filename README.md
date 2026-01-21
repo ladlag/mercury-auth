@@ -33,4 +33,4 @@ mvn spring-boot:run
 - Use `/api/auth/logout` to blacklist tokens.
 - Tenant APIs under `/api/tenants`.
 - Error responses use symbolic `code` values, and the same value is returned in `message`.
-- Captcha is required only after repeated failed login attempts (password/email/phone). When the API returns code `CAPTCHA_REQUIRED`, prompt for captcha and resend the login request with the `captcha` field. Threshold and TTL are configured via `security.captcha.threshold` and `security.captcha.ttl-minutes`.
+- Captcha is required only after repeated failed login attempts (password/email/phone). When the API returns code `CAPTCHA_REQUIRED`, request `/api/auth/captcha` with `tenantId`, `identifier`, and `action` (`CAPTCHA_LOGIN_PASSWORD`, `CAPTCHA_LOGIN_EMAIL`, `CAPTCHA_LOGIN_PHONE`), then resend the login request with `captchaId` + `captcha` (answer). Threshold and TTL are configured via `security.captcha.threshold` and `security.captcha.ttl-minutes`.

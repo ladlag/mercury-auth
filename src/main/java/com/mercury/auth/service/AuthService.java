@@ -50,7 +50,7 @@ public class AuthService {
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
         tenantService.requireEnabled(req.getTenantId());
         rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
-        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername(), req.getCaptcha());
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername(), req.getCaptchaId(), req.getCaptcha());
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
@@ -132,7 +132,7 @@ public class AuthService {
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         tenantService.requireEnabled(req.getTenantId());
         rateLimitService.check(buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
-        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail(), req.getCaptcha());
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), req.getEmail(), req.getCaptchaId(), req.getCaptcha());
         if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
             logger.warn("loginEmail invalid code tenant={} email={}", req.getTenantId(), req.getEmail());
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_EMAIL);
@@ -160,10 +160,17 @@ public class AuthService {
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
-    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captcha) {
+    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captchaId, String captcha) {
         String key = buildCaptchaKey(action, tenantId, identifier);
-        if (captchaService.isRequired(key) && (captcha == null || captcha.trim().isEmpty())) {
+        if (!captchaService.isRequired(key)) {
+            return;
+        }
+        if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
             throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
+        }
+        if (!captchaService.verifyChallenge(action, tenantId, identifier, captchaId, captcha)) {
+            captchaService.recordFailure(key);
+            throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
         }
     }
 
