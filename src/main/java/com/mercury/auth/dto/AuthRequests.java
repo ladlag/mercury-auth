@@ -154,13 +154,4 @@ public class AuthRequests {
         @NotBlank
         private String token;
     }
-
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    public static class CaptchaRequest extends BaseTenantRequest {
-        @NotBlank
-        private String identifier;
-        @NotBlank
-        private String action;
-    }
 }

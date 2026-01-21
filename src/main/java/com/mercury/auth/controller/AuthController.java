@@ -74,7 +74,15 @@ public class AuthController {
         try {
             action = AuthAction.valueOf(req.getAction());
         } catch (IllegalArgumentException ex) {
-            throw new ApiException(ErrorCodes.VALIDATION_FAILED, "invalid captcha action");
+            StringBuilder validActions = new StringBuilder();
+            for (AuthAction value : AuthAction.values()) {
+                if (validActions.length() > 0) {
+                    validActions.append(", ");
+                }
+                validActions.append(value.name());
+            }
+            throw new ApiException(ErrorCodes.VALIDATION_FAILED,
+                    "invalid captcha action. valid actions: " + validActions);
         }
         return ResponseEntity.ok(captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier()));
     }

@@ -7,6 +7,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class CaptchaChallenge {
     private String captchaId;
-    private String question;
-    private long expiresInSeconds;
+    private String captchaImage;
+    private long ttlSeconds;
 }
