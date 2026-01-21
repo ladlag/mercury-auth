@@ -58,6 +58,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.toNumeric(ErrorCodes.INTERNAL_ERROR), ErrorCodes.INTERNAL_ERROR));
+                .body(new ApiError(ErrorCodes.toNumeric(ErrorCodes.INTERNAL_ERROR), "Internal server error"));
     }
 }
