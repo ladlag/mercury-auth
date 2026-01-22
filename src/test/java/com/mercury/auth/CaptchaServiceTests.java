@@ -47,6 +47,7 @@ public class CaptchaServiceTests {
         assertThat(answerCaptor.getValue()).isEqualTo(String.valueOf(left + right));
         assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(5));
         assertThat(challenge.getExpiresInSeconds()).isEqualTo(300);
+        assertThat(challenge.getCaptchaImage()).isNotEmpty();
     }
 
     @Test

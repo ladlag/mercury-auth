@@ -64,7 +64,7 @@ public class CaptchaService {
         String captchaId = UUID.randomUUID().toString();
         Duration ttl = Duration.ofMinutes(ttlMinutes);
         redisTemplate.opsForValue().set(buildChallengeKey(action, tenantId, identifier, captchaId), answer, ttl);
-        return new CaptchaChallenge(captchaId, question, renderImage(answer), ttl.getSeconds());
+        return new CaptchaChallenge(captchaId, question, renderImage(question), ttl.getSeconds());
     }
 
     public boolean verifyChallenge(AuthAction action, String tenantId, String identifier, String captchaId, String answer) {
