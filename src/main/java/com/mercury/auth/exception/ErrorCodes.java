@@ -28,6 +28,7 @@ public enum ErrorCodes {
     // ========== 40 06 验证码/人机校验 ==========
     INVALID_CODE         ("400601", "Invalid verification code", HttpStatus.BAD_REQUEST),
     CAPTCHA_REQUIRED     ("400602", "Captcha required", HttpStatus.PRECONDITION_REQUIRED),
+    CAPTCHA_INVALID      ("400603", "Captcha invalid", HttpStatus.BAD_REQUEST),
 
     // ========== 40 07 限流/风控 ==========
     RATE_LIMITED         ("400701", "Too many requests", HttpStatus.TOO_MANY_REQUESTS),
