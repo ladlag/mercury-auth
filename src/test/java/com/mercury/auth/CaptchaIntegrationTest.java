@@ -48,7 +48,8 @@ public class CaptchaIntegrationTest {
         valueOps = Mockito.mock(ValueOperations.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
         
-        captchaService = new CaptchaService(redisTemplate);
+        RateLimitService rateLimitServiceForCaptcha = Mockito.mock(RateLimitService.class);
+        captchaService = new CaptchaService(redisTemplate, rateLimitServiceForCaptcha);
         ReflectionTestUtils.setField(captchaService, "ttlMinutes", 5L);
         ReflectionTestUtils.setField(captchaService, "threshold", 3L);
         
