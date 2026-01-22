@@ -140,7 +140,7 @@ public class PhoneAuthService {
         if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
             throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
         }
-        if (!captchaService.verifyChallenge(action, tenantId, identifier, captchaId, captcha)) {
+        if (!captchaService.verifyChallenge(captchaId, captcha)) {
             captchaService.recordFailure(key);
             throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
         }

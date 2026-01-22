@@ -39,6 +39,14 @@ public class CaptchaService {
 
     private final SecureRandom random = new SecureRandom();
 
+    /**
+     * Creates a new captcha challenge.
+     * 
+     * @param action The auth action (used for rate limiting tracking only)
+     * @param tenantId The tenant identifier (used for rate limiting tracking only)
+     * @param identifier The user identifier (used for rate limiting tracking only)
+     * @return A new CaptchaChallenge with question, image, and expiration
+     */
     public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
         String question = generateQuestion();
         int evaluated = evaluateQuestion(question);
@@ -48,15 +56,22 @@ public class CaptchaService {
         String answer = String.valueOf(evaluated);
         String captchaId = UUID.randomUUID().toString();
         Duration ttl = Duration.ofMinutes(ttlMinutes);
-        redisTemplate.opsForValue().set(buildChallengeKey(action, tenantId, identifier, captchaId), answer, ttl);
+        redisTemplate.opsForValue().set(buildChallengeKey(captchaId), answer, ttl);
         return new CaptchaChallenge(captchaId, question, renderImage(question), ttl.getSeconds());
     }
 
-    public boolean verifyChallenge(AuthAction action, String tenantId, String identifier, String captchaId, String answer) {
+    /**
+     * Verifies a captcha challenge answer.
+     * 
+     * @param captchaId The unique captcha identifier
+     * @param answer The user's answer to the captcha question
+     * @return true if the answer is correct, false otherwise
+     */
+    public boolean verifyChallenge(String captchaId, String answer) {
         if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(answer)) {
             return false;
         }
-        String key = buildChallengeKey(action, tenantId, identifier, captchaId);
+        String key = buildChallengeKey(captchaId);
         String storedAnswer = redisTemplate.opsForValue().get(key);
         if (storedAnswer == null) {
             return false;
@@ -106,9 +121,8 @@ public class CaptchaService {
         return KeyUtils.buildCaptchaKey(action, tenantId, identifier);
     }
 
-    private String buildChallengeKey(AuthAction action, String tenantId, String identifier, String captchaId) {
-        String safeIdentifier = identifier == null ? "unknown" : identifier;
-        return "captcha:challenge:" + action.name() + ":" + tenantId + ":" + safeIdentifier + ":" + captchaId;
+    private String buildChallengeKey(String captchaId) {
+        return "captcha:challenge:" + captchaId;
     }
 
     private String normalizeAnswer(String answer) {

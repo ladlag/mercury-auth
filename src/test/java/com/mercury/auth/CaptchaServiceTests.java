@@ -40,7 +40,7 @@ public class CaptchaServiceTests {
 
         Mockito.verify(valueOps).set(keyCaptor.capture(), answerCaptor.capture(), ttlCaptor.capture());
         assertThat(keyCaptor.getValue())
-                .contains("captcha:challenge:CAPTCHA_LOGIN_PASSWORD:t1:u1:" + challenge.getCaptchaId());
+                .isEqualTo("captcha:challenge:" + challenge.getCaptchaId());
         String[] parts = challenge.getQuestion().split(" ");
         int left = Integer.parseInt(parts[0]);
         int right = Integer.parseInt(parts[2]);
@@ -52,10 +52,10 @@ public class CaptchaServiceTests {
 
     @Test
     void verifyChallenge_consumes_on_match() {
-        String key = "captcha:challenge:CAPTCHA_LOGIN_PASSWORD:t1:u1:cid";
+        String key = "captcha:challenge:cid";
         Mockito.when(valueOps.get(key)).thenReturn("4");
 
-        boolean result = captchaService.verifyChallenge(AuthAction.CAPTCHA_LOGIN_PASSWORD, "t1", "u1", "cid", "4");
+        boolean result = captchaService.verifyChallenge("cid", "4");
 
         assertThat(result).isTrue();
         Mockito.verify(redisTemplate).delete(key);
