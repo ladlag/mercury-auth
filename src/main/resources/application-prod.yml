@@ -2,19 +2,19 @@ spring:
   application:
     name: mercury-auth
   datasource:
-    url: jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC
-    username: root
-    password: root
+    url: ${DB_URL:jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
-    host: localhost
-    port: 6379
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
     database: 0
   mail:
-    host: smtp.example.com
-    port: 25
-    username: user
-    password: pass
+    host: ${MAIL_HOST:smtp.example.com}
+    port: ${MAIL_PORT:25}
+    username: ${MAIL_USERNAME:user}
+    password: ${MAIL_PASSWORD:pass}
     properties:
       mail:
         smtp:
@@ -28,7 +28,7 @@ mybatis-plus:
 
 security:
   jwt:
-    secret: "f136803ab9c241079ba0cc1b5d02ee77"
+    secret: ${JWT_SECRET}
     ttl-seconds: 7200
   code:
     ttl-minutes: 10
@@ -41,6 +41,9 @@ security:
     ttl-minutes: 5
 
 mail:
-  from: "no-reply@example.com"
+  from: ${MAIL_FROM:no-reply@example.com}
 
-# Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml
+# SECURITY NOTE: Never commit secrets to version control
+# Set JWT_SECRET, DB_PASSWORD, MAIL_PASSWORD, etc. via environment variables
+# For production deployment, use secrets management (e.g., Kubernetes Secrets, AWS Secrets Manager)
+

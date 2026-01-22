@@ -31,13 +31,9 @@ public class VerificationService {
         redisTemplate.opsForValue().set(key, code, ttl);
     }
 
-    public boolean verify(String key, String code) {
-        String val = redisTemplate.opsForValue().get(key);
-        return val != null && val.equals(code);
-    }
-
     public boolean verifyAndConsume(String key, String code) {
-        if (verify(key, code)) {
+        String val = redisTemplate.opsForValue().get(key);
+        if (val != null && val.equals(code)) {
             redisTemplate.delete(key);
             return true;
         }
