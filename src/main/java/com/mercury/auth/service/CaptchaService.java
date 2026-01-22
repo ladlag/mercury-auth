@@ -48,7 +48,7 @@ public class CaptchaService {
         String answer = String.valueOf(evaluated);
         String captchaId = UUID.randomUUID().toString();
         Duration ttl = Duration.ofMinutes(ttlMinutes);
-        redisTemplate.opsForValue().set(buildChallengeKey(action, tenantId, identifier, captchaId), answer, ttl);
+        redisTemplate.opsForValue().set(buildChallengeKey(captchaId), answer, ttl);
         return new CaptchaChallenge(captchaId, question, renderImage(question), ttl.getSeconds());
     }
 
@@ -56,7 +56,7 @@ public class CaptchaService {
         if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(answer)) {
             return false;
         }
-        String key = buildChallengeKey(action, tenantId, identifier, captchaId);
+        String key = buildChallengeKey(captchaId);
         String storedAnswer = redisTemplate.opsForValue().get(key);
         if (storedAnswer == null) {
             return false;
@@ -106,9 +106,8 @@ public class CaptchaService {
         return KeyUtils.buildCaptchaKey(action, tenantId, identifier);
     }
 
-    private String buildChallengeKey(AuthAction action, String tenantId, String identifier, String captchaId) {
-        String safeIdentifier = identifier == null ? "unknown" : identifier;
-        return "captcha:challenge:" + action.name() + ":" + tenantId + ":" + safeIdentifier + ":" + captchaId;
+    private String buildChallengeKey(String captchaId) {
+        return "captcha:challenge:" + captchaId;
     }
 
     private String normalizeAnswer(String answer) {
