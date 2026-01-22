@@ -1,6 +1,5 @@
 package com.mercury.auth.dto;
 
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.Email;
@@ -14,7 +13,6 @@ public class AuthRequests {
         LOGIN
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordRegister extends BaseTenantRequest {
         @NotBlank
@@ -67,7 +65,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordLogin extends BaseTenantRequest {
         @NotBlank
@@ -110,7 +107,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class SendEmailCode extends BaseTenantRequest {
         @NotBlank
@@ -135,7 +131,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailRegister extends BaseTenantRequest {
         @NotBlank
@@ -191,7 +186,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailLogin extends BaseTenantRequest {
         @NotBlank
@@ -235,7 +229,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class SendPhoneCode extends BaseTenantRequest {
         @NotBlank
@@ -259,7 +252,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class UserStatusUpdate extends BaseTenantRequest {
         @NotBlank
@@ -283,7 +275,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class ChangePassword extends BaseTenantRequest {
         @NotBlank
@@ -328,7 +319,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneLogin extends BaseTenantRequest {
         @NotBlank
@@ -371,7 +361,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneRegister extends BaseTenantRequest {
         @NotBlank
@@ -406,7 +395,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class CaptchaRequest extends BaseTenantRequest {
         @NotBlank
@@ -431,7 +419,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class WeChatLogin extends BaseTenantRequest {
         @NotBlank
@@ -455,7 +442,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenVerify extends BaseTenantRequest {
         @NotBlank
@@ -470,7 +456,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenLogout extends BaseTenantRequest {
         @NotBlank
@@ -485,7 +470,6 @@ public class AuthRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenRefresh extends BaseTenantRequest {
         @NotBlank

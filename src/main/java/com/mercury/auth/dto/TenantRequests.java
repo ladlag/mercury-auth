@@ -1,13 +1,11 @@
 package com.mercury.auth.dto;
 
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.NotBlank;
 
 public class TenantRequests {
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class Create extends BaseTenantRequest {
         @NotBlank
@@ -22,7 +20,6 @@ public class TenantRequests {
         }
     }
 
-    @Data
     @EqualsAndHashCode(callSuper = true)
     public static class UpdateStatus extends BaseTenantRequest {
         private boolean enabled;

@@ -2,11 +2,10 @@ package com.mercury.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiError {
     private String code;
@@ -24,8 +23,32 @@ public class ApiError {
         this.errors = errors;
     }
 
-    @Data
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public List<FieldError> getErrors() {
+        return errors;
+    }
+
+    public void setErrors(List<FieldError> errors) {
+        this.errors = errors;
+    }
+
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class FieldError {
         private String field;
         private String message;
