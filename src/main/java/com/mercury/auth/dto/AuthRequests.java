@@ -17,12 +17,12 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordRegister extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
-        @NotBlank
+        @NotBlank(message = "Password is required")
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String password;
-        @NotBlank
+        @NotBlank(message = "Confirm password is required")
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String confirmPassword;
         @Email(message = "Invalid email format")
@@ -33,9 +33,9 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordLogin extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
-        @NotBlank
+        @NotBlank(message = "Password is required")
         private String password;
         private String captchaId;
         private String captcha;
@@ -44,8 +44,8 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class SendEmailCode extends BaseTenantRequest {
-        @NotBlank
-        @Email
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
         private String email;
         private VerificationPurpose purpose;
     }
@@ -53,17 +53,17 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailRegister extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Email is required")
         @Email(message = "Invalid email format")
         private String email;
-        @NotBlank
+        @NotBlank(message = "Verification code is required")
         private String code;
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
-        @NotBlank
+        @NotBlank(message = "Password is required")
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String password;
-        @NotBlank
+        @NotBlank(message = "Confirm password is required")
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String confirmPassword;
     }
@@ -71,10 +71,10 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailLogin extends BaseTenantRequest {
-        @NotBlank
-        @Email
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
         private String email;
-        @NotBlank
+        @NotBlank(message = "Verification code is required")
         private String code;
         private String captchaId;
         private String captcha;
@@ -91,7 +91,7 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class UserStatusUpdate extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
         private boolean enabled;
     }
@@ -99,14 +99,14 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class ChangePassword extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
-        @NotBlank
+        @NotBlank(message = "Old password is required")
         private String oldPassword;
-        @NotBlank
+        @NotBlank(message = "New password is required")
         @Size(min = 8, message = "New password must be at least 8 characters")
         private String newPassword;
-        @NotBlank
+        @NotBlank(message = "Confirm password is required")
         @Size(min = 8, message = "Confirm password must be at least 8 characters")
         private String confirmPassword;
     }
@@ -116,7 +116,7 @@ public class AuthRequests {
     public static class PhoneLogin extends BaseTenantRequest {
         @NotBlank(message = "Phone number is required")
         private String phone;
-        @NotBlank
+        @NotBlank(message = "Verification code is required")
         private String code;
         private String captchaId;
         private String captcha;
@@ -127,25 +127,25 @@ public class AuthRequests {
     public static class PhoneRegister extends BaseTenantRequest {
         @NotBlank(message = "Phone number is required")
         private String phone;
-        @NotBlank
+        @NotBlank(message = "Verification code is required")
         private String code;
-        @NotBlank
+        @NotBlank(message = "Username is required")
         private String username;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class CaptchaRequest extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Action is required")
         private String action;
-        @NotBlank
+        @NotBlank(message = "Identifier is required")
         private String identifier;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class WeChatLogin extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "OpenId is required")
         private String openId;
         private String username;
     }
@@ -153,21 +153,21 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenVerify extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Token is required")
         private String token;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenLogout extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Token is required")
         private String token;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenRefresh extends BaseTenantRequest {
-        @NotBlank
+        @NotBlank(message = "Token is required")
         private String token;
     }
 }

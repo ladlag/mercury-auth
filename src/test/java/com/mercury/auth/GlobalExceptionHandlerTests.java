@@ -33,8 +33,8 @@ public class GlobalExceptionHandlerTests {
     void handleValidation_returns_structured_errors() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
         BindException ex = new BindException(new Object(), "passwordRegister");
-        ex.addError(new FieldError("passwordRegister", "password", "too short"));
-        ex.addError(new FieldError("passwordRegister", "confirmPassword", "too short"));
+        ex.addError(new FieldError("passwordRegister", "password", "Password must be at least 8 characters"));
+        ex.addError(new FieldError("passwordRegister", "confirmPassword", "Confirm password is required"));
 
         ResponseEntity<ApiError> response = handler.handleBindValidation(ex);
 
@@ -46,7 +46,7 @@ public class GlobalExceptionHandlerTests {
         assertThat(body.getErrors())
                 .extracting("field", "message")
                 .containsExactlyInAnyOrder(
-                        tuple("password", "invalid"),
-                        tuple("confirmPassword", "invalid"));
+                        tuple("password", "Password must be at least 8 characters"),
+                        tuple("confirmPassword", "Confirm password is required"));
     }
 }
