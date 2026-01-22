@@ -9,9 +9,9 @@ public class TenantRequests {
 
     @Data
     public static class Create {
-        @NotBlank
+        @NotBlank(message = "Tenant ID is required")
         private String tenantId;
-        @NotBlank
+        @NotBlank(message = "Tenant name is required")
         private String name;
     }
 

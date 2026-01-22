@@ -51,7 +51,7 @@ public class TokenService {
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
         safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
-        return new TokenVerifyResponse(tokenTenant, userId, user.getUsername());
+        return new TokenVerifyResponse(tokenTenant, userId, user.getUsername(), user.getEmail(), user.getPhone());
     }
 
     public void blacklistToken(String tenantId, String token) {

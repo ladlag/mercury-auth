@@ -44,11 +44,13 @@ public class GlobalExceptionHandler {
                 .map(error -> {
                     if (error instanceof FieldError) {
                         FieldError fieldError = (FieldError) error;
-                        logger.warn("validation field={} message={}", fieldError.getField(), fieldError.getDefaultMessage());
-                        return new ApiError.FieldError(fieldError.getField(), INVALID_FIELD_MESSAGE);
+                        String message = fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : INVALID_FIELD_MESSAGE;
+                        logger.warn("validation field={} message={}", fieldError.getField(), message);
+                        return new ApiError.FieldError(fieldError.getField(), message);
                     }
-                    logger.warn("validation error={}", error.getDefaultMessage());
-                    return new ApiError.FieldError("general", INVALID_FIELD_MESSAGE);
+                    String message = error.getDefaultMessage() != null ? error.getDefaultMessage() : INVALID_FIELD_MESSAGE;
+                    logger.warn("validation error={}", message);
+                    return new ApiError.FieldError("general", message);
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest()
