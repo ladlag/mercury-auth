@@ -25,7 +25,7 @@ public class SecurityConfig {
         // For stateless JWT authentication, CSRF protection is not required
         http.csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/api/auth/**", "/api/tenants/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                .antMatchers("/api/auth/**", "/api/tenants/**", "/v3/api-docs/**", "/swagger-ui/**", "/actuator/**").permitAll()
                 .anyRequest().authenticated();
         return http.build();
     }
