@@ -8,19 +8,10 @@ import javax.validation.constraints.NotBlank;
 public class TenantRequests {
 
     @Data
-    public static class Create {
-        @NotBlank
-        private String tenantId;
+    @EqualsAndHashCode(callSuper = true)
+    public static class Create extends BaseTenantRequest {
         @NotBlank
         private String name;
-
-        public String getTenantId() {
-            return tenantId;
-        }
-
-        public void setTenantId(String tenantId) {
-            this.tenantId = tenantId;
-        }
 
         public String getName() {
             return name;
