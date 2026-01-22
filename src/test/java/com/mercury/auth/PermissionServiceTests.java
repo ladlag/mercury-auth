@@ -150,9 +150,9 @@ public class PermissionServiceTests {
         ugp2.setGroupId(20L);
         ugp2.setPermissionId(2L);
 
+        // Now returns both permissions in single query (optimized)
         Mockito.when(userGroupPermissionMapper.selectList(any()))
-                .thenReturn(Arrays.asList(ugp1))
-                .thenReturn(Arrays.asList(ugp2));
+                .thenReturn(Arrays.asList(ugp1, ugp2));
 
         Permission perm1 = new Permission();
         perm1.setId(1L);
@@ -163,8 +163,6 @@ public class PermissionServiceTests {
         perm2.setCode("EDIT_PROFILE");
 
         Mockito.when(permissionMapper.selectBatchIds(any()))
-                .thenReturn(Arrays.asList(perm1))
-                .thenReturn(Arrays.asList(perm2))
                 .thenReturn(Arrays.asList(perm1, perm2));
 
         List<Permission> permissions = permissionService.getUserPermissions(100L, "t1");

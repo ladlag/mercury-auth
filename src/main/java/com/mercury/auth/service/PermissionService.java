@@ -153,18 +153,31 @@ public class PermissionService {
             return List.of();
         }
         
-        Set<Long> permissionIds = new HashSet<>();
+        // Filter enabled groups for the tenant and collect group IDs
+        List<Long> enabledGroupIds = new ArrayList<>();
         for (UserGroup group : userGroups) {
             if (group.getEnabled() && group.getTenantId().equals(tenantId)) {
-                List<Permission> groupPerms = getGroupPermissions(group.getId());
-                for (Permission perm : groupPerms) {
-                    permissionIds.add(perm.getId());
-                }
+                enabledGroupIds.add(group.getId());
             }
         }
         
-        if (permissionIds.isEmpty()) {
+        if (enabledGroupIds.isEmpty()) {
             return List.of();
+        }
+        
+        // Batch fetch all permissions for all groups to avoid N+1 queries
+        QueryWrapper<UserGroupPermission> wrapper = new QueryWrapper<>();
+        wrapper.in("group_id", enabledGroupIds);
+        List<UserGroupPermission> ugps = userGroupPermissionMapper.selectList(wrapper);
+        
+        if (ugps.isEmpty()) {
+            return List.of();
+        }
+        
+        // Collect unique permission IDs
+        Set<Long> permissionIds = new HashSet<>();
+        for (UserGroupPermission ugp : ugps) {
+            permissionIds.add(ugp.getPermissionId());
         }
         
         return new ArrayList<>(permissionMapper.selectBatchIds(permissionIds));
