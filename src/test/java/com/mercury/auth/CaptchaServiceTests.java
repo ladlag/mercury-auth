@@ -55,7 +55,7 @@ public class CaptchaServiceTests {
         String key = "captcha:challenge:cid";
         Mockito.when(valueOps.get(key)).thenReturn("4");
 
-        boolean result = captchaService.verifyChallenge(AuthAction.CAPTCHA_LOGIN_PASSWORD, "t1", "u1", "cid", "4");
+        boolean result = captchaService.verifyChallenge("cid", "4");
 
         assertThat(result).isTrue();
         Mockito.verify(redisTemplate).delete(key);
