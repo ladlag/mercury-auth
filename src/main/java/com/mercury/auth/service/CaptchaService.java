@@ -27,7 +27,11 @@ public class CaptchaService {
     private static final String CHALLENGE_OPERATOR = "+";
     private static final char CHALLENGE_DELIMITER = ' ';
     private static final int INVALID_ANSWER = -1;
+    
     private final StringRedisTemplate redisTemplate;
+    private final RateLimitService rateLimitService;
+    private final SecureRandom random = new SecureRandom();
+    
     @Value("${security.captcha.threshold:3}")
     private long threshold;
 
@@ -37,17 +41,22 @@ public class CaptchaService {
     @Value("${security.captcha.length:4}")
     private int questionNumberBound;
 
-    private final SecureRandom random = new SecureRandom();
-
     /**
-     * Creates a new captcha challenge.
+     * Creates a new captcha challenge with rate limiting.
+     * Rate limiting is applied per user (identified by tenantId + identifier combination)
+     * to prevent abuse of captcha generation.
      * 
-     * @param action The auth action (used for rate limiting tracking only)
-     * @param tenantId The tenant identifier (used for rate limiting tracking only)
-     * @param identifier The user identifier (used for rate limiting tracking only)
+     * @param action The auth action (used for building rate limit key)
+     * @param tenantId The tenant identifier (used for building rate limit key)
+     * @param identifier The user identifier (username, email, phone, etc.) used for building rate limit key
      * @return A new CaptchaChallenge with question, image, and expiration
+     * @throws ApiException if rate limit is exceeded
      */
     public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
+        // Apply rate limiting for captcha generation to prevent abuse
+        String rateLimitKey = KeyUtils.buildRateLimitKey(action, tenantId, identifier);
+        rateLimitService.check(rateLimitKey);
+        
         String question = generateQuestion();
         int evaluated = evaluateQuestion(question);
         if (evaluated == INVALID_ANSWER) {

@@ -34,6 +34,16 @@ security:
     ttl-minutes: 10
     phone-ttl-minutes: 5
   rate-limit:
+    # Rate limiting configuration for various auth operations
+    # max-attempts: Maximum number of requests allowed within the window
+    # window-minutes: Time window in minutes for rate limiting
+    # These limits apply to:
+    # - Sending email verification codes (RATE_LIMIT_SEND_EMAIL_CODE)
+    # - Sending phone verification codes (RATE_LIMIT_SEND_PHONE_CODE)
+    # - Password login attempts (RATE_LIMIT_LOGIN_PASSWORD)
+    # - Email login attempts (RATE_LIMIT_LOGIN_EMAIL)
+    # - Phone login attempts (RATE_LIMIT_LOGIN_PHONE)
+    # - Captcha generation requests (per action type)
     max-attempts: 10
     window-minutes: 1
   captcha:

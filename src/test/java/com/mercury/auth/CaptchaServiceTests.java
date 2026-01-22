@@ -2,7 +2,9 @@ package com.mercury.auth;
 
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.CaptchaChallenge;
+import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.service.CaptchaService;
+import com.mercury.auth.service.RateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -13,20 +15,24 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 
+import static com.mercury.auth.exception.ErrorCodes.RATE_LIMITED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class CaptchaServiceTests {
 
     private StringRedisTemplate redisTemplate;
     private ValueOperations<String, String> valueOps;
+    private RateLimitService rateLimitService;
     private CaptchaService captchaService;
 
     @BeforeEach
     void setup() {
         redisTemplate = Mockito.mock(StringRedisTemplate.class);
         valueOps = Mockito.mock(ValueOperations.class);
+        rateLimitService = Mockito.mock(RateLimitService.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        captchaService = new CaptchaService(redisTemplate);
+        captchaService = new CaptchaService(redisTemplate, rateLimitService);
         ReflectionTestUtils.setField(captchaService, "ttlMinutes", 5L);
     }
 
@@ -48,6 +54,19 @@ public class CaptchaServiceTests {
         assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(5));
         assertThat(challenge.getExpiresInSeconds()).isEqualTo(300);
         assertThat(challenge.getCaptchaImage()).isNotEmpty();
+        
+        // Verify rate limiting was checked
+        Mockito.verify(rateLimitService).check(Mockito.anyString());
+    }
+
+    @Test
+    void createChallenge_enforces_rate_limit() {
+        Mockito.doThrow(new ApiException(RATE_LIMITED, "too many requests"))
+                .when(rateLimitService).check(Mockito.anyString());
+
+        assertThatThrownBy(() -> captchaService.createChallenge(AuthAction.CAPTCHA_LOGIN_PASSWORD, "t1", "u1"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("too many requests");
     }
 
     @Test
