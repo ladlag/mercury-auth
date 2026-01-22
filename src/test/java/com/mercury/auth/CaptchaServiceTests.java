@@ -15,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 
+import static com.mercury.auth.exception.ErrorCodes.RATE_LIMITED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -60,7 +61,7 @@ public class CaptchaServiceTests {
 
     @Test
     void createChallenge_enforces_rate_limit() {
-        Mockito.doThrow(new ApiException(com.mercury.auth.exception.ErrorCodes.RATE_LIMITED, "too many requests"))
+        Mockito.doThrow(new ApiException(RATE_LIMITED, "too many requests"))
                 .when(rateLimitService).check(Mockito.anyString());
 
         assertThatThrownBy(() -> captchaService.createChallenge(AuthAction.CAPTCHA_LOGIN_PASSWORD, "t1", "u1"))

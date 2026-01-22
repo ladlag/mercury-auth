@@ -27,8 +27,11 @@ public class CaptchaService {
     private static final String CHALLENGE_OPERATOR = "+";
     private static final char CHALLENGE_DELIMITER = ' ';
     private static final int INVALID_ANSWER = -1;
+    
     private final StringRedisTemplate redisTemplate;
     private final RateLimitService rateLimitService;
+    private final SecureRandom random = new SecureRandom();
+    
     @Value("${security.captcha.threshold:3}")
     private long threshold;
 
@@ -37,8 +40,6 @@ public class CaptchaService {
 
     @Value("${security.captcha.length:4}")
     private int questionNumberBound;
-
-    private final SecureRandom random = new SecureRandom();
 
     /**
      * Creates a new captcha challenge with rate limiting.
