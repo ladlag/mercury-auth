@@ -21,9 +21,6 @@ public class AuthRequests {
         private String username;
         @NotBlank
         @Size(min = 8, message = "Password must be at least 8 characters")
-        // Strong password: at least one uppercase, one lowercase, one digit, one special character
-        // @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$", 
-        //          message = "Password must contain uppercase, lowercase, digit and special character")
         private String password;
         @NotBlank
         @Size(min = 8, message = "Password must be at least 8 characters")
@@ -87,8 +84,6 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class SendPhoneCode extends BaseTenantRequest {
         @NotBlank(message = "Phone number is required")
-        // International E.164 format: +[country code][number]
-        // @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
         private String phone;
         private VerificationPurpose purpose;
     }
