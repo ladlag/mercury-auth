@@ -12,6 +12,11 @@ Spring Boot multi-tenant auth service with JWT, email/phone verification, token 
 - User management (status updates, password change)
 - Rate limiting and captcha gating after repeated failures
 
+## Documentation
+- [Rate Limiting Guide](RATE_LIMITING.md) - Detailed guide on rate limiting configuration and usage
+- [Identifier Field Guide](IDENTIFIER_GUIDE.md) - Explanation of the identifier field usage in authentication (中英文)
+- [Requirements](REQUIREMENTS.md) - Full system requirements (中文)
+
 ## Configuration
 Key properties (see `application.yml`, with overrides in `application-dev.yml`, `application-test.yml`, `application-prod.yml`):
 - `security.jwt.secret`, `security.jwt.ttl-seconds`
