@@ -8,12 +8,21 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Security configuration for the Mercury Auth API service.
+ * This is a stateless REST API using JWT tokens for authentication.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // CSRF protection is disabled because:
+        // 1. This is a stateless REST API using JWT tokens (not session cookies)
+        // 2. All authentication is done via Bearer tokens in Authorization header
+        // 3. The API is not rendered in a browser with forms
+        // For stateless JWT authentication, CSRF protection is not required
         http.csrf().disable()
                 .authorizeRequests()
                 .antMatchers("/api/auth/**", "/api/tenants/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()

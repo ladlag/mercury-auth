@@ -275,8 +275,9 @@ public class AuthService {
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
             authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
+        } catch (Exception ex) {
+            // Log failure to record audit log, but don't fail the operation
+            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
         }
     }
 }

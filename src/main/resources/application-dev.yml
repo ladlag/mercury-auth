@@ -28,7 +28,9 @@ mybatis-plus:
 
 security:
   jwt:
-    secret: "f136803ab9c241079ba0cc1b5d02ee77"
+    # Development secret - replace with strong secret in production
+    # Use JWT_SECRET environment variable to override
+    secret: ${JWT_SECRET:dev-secret-change-in-production-f136803ab9c241079ba0cc1b5d02ee77}
     ttl-seconds: 7200
   code:
     ttl-minutes: 10
@@ -43,4 +45,6 @@ security:
 mail:
   from: "no-reply@example.com"
 
-# Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml
+# NOTE: This is development configuration
+# For production, use environment variables and secrets management
+

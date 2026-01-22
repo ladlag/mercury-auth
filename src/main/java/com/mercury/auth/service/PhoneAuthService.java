@@ -28,12 +28,14 @@ public class PhoneAuthService {
     private final UserMapper userMapper;
     private final JwtService jwtService;
     private final RateLimitService rateLimitService;
+    private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
     @Value("${security.code.phone-ttl-minutes:5}")
     private long phoneTtlMinutes;
 
     public String sendPhoneCode(String tenantId, String phone, AuthRequests.VerificationPurpose purpose) {
+        tenantService.requireEnabled(tenantId);
         rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_PHONE_CODE, tenantId, phone));
         AuthRequests.VerificationPurpose resolvedPurpose = purpose;
         if (resolvedPurpose == null) {
@@ -56,6 +58,7 @@ public class PhoneAuthService {
     }
 
     public void registerPhone(String tenantId, String phone, String code, String username) {
+        tenantService.requireEnabled(tenantId);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
             logger.warn("registerPhone invalid code tenant={} phone={}", tenantId, phone);
             recordFailure(tenantId, null, AuthAction.REGISTER_PHONE);
@@ -85,6 +88,7 @@ public class PhoneAuthService {
     }
 
     public AuthResponse loginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
+        tenantService.requireEnabled(tenantId);
         rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PHONE, tenantId, phone));
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
@@ -145,8 +149,9 @@ public class PhoneAuthService {
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
             authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
+        } catch (Exception ex) {
+            // Log failure to record audit log, but don't fail the operation
+            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
         }
     }
 }
