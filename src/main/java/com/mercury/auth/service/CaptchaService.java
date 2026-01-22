@@ -2,6 +2,7 @@ package com.mercury.auth.service;
 
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.CaptchaChallenge;
+import com.mercury.auth.util.KeyUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -17,7 +18,6 @@ import java.io.ByteArrayOutputStream;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -38,21 +38,6 @@ public class CaptchaService {
     private int questionNumberBound;
 
     private final SecureRandom random = new SecureRandom();
-
-    public void recordFailure(AuthAction action, String tenantId, String identifier, String ipAddress) {
-        recordFailure(buildRiskKey(action, tenantId, identifier, ipAddress));
-        recordFailure(buildRiskKey(action, tenantId, ipAddress));
-    }
-
-    public void reset(AuthAction action, String tenantId, String identifier, String ipAddress) {
-        redisTemplate.delete(buildRiskKey(action, tenantId, identifier, ipAddress));
-        redisTemplate.delete(buildRiskKey(action, tenantId, ipAddress));
-    }
-
-    public boolean isRequired(AuthAction action, String tenantId, String identifier, String ipAddress) {
-        return isRequired(buildRiskKey(action, tenantId, identifier, ipAddress))
-                || isRequired(buildRiskKey(action, tenantId, ipAddress));
-    }
 
     public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
         String question = generateQuestion();
@@ -118,19 +103,7 @@ public class CaptchaService {
     }
 
     public String buildKey(AuthAction action, String tenantId, String identifier) {
-        String safeIdentifier = identifier == null ? "unknown" : identifier;
-        return "captcha:fail:" + action.name() + ":" + tenantId + ":" + safeIdentifier;
-    }
-
-    private String buildRiskKey(AuthAction action, String tenantId, String identifier, String ipAddress) {
-        String safeIdentifier = identifier == null ? "unknown" : identifier;
-        String safeIp = normalizeIp(ipAddress);
-        return "captcha:fail:" + action.name() + ":" + tenantId + ":" + safeIdentifier + ":" + safeIp;
-    }
-
-    private String buildRiskKey(AuthAction action, String tenantId, String ipAddress) {
-        String safeIp = normalizeIp(ipAddress);
-        return "captcha:fail:" + action.name() + ":" + tenantId + ":ip:" + safeIp;
+        return KeyUtils.buildCaptchaKey(action, tenantId, identifier);
     }
 
     private String buildChallengeKey(AuthAction action, String tenantId, String identifier, String captchaId) {
@@ -140,13 +113,6 @@ public class CaptchaService {
 
     private String normalizeAnswer(String answer) {
         return answer.trim();
-    }
-
-    private String normalizeIp(String ipAddress) {
-        if (!StringUtils.hasText(ipAddress)) {
-            return "unknown";
-        }
-        return ipAddress.trim().toLowerCase(Locale.ROOT);
     }
 
     private String generateQuestion() {
