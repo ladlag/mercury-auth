@@ -36,6 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
 
     private final JwtService jwtService;
+    private final TokenService tokenService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -59,6 +60,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String token = authHeader.substring(BEARER_PREFIX.length());
+            
+            // CRITICAL: Check if token is blacklisted (logout/refresh invalidation)
+            if (tokenService.isTokenBlacklisted(token)) {
+                logger.warn("Blacklisted token attempted");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"code\":\"TOKEN_BLACKLISTED\",\"message\":\"token has been revoked\"}");
+                return;
+            }
             
             // Parse and validate token
             Claims claims = jwtService.parse(token);

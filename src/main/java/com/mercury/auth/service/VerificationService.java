@@ -14,6 +14,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
 
@@ -118,7 +119,7 @@ public class VerificationService {
         }
         
         String val = redisTemplate.opsForValue().get(key);
-        if (val != null && val.equals(code)) {
+        if (val != null && MessageDigest.isEqual(val.getBytes(), code.getBytes())) {
             // Success: delete code, cooldown, and attempts
             redisTemplate.delete(key);
             redisTemplate.delete(key + ":cooldown");

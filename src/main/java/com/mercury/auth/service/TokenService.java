@@ -185,6 +185,13 @@ public class TokenService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
     }
     
+    /**
+     * Public method to check if a token is blacklisted (for JWT filter)
+     */
+    public boolean isTokenBlacklisted(String token) {
+        return isBlacklisted(token);
+    }
+    
     private boolean isJtiBlacklisted(String jti) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildJtiBlacklistKey(jti)));
     }

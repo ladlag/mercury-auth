@@ -37,6 +37,8 @@ import java.lang.reflect.Type;
 public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
 
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
+    // Pattern for valid tenant IDs: alphanumeric, underscore, hyphen, 1-50 chars
+    private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9_-]{1,50}$";
     
     private final HttpServletRequest request;
 
@@ -68,6 +70,12 @@ public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
             if (!StringUtils.hasText(headerTenantId)) {
                 throw new ApiException(ErrorCodes.MISSING_TENANT_HEADER, 
                     "X-Tenant-Id header is required for all requests");
+            }
+            
+            // Validate tenant ID format to prevent injection attacks
+            if (!headerTenantId.matches(TENANT_ID_PATTERN)) {
+                throw new ApiException(ErrorCodes.VALIDATION_FAILED, 
+                    "X-Tenant-Id header contains invalid characters");
             }
             
             // Inject tenantId from header (overwrites any value from body)

@@ -6,18 +6,28 @@ import com.mercury.auth.util.IpUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
 public class RateLimitService {
 
     private final StringRedisTemplate redisTemplate;
+    
+    // Lua script for atomic increment with expiration
+    private static final String RATE_LIMIT_SCRIPT = 
+        "local current = redis.call('incr', KEYS[1]) " +
+        "if current == 1 then " +
+        "    redis.call('expire', KEYS[1], ARGV[1]) " +
+        "end " +
+        "return current";
 
     @Value("${security.rate-limit.max-attempts:10}")
     private long maxAttempts;
@@ -33,12 +43,14 @@ public class RateLimitService {
 
     /**
      * Check rate limit for a specific key (tenant + identifier based)
+     * Uses Lua script for atomic increment + expiration to prevent race conditions
      */
     public void check(String key) {
-        Long count = redisTemplate.opsForValue().increment(key);
-        if (count != null && count == 1) {
-            redisTemplate.expire(key, Duration.ofMinutes(windowMinutes));
-        }
+        Long count = redisTemplate.execute(
+            RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+            Collections.singletonList(key),
+            String.valueOf(windowMinutes * 60) // Convert to seconds
+        );
         if (count != null && count > maxAttempts) {
             throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests");
         }
@@ -56,10 +68,11 @@ public class RateLimitService {
                 String clientIp = IpUtils.getClientIp(request);
                 String ipKey = "rate:ip:" + action + ":" + clientIp;
                 
-                Long count = redisTemplate.opsForValue().increment(ipKey);
-                if (count != null && count == 1) {
-                    redisTemplate.expire(ipKey, Duration.ofMinutes(ipWindowMinutes));
-                }
+                Long count = redisTemplate.execute(
+                    RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                    Collections.singletonList(ipKey),
+                    String.valueOf(ipWindowMinutes * 60) // Convert to seconds
+                );
                 if (count != null && count > ipMaxAttempts) {
                     throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests from your IP");
                 }
