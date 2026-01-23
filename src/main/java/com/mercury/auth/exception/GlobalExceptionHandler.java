@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
         Locale locale = LocaleContextHolder.getLocale();
         String localizedMessage = messageSource.getMessage(ex.getCode().getMessageKey(), null, locale);
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), localizedMessage));
+        return ResponseEntity.ok().body(new ApiError(ex.getCodeValue(), localizedMessage));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toList());
         Locale locale = LocaleContextHolder.getLocale();
         String localizedMessage = messageSource.getMessage(ErrorCodes.VALIDATION_FAILED.getMessageKey(), null, locale);
-        return ResponseEntity.badRequest()
+        return ResponseEntity.ok()
                 .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), localizedMessage, errors));
     }
 
@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
         logger.error("internal error", ex);
         Locale locale = LocaleContextHolder.getLocale();
         String localizedMessage = messageSource.getMessage(ErrorCodes.INTERNAL_ERROR.getMessageKey(), null, locale);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity.ok()
                 .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), localizedMessage));
     }
 }

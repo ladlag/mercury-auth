@@ -139,4 +139,22 @@ public class AuthController {
         authService.changePassword(req);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
+        authService.forgotPassword(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
+        authService.resetPassword(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
+        authService.verifyEmailAfterRegister(req);
+        return ResponseEntity.ok().build();
+    }
 }

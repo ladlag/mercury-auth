@@ -35,7 +35,7 @@ public class GlobalExceptionHandlerTests {
 
         ResponseEntity<ApiError> response = handler.handleApi(ex);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.getCode()).isEqualTo(ErrorCodes.BAD_CREDENTIALS.getCode());
@@ -52,7 +52,7 @@ public class GlobalExceptionHandlerTests {
 
         ResponseEntity<ApiError> response = handler.handleBindValidation(ex);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
