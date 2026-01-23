@@ -23,7 +23,7 @@ public class ValidationMessagesTest {
 
     private LocalValidatorFactoryBean createValidator(Locale locale) {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:ValidationMessages");
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setDefaultLocale(locale);
         
@@ -31,6 +31,14 @@ public class ValidationMessagesTest {
         validator.setValidationMessageSource(messageSource);
         validator.afterPropertiesSet();
         return validator;
+    }
+
+    private GlobalExceptionHandler createHandler(Locale locale) {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setDefaultLocale(locale);
+        return new GlobalExceptionHandler(messageSource);
     }
 
     @Test
@@ -54,14 +62,14 @@ public class ValidationMessagesTest {
         assertThat(bindingResult.hasErrors()).isTrue();
 
         // Process through GlobalExceptionHandler
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
         // Verify response structure
         assertThat(response).isNotNull();
         assertThat(response.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
-        assertThat(response.getMessage()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getMessage());
+        assertThat(response.getMessage()).isEqualTo("Validation failed");
         assertThat(response.getErrors()).isNotEmpty();
 
         // Verify that error messages are NOT "invalid" but actual validation messages
@@ -124,7 +132,7 @@ public class ValidationMessagesTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -169,7 +177,7 @@ public class ValidationMessagesTest {
         assertThat(bindingResult.hasErrors()).isTrue();
 
         // Process through GlobalExceptionHandler
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -232,7 +240,7 @@ public class ValidationMessagesTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 

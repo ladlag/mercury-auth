@@ -31,6 +31,14 @@ public class PhoneValidationTest {
         return validator;
     }
 
+    private GlobalExceptionHandler createHandler(Locale locale) {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setDefaultLocale(locale);
+        return new GlobalExceptionHandler(messageSource);
+    }
+
     @Test
     void phoneRegister_invalidPhone_returnsChineseError() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
@@ -46,7 +54,7 @@ public class PhoneValidationTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -96,7 +104,7 @@ public class PhoneValidationTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
