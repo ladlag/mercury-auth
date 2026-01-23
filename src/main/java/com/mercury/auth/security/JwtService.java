@@ -14,6 +14,7 @@ import java.util.Date;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class JwtService {
@@ -41,8 +42,13 @@ public class JwtService {
         claims.put("tenantId", tenantId);
         claims.put("userId", userId);
         claims.put("username", username);
+        
+        // Generate unique JTI (JWT ID) for token tracking and blacklisting
+        String jti = UUID.randomUUID().toString();
+        
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(jti)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plusSeconds(ttlSeconds)))
                 .signWith(key, SignatureAlgorithm.HS256)

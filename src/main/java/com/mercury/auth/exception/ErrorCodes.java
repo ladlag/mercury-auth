@@ -24,6 +24,7 @@ public enum ErrorCodes {
     TENANT_DISABLED      ("400402", "error.400402", HttpStatus.FORBIDDEN),
     TENANT_MISMATCH      ("400403", "error.400403", HttpStatus.FORBIDDEN),
     DUPLICATE_TENANT     ("400404", "error.400404", HttpStatus.CONFLICT),
+    MISSING_TENANT_HEADER("400405", "error.400405", HttpStatus.BAD_REQUEST),
 
     // ========== 40 06 验证码/人机校验 ==========
     INVALID_CODE         ("400601", "error.400601", HttpStatus.BAD_REQUEST),

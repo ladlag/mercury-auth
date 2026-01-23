@@ -36,9 +36,15 @@ public class EmailAuthService {
 
     /**
      * Send verification code to email for registration or login
+     * Returns consistent response to prevent account enumeration
      */
     public User sendEmailCode(AuthRequests.SendEmailCode req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("SEND_EMAIL_CODE");
+        
+        // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()));
         
@@ -48,34 +54,42 @@ public class EmailAuthService {
         }
         
         User user = null;
+        boolean shouldSendCode = true;
         
-        if (AuthRequests.VerificationPurpose.REGISTER.equals(purpose)
-                && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            logger.warn("sendEmailCode duplicate email tenant={} email={}", 
-                req.getTenantId(), req.getEmail());
-            recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
-            throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
-        }
-        
-        if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)) {
+        if (AuthRequests.VerificationPurpose.REGISTER.equals(purpose)) {
+            // For registration, check if email already exists
+            if (existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
+                // Don't reveal that email exists - just don't send code
+                logger.warn("sendEmailCode duplicate email tenant={} email={}", 
+                    req.getTenantId(), req.getEmail());
+                recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
+                shouldSendCode = false;
+            }
+        } else if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)) {
+            // For login, check if user exists
             QueryWrapper<User> qw = new QueryWrapper<>();
             qw.eq("tenant_id", req.getTenantId()).eq("email", req.getEmail());
             user = userMapper.selectOne(qw);
             if (user == null) {
+                // Don't reveal that user doesn't exist - just don't send code
                 logger.warn("sendEmailCode user not found tenant={} email={}", 
                     req.getTenantId(), req.getEmail());
                 recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
-                throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+                shouldSendCode = false;
             }
         }
         
-        String code = verificationService.generateCode();
-        String key = "email:" + req.getTenantId() + ":" + req.getEmail();
-        verificationService.storeCode(key, code, verificationService.defaultTtl());
-        verificationService.sendEmailCode(req.getEmail(), code);
+        if (shouldSendCode) {
+            String code = verificationService.generateCode();
+            String key = "email:" + req.getTenantId() + ":" + req.getEmail();
+            verificationService.storeCode(key, code, verificationService.defaultTtl());
+            verificationService.sendEmailCode(req.getEmail(), code);
+            safeRecord(req.getTenantId(), user != null ? user.getId() : null, AuthAction.SEND_EMAIL_CODE, true);
+        }
         
-        safeRecord(req.getTenantId(), user != null ? user.getId() : null, AuthAction.SEND_EMAIL_CODE, true);
-        return user;
+        // Always return null to prevent account enumeration
+        // This ensures the response doesn't reveal whether the account exists or not
+        return null;
     }
 
     /**
@@ -127,6 +141,11 @@ public class EmailAuthService {
      */
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("LOGIN_EMAIL");
+        
+        // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), 

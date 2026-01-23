@@ -34,8 +34,17 @@ public class PhoneAuthService {
     @Value("${security.code.phone-ttl-minutes:5}")
     private long phoneTtlMinutes;
 
+    /**
+     * Send verification code to phone for registration or login
+     * Returns consistent response to prevent account enumeration
+     */
     public User sendPhoneCode(String tenantId, String phone, AuthRequests.VerificationPurpose purpose) {
         tenantService.requireEnabled(tenantId);
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("SEND_PHONE_CODE");
+        
+        // Apply per-phone rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_PHONE_CODE, tenantId, phone));
         AuthRequests.VerificationPurpose resolvedPurpose = purpose;
         if (resolvedPurpose == null) {
@@ -43,26 +52,38 @@ public class PhoneAuthService {
         }
         
         User user = null;
+        boolean shouldSendCode = true;
         
-        if (AuthRequests.VerificationPurpose.REGISTER.equals(resolvedPurpose) && existsByTenantAndPhone(tenantId, phone)) {
-            logger.warn("sendPhoneCode duplicate phone tenant={} phone={}", tenantId, phone);
-            recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
-            throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
-        }
-        if (AuthRequests.VerificationPurpose.LOGIN.equals(resolvedPurpose)) {
+        if (AuthRequests.VerificationPurpose.REGISTER.equals(resolvedPurpose)) {
+            // For registration, check if phone already exists
+            if (existsByTenantAndPhone(tenantId, phone)) {
+                // Don't reveal that phone exists - just don't send code
+                logger.warn("sendPhoneCode duplicate phone tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
+                shouldSendCode = false;
+            }
+        } else if (AuthRequests.VerificationPurpose.LOGIN.equals(resolvedPurpose)) {
+            // For login, check if user exists
             QueryWrapper<User> qw = new QueryWrapper<>();
             qw.eq("tenant_id", tenantId).eq("phone", phone);
             user = userMapper.selectOne(qw);
             if (user == null) {
+                // Don't reveal that user doesn't exist - just don't send code
                 logger.warn("sendPhoneCode user not found tenant={} phone={}", tenantId, phone);
                 recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
-                throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+                shouldSendCode = false;
             }
         }
-        String code = verificationService.generateCode();
-        verificationService.storeCode(buildPhoneKey(tenantId, phone), code, Duration.ofMinutes(phoneTtlMinutes));
-        safeRecord(tenantId, user != null ? user.getId() : null, AuthAction.SEND_PHONE_CODE, true);
-        return user;
+        
+        if (shouldSendCode) {
+            String code = verificationService.generateCode();
+            verificationService.storeCode(buildPhoneKey(tenantId, phone), code, Duration.ofMinutes(phoneTtlMinutes));
+            safeRecord(tenantId, user != null ? user.getId() : null, AuthAction.SEND_PHONE_CODE, true);
+        }
+        
+        // Always return null to prevent account enumeration
+        // This ensures the response doesn't reveal whether the account exists or not
+        return null;
     }
 
     public User registerPhone(String tenantId, String phone, String code, String username) {
@@ -98,6 +119,11 @@ public class PhoneAuthService {
 
     public AuthResponse loginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
         tenantService.requireEnabled(tenantId);
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("LOGIN_PHONE");
+        
+        // Apply per-phone rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PHONE, tenantId, phone));
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {

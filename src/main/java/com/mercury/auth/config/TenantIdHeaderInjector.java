@@ -1,6 +1,8 @@
 package com.mercury.auth.config;
 
 import com.mercury.auth.dto.BaseTenantRequest;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -12,16 +14,31 @@ import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Type;
 
 /**
- * Intercepts request body deserialization and injects tenantId from HTTP header
- * (X-Tenant-Id) into BaseTenantRequest instances if present.
+ * Intercepts request body deserialization and injects tenantId from X-Tenant-Id HTTP header
+ * into BaseTenantRequest instances.
  * 
- * Priority: Header value takes precedence over body/parameter value.
- * If header is not present, body/parameter value is used (maintains backward compatibility).
+ * Design Philosophy:
+ * - ALL endpoints (both public and protected) require X-Tenant-Id header for consistency
+ * - The header value is always injected into request body's tenantId field
+ * - Any tenantId in request body JSON is IGNORED and overwritten
+ * 
+ * Validation:
+ * - Public endpoints (login, register, etc.): Just validate header exists
+ * - Protected endpoints (logout, user management, etc.): JwtAuthenticationFilter validates header == JWT token's tenantId
+ * 
+ * Benefits:
+ * - Consistent API design - same header requirement for all endpoints
+ * - Simpler client code - always include X-Tenant-Id header
+ * - Better security - tenant context is explicit and validated
+ * 
+ * If X-Tenant-Id header is missing, an ApiException is thrown with MISSING_TENANT_HEADER error code.
  */
 @ControllerAdvice
 public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
 
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
+    // Pattern for valid tenant IDs: alphanumeric, underscore, hyphen, 1-50 chars
+    private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9_-]{1,50}$";
     
     private final HttpServletRequest request;
 
@@ -49,11 +66,20 @@ public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
             BaseTenantRequest tenantRequest = (BaseTenantRequest) body;
             String headerTenantId = request.getHeader(TENANT_ID_HEADER);
             
-            // If header contains tenantId, use it (takes precedence)
-            // Otherwise, keep the value from body (backward compatible)
-            if (StringUtils.hasText(headerTenantId)) {
-                tenantRequest.setTenantId(headerTenantId);
+            // X-Tenant-Id header is REQUIRED for ALL endpoints
+            if (!StringUtils.hasText(headerTenantId)) {
+                throw new ApiException(ErrorCodes.MISSING_TENANT_HEADER, 
+                    "X-Tenant-Id header is required for all requests");
             }
+            
+            // Validate tenant ID format to prevent injection attacks
+            if (!headerTenantId.matches(TENANT_ID_PATTERN)) {
+                throw new ApiException(ErrorCodes.VALIDATION_FAILED, 
+                    "X-Tenant-Id header contains invalid characters");
+            }
+            
+            // Inject tenantId from header (overwrites any value from body)
+            tenantRequest.setTenantId(headerTenantId);
         }
         
         return body;

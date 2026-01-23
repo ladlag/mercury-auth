@@ -76,7 +76,10 @@ public class PhoneAuthServiceTests {
     @Test
     void sendPhoneCode_register_duplicate_phone() {
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(1L);
-        assertThatThrownBy(() -> phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER))
-                .isInstanceOf(RuntimeException.class);
+        // New behavior: returns null instead of throwing exception to prevent account enumeration
+        User result = phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER);
+        assertThat(result).isNull();
+        // Verify that code is NOT stored when phone already exists
+        Mockito.verify(verificationService, Mockito.never()).storeCode(Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

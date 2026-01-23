@@ -84,19 +84,12 @@ public class ValidationMessagesTest {
                     .isNotBlank();
         }
 
-        // Verify specific expected messages
+        // Verify specific expected messages (tenantId no longer validated in body - comes from header)
         assertThat(response.getErrors())
                 .extracting(ApiError.FieldError::getField)
-                .contains("tenantId", "username", "password", "confirmPassword", "email");
+                .contains("username", "password", "confirmPassword", "email");
 
         // Check some specific messages
-        ApiError.FieldError tenantIdError = response.getErrors().stream()
-                .filter(e -> e.getField().equals("tenantId"))
-                .findFirst()
-                .orElse(null);
-        assertThat(tenantIdError).isNotNull();
-        assertThat(tenantIdError.getMessage()).isEqualTo("Tenant ID is required");
-
         ApiError.FieldError usernameError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("username"))
                 .findFirst()
@@ -201,14 +194,7 @@ public class ValidationMessagesTest {
                     .isNotBlank();
         }
 
-        // Check some specific Chinese messages
-        ApiError.FieldError tenantIdError = response.getErrors().stream()
-                .filter(e -> e.getField().equals("tenantId"))
-                .findFirst()
-                .orElse(null);
-        assertThat(tenantIdError).isNotNull();
-        assertThat(tenantIdError.getMessage()).isEqualTo("租户ID必填");
-
+        // Check some specific Chinese messages (tenantId no longer validated - comes from header)
         ApiError.FieldError usernameError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("username"))
                 .findFirst()
