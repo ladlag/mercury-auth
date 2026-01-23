@@ -100,7 +100,8 @@ public class ValidationMessagesTest {
                 .orElse(null);
         assertThat(passwordError).isNotNull();
         assertThat(passwordError.getMessage())
-                .matches("Password (is required|must be at least 8 characters)");
+                .as("Password validation message should be one of the two English messages")
+                .isIn("Password is required", "Password must be at least 8 characters");
 
         ApiError.FieldError emailError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("email"))
@@ -207,7 +208,8 @@ public class ValidationMessagesTest {
                 .orElse(null);
         assertThat(passwordError).isNotNull();
         assertThat(passwordError.getMessage())
-                .matches("密码(必填|至少需要8个字符)");
+                .as("Password validation message should be one of the two Chinese messages")
+                .isIn("密码必填", "密码至少需要8个字符");
 
         ApiError.FieldError emailError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("email"))
