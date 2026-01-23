@@ -24,6 +24,7 @@ import java.time.Duration;
 public class PhoneAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PhoneAuthService.class);
+    private static final int PHONE_SUFFIX_LENGTH = 8;
     private final VerificationService verificationService;
     private final SmsService smsService;
     private final UserMapper userMapper;
@@ -185,17 +186,18 @@ public class PhoneAuthService {
         
         if (user == null) {
             // User doesn't exist - register new user
-            // Generate username from phone number (use last 8 digits + random suffix)
-            String username = "user_" + phone.substring(Math.max(0, phone.length() - 8));
+            // Generate username from phone number (use last digits based on PHONE_SUFFIX_LENGTH)
+            String baseUsername = "user_" + phone.substring(Math.max(0, phone.length() - PHONE_SUFFIX_LENGTH));
             
             // Check if username already exists, add suffix if needed
-            int suffix = 1;
-            String finalUsername = username;
+            String finalUsername = baseUsername;
             QueryWrapper<User> usernameCheck = new QueryWrapper<>();
             usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
+            
+            int suffix = 1;
             while (userMapper.selectCount(usernameCheck) > 0) {
-                finalUsername = username + "_" + suffix++;
-                usernameCheck = new QueryWrapper<>();
+                finalUsername = baseUsername + "_" + suffix++;
+                usernameCheck.clear();
                 usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
             }
             
