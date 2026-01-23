@@ -9,9 +9,9 @@ public class TenantRequests {
 
     @Data
     public static class Create {
-        @NotBlank(message = "Tenant ID is required")
+        @NotBlank(message = "{validation.tenantId.required}")
         private String tenantId;
-        @NotBlank(message = "Tenant name is required")
+        @NotBlank(message = "{validation.tenantName.required}")
         private String name;
     }
 

@@ -1,10 +1,12 @@
 package com.mercury.auth.dto;
 
+import com.mercury.auth.util.ValidationPatterns;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class AuthRequests {
@@ -17,25 +19,26 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordRegister extends BaseTenantRequest {
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
-        @NotBlank(message = "Password is required")
-        @Size(min = 8, message = "Password must be at least 8 characters")
+        @NotBlank(message = "{validation.password.required}")
+        @Size(min = 8, message = "{validation.password.size}")
         private String password;
-        @NotBlank(message = "Confirm password is required")
-        @Size(min = 8, message = "Password must be at least 8 characters")
+        @NotBlank(message = "{validation.confirmPassword.required}")
+        @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
-        @Email(message = "Invalid email format")
+        @Email(message = "{validation.email.invalid}")
         private String email;
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordLogin extends BaseTenantRequest {
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
-        @NotBlank(message = "Password is required")
+        @NotBlank(message = "{validation.password.required}")
         private String password;
         private String captchaId;
         private String captcha;
@@ -44,8 +47,8 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class SendEmailCode extends BaseTenantRequest {
-        @NotBlank(message = "Email is required")
-        @Email(message = "Invalid email format")
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
         private String email;
         private VerificationPurpose purpose;
     }
@@ -53,28 +56,28 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailRegister extends BaseTenantRequest {
-        @NotBlank(message = "Email is required")
-        @Email(message = "Invalid email format")
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
         private String email;
-        @NotBlank(message = "Verification code is required")
+        @NotBlank(message = "{validation.code.required}")
         private String code;
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
-        @NotBlank(message = "Password is required")
-        @Size(min = 8, message = "Password must be at least 8 characters")
+        @NotBlank(message = "{validation.password.required}")
+        @Size(min = 8, message = "{validation.password.size}")
         private String password;
-        @NotBlank(message = "Confirm password is required")
-        @Size(min = 8, message = "Password must be at least 8 characters")
+        @NotBlank(message = "{validation.confirmPassword.required}")
+        @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class EmailLogin extends BaseTenantRequest {
-        @NotBlank(message = "Email is required")
-        @Email(message = "Invalid email format")
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
         private String email;
-        @NotBlank(message = "Verification code is required")
+        @NotBlank(message = "{validation.code.required}")
         private String code;
         private String captchaId;
         private String captcha;
@@ -83,7 +86,8 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class SendPhoneCode extends BaseTenantRequest {
-        @NotBlank(message = "Phone number is required")
+        @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
         private VerificationPurpose purpose;
     }
@@ -91,7 +95,7 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class UserStatusUpdate extends BaseTenantRequest {
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
         private boolean enabled;
     }
@@ -99,24 +103,25 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class ChangePassword extends BaseTenantRequest {
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
-        @NotBlank(message = "Old password is required")
+        @NotBlank(message = "{validation.oldPassword.required}")
         private String oldPassword;
-        @NotBlank(message = "New password is required")
-        @Size(min = 8, message = "New password must be at least 8 characters")
+        @NotBlank(message = "{validation.newPassword.required}")
+        @Size(min = 8, message = "{validation.newPassword.size}")
         private String newPassword;
-        @NotBlank(message = "Confirm password is required")
-        @Size(min = 8, message = "Confirm password must be at least 8 characters")
+        @NotBlank(message = "{validation.confirmPassword.required}")
+        @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneLogin extends BaseTenantRequest {
-        @NotBlank(message = "Phone number is required")
+        @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
-        @NotBlank(message = "Verification code is required")
+        @NotBlank(message = "{validation.code.required}")
         private String code;
         private String captchaId;
         private String captcha;
@@ -125,27 +130,28 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneRegister extends BaseTenantRequest {
-        @NotBlank(message = "Phone number is required")
+        @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
-        @NotBlank(message = "Verification code is required")
+        @NotBlank(message = "{validation.code.required}")
         private String code;
-        @NotBlank(message = "Username is required")
+        @NotBlank(message = "{validation.username.required}")
         private String username;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class CaptchaRequest extends BaseTenantRequest {
-        @NotBlank(message = "Action is required")
+        @NotBlank(message = "{validation.action.required}")
         private String action;
-        @NotBlank(message = "Identifier is required")
+        @NotBlank(message = "{validation.identifier.required}")
         private String identifier;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class WeChatLogin extends BaseTenantRequest {
-        @NotBlank(message = "OpenId is required")
+        @NotBlank(message = "{validation.openId.required}")
         private String openId;
         private String username;
     }
@@ -153,21 +159,21 @@ public class AuthRequests {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenVerify extends BaseTenantRequest {
-        @NotBlank(message = "Token is required")
+        @NotBlank(message = "{validation.token.required}")
         private String token;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenLogout extends BaseTenantRequest {
-        @NotBlank(message = "Token is required")
+        @NotBlank(message = "{validation.token.required}")
         private String token;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class TokenRefresh extends BaseTenantRequest {
-        @NotBlank(message = "Token is required")
+        @NotBlank(message = "{validation.token.required}")
         private String token;
     }
 }

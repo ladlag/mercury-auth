@@ -57,7 +57,7 @@ public class PhoneAuthService {
         return "OK"; // stub for SMS sending
     }
 
-    public void registerPhone(String tenantId, String phone, String code, String username) {
+    public User registerPhone(String tenantId, String phone, String code, String username) {
         tenantService.requireEnabled(tenantId);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
             logger.warn("registerPhone invalid code tenant={} phone={}", tenantId, phone);
@@ -85,6 +85,7 @@ public class PhoneAuthService {
         user.setEnabled(true);
         userMapper.insert(user);
         safeRecord(tenantId, user.getId(), AuthAction.REGISTER_PHONE, true);
+        return user;
     }
 
     public AuthResponse loginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
