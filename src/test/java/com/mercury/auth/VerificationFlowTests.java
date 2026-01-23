@@ -69,10 +69,10 @@ public class VerificationFlowTests {
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
         Mockito.when(verificationService.generateCode()).thenReturn("123456");
         Mockito.when(verificationService.defaultTtl()).thenReturn(Duration.ofMinutes(10));
-        String code = emailAuthService.sendEmailCode(req);
+        User result = emailAuthService.sendEmailCode(req);
         Mockito.verify(verificationService).storeCode(Mockito.eq("email:t1:a@b.com"), Mockito.eq("123456"), Mockito.any());
         Mockito.verify(verificationService).sendEmailCode("a@b.com", "123456");
-        assertThat(code).isEqualTo("123456");
+        assertThat(result).isNull(); // For REGISTER purpose, no user exists yet
     }
 
     @Test

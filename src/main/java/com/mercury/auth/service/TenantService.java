@@ -17,7 +17,7 @@ public class TenantService {
 
     private final TenantMapper tenantMapper;
 
-    public void create(TenantRequests.Create req) {
+    public Tenant create(TenantRequests.Create req) {
         if (tenantMapper.selectById(req.getTenantId()) != null) {
             throw new ApiException(ErrorCodes.DUPLICATE_TENANT, "tenant exists");
         }
@@ -26,19 +26,21 @@ public class TenantService {
         tenant.setName(req.getName());
         tenant.setEnabled(true);
         tenantMapper.insert(tenant);
+        return tenant;
     }
 
     public List<Tenant> list() {
         return tenantMapper.selectList(new QueryWrapper<>());
     }
 
-    public void updateStatus(TenantRequests.UpdateStatus req) {
+    public Tenant updateStatus(TenantRequests.UpdateStatus req) {
         Tenant tenant = tenantMapper.selectById(req.getTenantId());
         if (tenant == null) {
             throw new ApiException(ErrorCodes.TENANT_NOT_FOUND, "tenant not found");
         }
         tenant.setEnabled(req.isEnabled());
         tenantMapper.updateById(tenant);
+        return tenant;
     }
 
     public Tenant requireEnabled(String tenantId) {

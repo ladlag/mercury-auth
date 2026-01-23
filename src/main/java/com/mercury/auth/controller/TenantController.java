@@ -1,6 +1,7 @@
 package com.mercury.auth.controller;
 
 import com.mercury.auth.dto.TenantRequests;
+import com.mercury.auth.dto.TenantResponse;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.service.TenantService;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,13 @@ public class TenantController {
     private final TenantService tenantService;
 
     @PostMapping
-    public ResponseEntity<Void> createTenant(@Validated @RequestBody TenantRequests.Create req) {
-        tenantService.create(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<TenantResponse> createTenant(@Validated @RequestBody TenantRequests.Create req) {
+        Tenant tenant = tenantService.create(req);
+        return ResponseEntity.ok(TenantResponse.builder()
+                .tenantId(tenant.getTenantId())
+                .name(tenant.getName())
+                .enabled(tenant.getEnabled())
+                .build());
     }
 
     @GetMapping
@@ -33,8 +38,12 @@ public class TenantController {
     }
 
     @PostMapping("/status")
-    public ResponseEntity<Void> updateStatus(@Validated @RequestBody TenantRequests.UpdateStatus req) {
-        tenantService.updateStatus(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<TenantResponse> updateStatus(@Validated @RequestBody TenantRequests.UpdateStatus req) {
+        Tenant tenant = tenantService.updateStatus(req);
+        return ResponseEntity.ok(TenantResponse.builder()
+                .tenantId(tenant.getTenantId())
+                .name(tenant.getName())
+                .enabled(tenant.getEnabled())
+                .build());
     }
 }

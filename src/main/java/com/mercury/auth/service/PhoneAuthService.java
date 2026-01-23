@@ -34,27 +34,35 @@ public class PhoneAuthService {
     @Value("${security.code.phone-ttl-minutes:5}")
     private long phoneTtlMinutes;
 
-    public String sendPhoneCode(String tenantId, String phone, AuthRequests.VerificationPurpose purpose) {
+    public User sendPhoneCode(String tenantId, String phone, AuthRequests.VerificationPurpose purpose) {
         tenantService.requireEnabled(tenantId);
         rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_PHONE_CODE, tenantId, phone));
         AuthRequests.VerificationPurpose resolvedPurpose = purpose;
         if (resolvedPurpose == null) {
             resolvedPurpose = AuthRequests.VerificationPurpose.REGISTER;
         }
+        
+        User user = null;
+        
         if (AuthRequests.VerificationPurpose.REGISTER.equals(resolvedPurpose) && existsByTenantAndPhone(tenantId, phone)) {
             logger.warn("sendPhoneCode duplicate phone tenant={} phone={}", tenantId, phone);
             recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
             throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
         }
-        if (AuthRequests.VerificationPurpose.LOGIN.equals(resolvedPurpose) && !existsByTenantAndPhone(tenantId, phone)) {
-            logger.warn("sendPhoneCode user not found tenant={} phone={}", tenantId, phone);
-            recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
-            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        if (AuthRequests.VerificationPurpose.LOGIN.equals(resolvedPurpose)) {
+            QueryWrapper<User> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId).eq("phone", phone);
+            user = userMapper.selectOne(qw);
+            if (user == null) {
+                logger.warn("sendPhoneCode user not found tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, null, AuthAction.SEND_PHONE_CODE);
+                throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+            }
         }
         String code = verificationService.generateCode();
         verificationService.storeCode(buildPhoneKey(tenantId, phone), code, Duration.ofMinutes(phoneTtlMinutes));
-        safeRecord(tenantId, null, AuthAction.SEND_PHONE_CODE, true);
-        return "OK"; // stub for SMS sending
+        safeRecord(tenantId, user != null ? user.getId() : null, AuthAction.SEND_PHONE_CODE, true);
+        return user;
     }
 
     public User registerPhone(String tenantId, String phone, String code, String username) {
