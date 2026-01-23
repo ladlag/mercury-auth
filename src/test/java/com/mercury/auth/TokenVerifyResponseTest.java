@@ -98,7 +98,7 @@ public class TokenVerifyResponseTest {
         assertThat(response).isNotNull();
         assertThat(response.getTenantId()).isEqualTo(tenantId);
         assertThat(response.getUserId()).isEqualTo(userId);
-        assertThat(response.getUsername()).isEqualTo(username);
+        assertThat(response.getUserName()).isEqualTo(username);
         assertThat(response.getEmail()).isEqualTo(email);
         assertThat(response.getPhone()).isEqualTo(phone);
     }
@@ -137,7 +137,7 @@ public class TokenVerifyResponseTest {
         assertThat(response).isNotNull();
         assertThat(response.getTenantId()).isEqualTo(tenantId);
         assertThat(response.getUserId()).isEqualTo(userId);
-        assertThat(response.getUsername()).isEqualTo(username);
+        assertThat(response.getUserName()).isEqualTo(username);
         assertThat(response.getEmail()).isNull();
         assertThat(response.getPhone()).isNull();
     }
