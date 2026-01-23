@@ -83,19 +83,7 @@ public class AuthController {
     @PostMapping("/send-email-code")
     public ResponseEntity<BaseAuthResponse> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
         User user = emailAuthService.sendEmailCode(req);
-        // For REGISTER purpose, user will be null (not yet created)
-        if (user == null) {
-            return ResponseEntity.ok(BaseAuthResponse.builder()
-                    .tenantId(req.getTenantId())
-                    .userId(null)
-                    .username(null)
-                    .build());
-        }
-        return ResponseEntity.ok(BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build());
+        return ResponseEntity.ok(buildBaseAuthResponse(user, req.getTenantId()));
     }
 
     @PostMapping("/register-email")
@@ -128,19 +116,7 @@ public class AuthController {
     @PostMapping("/send-phone-code")
     public ResponseEntity<BaseAuthResponse> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
         User user = phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone(), req.getPurpose());
-        // For REGISTER purpose, user will be null (not yet created)
-        if (user == null) {
-            return ResponseEntity.ok(BaseAuthResponse.builder()
-                    .tenantId(req.getTenantId())
-                    .userId(null)
-                    .username(null)
-                    .build());
-        }
-        return ResponseEntity.ok(BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build());
+        return ResponseEntity.ok(buildBaseAuthResponse(user, req.getTenantId()));
     }
 
     @PostMapping("/register-phone")
@@ -218,5 +194,25 @@ public class AuthController {
                     "invalid captcha action. valid actions: " + validActions);
         }
         return ResponseEntity.ok(captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier()));
+    }
+
+    // Helper methods
+
+    /**
+     * Build BaseAuthResponse from User object, handling null case (for operations before user exists)
+     */
+    private BaseAuthResponse buildBaseAuthResponse(User user, String tenantId) {
+        if (user == null) {
+            return BaseAuthResponse.builder()
+                    .tenantId(tenantId)
+                    .userId(null)
+                    .username(null)
+                    .build();
+        }
+        return BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build();
     }
 }
