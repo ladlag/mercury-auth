@@ -99,13 +99,19 @@ mvn spring-boot:run
 
 ### Authentication Flow
 
+**IMPORTANT**: ALL endpoints (both public and protected) require the `X-Tenant-Id` header:
+- Specifies which tenant context the operation is performed in
+- Automatically injected into request body's tenantId field
+- Any tenantId in request body JSON is **ignored** and overwritten by header value
+- **Best Practice**: Always include X-Tenant-Id header, omit tenantId from request body
+
 #### 1. Login and Get JWT Token (Public Endpoint)
 ```bash
-# Password login - tenantId REQUIRED in body (no JWT token yet)
+# Password login - X-Tenant-Id header specifies which tenant to login to
 curl -X POST http://localhost:10000/auth/api/auth/login-password \
+  -H "X-Tenant-Id: tenant1" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "tenant1",
     "username": "user1",
     "password": "password123"
   }'
@@ -120,12 +126,10 @@ curl -X POST http://localhost:10000/auth/api/auth/login-password \
 #### 2. Use JWT Token for Protected Endpoints
 **IMPORTANT**: Protected endpoints require:
 - `Authorization: Bearer <token>` header
-- `X-Tenant-Id: <tenantId>` header (must match JWT token's tenant)
-- **tenantId in request body is OPTIONAL** - if included, it will be overwritten by header value
-- **RECOMMENDED**: Omit tenantId from request body for protected endpoints
+- `X-Tenant-Id: <tenantId>` header (must match JWT token's tenant for security)
 
 ```bash
-# Logout (blacklist token) - tenantId automatically injected from header
+# Logout (blacklist token)
 curl -X POST http://localhost:10000/auth/api/auth/logout \
   -H "Authorization: Bearer eyJhbGc..." \
   -H "X-Tenant-Id: tenant1" \
@@ -134,7 +138,7 @@ curl -X POST http://localhost:10000/auth/api/auth/logout \
     "token": "eyJhbGc..."
   }'
 
-# Update user status - tenantId automatically injected from header
+# Update user status
 curl -X POST http://localhost:10000/auth/api/auth/user-status \
   -H "Authorization: Bearer eyJhbGc..." \
   -H "X-Tenant-Id: tenant1" \
@@ -143,33 +147,22 @@ curl -X POST http://localhost:10000/auth/api/auth/user-status \
     "username": "user1",
     "enabled": false
   }'
-
-# If you include tenantId in body, it will be IGNORED and overwritten
-curl -X POST http://localhost:10000/auth/api/auth/logout \
-  -H "Authorization: Bearer eyJhbGc..." \
-  -H "X-Tenant-Id: tenant1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenantId": "any-value-will-be-replaced",
-    "token": "eyJhbGc..."
-  }'
 ```
 
 **Security Notes**: 
-- **Public endpoints** (login, register): tenantId required in request body
-- **Protected endpoints** (logout, user management): X-Tenant-Id header required, body tenantId optional/ignored
-- X-Tenant-Id header must match the tenant ID in your JWT token
-- Any tenantId in request body for protected endpoints is **overwritten** by header value
-- Missing header on protected endpoint → HTTP 400 MISSING_TENANT_HEADER
-- Mismatched header → HTTP 403 TENANT_MISMATCH
+- **Public endpoints** (login, register): X-Tenant-Id specifies tenant context
+- **Protected endpoints** (logout, user management): X-Tenant-Id must match JWT token's tenant
+- Consistent API design: Same header requirement for all endpoints
+- Missing X-Tenant-Id header → HTTP 400 MISSING_TENANT_HEADER
+- Mismatched X-Tenant-Id (protected endpoints only) → HTTP 403 TENANT_MISMATCH
 
 #### 3. Token Refresh (Public Endpoint)
 ```bash
-# tenantId required in body (no X-Tenant-Id header needed)
+# X-Tenant-Id header required for all endpoints
 curl -X POST http://localhost:10000/auth/api/auth/refresh-token \
+  -H "X-Tenant-Id: tenant1" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "tenant1",
     "token": "eyJhbGc..."
   }'
 ```

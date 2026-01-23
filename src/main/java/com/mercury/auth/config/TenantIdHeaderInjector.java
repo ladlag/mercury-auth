@@ -17,18 +17,21 @@ import java.lang.reflect.Type;
  * Intercepts request body deserialization and injects tenantId from X-Tenant-Id HTTP header
  * into BaseTenantRequest instances.
  * 
- * For protected endpoints (those requiring JWT authentication):
- * - X-Tenant-Id header is mandatory and validated by JwtAuthenticationFilter
- * - Header value is automatically injected into request body's tenantId field
- * - Any tenantId value in the request body JSON is IGNORED and overwritten
+ * Design Philosophy:
+ * - ALL endpoints (both public and protected) require X-Tenant-Id header for consistency
+ * - The header value is always injected into request body's tenantId field
+ * - Any tenantId in request body JSON is IGNORED and overwritten
  * 
- * For public endpoints (those not requiring authentication):
- * - X-Tenant-Id header is optional
- * - If header is present, it's injected into the body
- * - If header is absent, body value is used (backward compatible)
+ * Validation:
+ * - Public endpoints (login, register, etc.): Just validate header exists
+ * - Protected endpoints (logout, user management, etc.): JwtAuthenticationFilter validates header == JWT token's tenantId
  * 
- * This ensures consistent tenant isolation - the authenticated tenant from JWT
- * is always enforced via the header injection mechanism.
+ * Benefits:
+ * - Consistent API design - same header requirement for all endpoints
+ * - Simpler client code - always include X-Tenant-Id header
+ * - Better security - tenant context is explicit and validated
+ * 
+ * If X-Tenant-Id header is missing, an ApiException is thrown with MISSING_TENANT_HEADER error code.
  */
 @ControllerAdvice
 public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
@@ -61,14 +64,14 @@ public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
             BaseTenantRequest tenantRequest = (BaseTenantRequest) body;
             String headerTenantId = request.getHeader(TENANT_ID_HEADER);
             
-            // Inject tenantId from header
-            // For protected endpoints: header is mandatory (enforced by JwtAuthenticationFilter)
-            // For public endpoints: header is optional, fall back to body value if absent
-            if (StringUtils.hasText(headerTenantId)) {
-                tenantRequest.setTenantId(headerTenantId);
+            // X-Tenant-Id header is REQUIRED for ALL endpoints
+            if (!StringUtils.hasText(headerTenantId)) {
+                throw new ApiException(ErrorCodes.MISSING_TENANT_HEADER, 
+                    "X-Tenant-Id header is required for all requests");
             }
-            // Note: If header is absent and body tenantId is also null/empty,
-            // the service layer will handle the validation error
+            
+            // Inject tenantId from header (overwrites any value from body)
+            tenantRequest.setTenantId(headerTenantId);
         }
         
         return body;

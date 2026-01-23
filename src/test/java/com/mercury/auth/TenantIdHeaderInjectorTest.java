@@ -2,6 +2,7 @@ package com.mercury.auth;
 
 import com.mercury.auth.config.TenantIdHeaderInjector;
 import com.mercury.auth.dto.AuthRequests;
+import com.mercury.auth.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -13,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Type;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for TenantIdHeaderInjector
@@ -69,7 +71,7 @@ public class TenantIdHeaderInjectorTest {
     }
 
     @Test
-    void afterBodyRead_keepsBodyValueWhenNoHeader() {
+    void afterBodyRead_throwsExceptionWhenNoHeader() {
         Mockito.when(request.getHeader("X-Tenant-Id")).thenReturn(null);
         
         AuthRequests.PasswordLogin body = new AuthRequests.PasswordLogin();
@@ -77,20 +79,19 @@ public class TenantIdHeaderInjectorTest {
         body.setUsername("user");
         body.setPassword("pass");
         
-        Object result = injector.afterBodyRead(
+        // Now X-Tenant-Id header is required for ALL endpoints
+        assertThatThrownBy(() -> injector.afterBodyRead(
                 body,
                 inputMessage,
                 methodParameter,
                 AuthRequests.PasswordLogin.class,
-                null);
-        
-        assertThat(result).isInstanceOf(AuthRequests.PasswordLogin.class);
-        AuthRequests.PasswordLogin modifiedBody = (AuthRequests.PasswordLogin) result;
-        assertThat(modifiedBody.getTenantId()).isEqualTo("tenant-from-body");
+                null))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("X-Tenant-Id header is required");
     }
 
     @Test
-    void afterBodyRead_keepsBodyValueWhenHeaderIsEmpty() {
+    void afterBodyRead_throwsExceptionWhenHeaderIsEmpty() {
         Mockito.when(request.getHeader("X-Tenant-Id")).thenReturn("");
         
         AuthRequests.PasswordLogin body = new AuthRequests.PasswordLogin();
@@ -98,16 +99,15 @@ public class TenantIdHeaderInjectorTest {
         body.setUsername("user");
         body.setPassword("pass");
         
-        Object result = injector.afterBodyRead(
+        // Empty header is also not allowed
+        assertThatThrownBy(() -> injector.afterBodyRead(
                 body,
                 inputMessage,
                 methodParameter,
                 AuthRequests.PasswordLogin.class,
-                null);
-        
-        assertThat(result).isInstanceOf(AuthRequests.PasswordLogin.class);
-        AuthRequests.PasswordLogin modifiedBody = (AuthRequests.PasswordLogin) result;
-        assertThat(modifiedBody.getTenantId()).isEqualTo("tenant-from-body");
+                null))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("X-Tenant-Id header is required");
     }
 
     @Test
