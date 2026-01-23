@@ -69,7 +69,8 @@ public class AliyunSmsProvider implements SmsProvider {
         }
         
         try {
-            // Ensure phone number has country code prefix
+            // Ensure phone number does not have country code prefix
+            // Aliyun API expects phone numbers without country code
             String normalizedPhone = normalizePhoneNumber(phone);
             
             SendSmsRequest request = new SendSmsRequest();

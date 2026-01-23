@@ -16,6 +16,7 @@
         <!-- Updated to fix CVE vulnerabilities - MySQL 8.2.0+ recommended -->
         <mysql.version>8.2.0</mysql.version>
         <aliyun-java-sdk-core.version>4.6.4</aliyun-java-sdk-core.version>
+        <aliyun-dysmsapi.version>2.2.1</aliyun-dysmsapi.version>
         <tencentcloud-sdk-java.version>3.1.912</tencentcloud-sdk-java.version>
     </properties>
     <dependencyManagement>
@@ -111,7 +112,7 @@
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-dysmsapi</artifactId>
-            <version>2.2.1</version>
+            <version>${aliyun-dysmsapi.version}</version>
         </dependency>
         <!-- Tencent Cloud SMS SDK -->
         <dependency>

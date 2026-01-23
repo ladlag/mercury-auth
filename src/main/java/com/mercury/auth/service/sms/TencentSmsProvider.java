@@ -82,7 +82,8 @@ public class TencentSmsProvider implements SmsProvider {
         }
         
         try {
-            // Ensure phone number has country code prefix
+            // Ensure phone number has +86 country code prefix for Tencent API
+            // Tencent API expects phone numbers with country code (e.g., +8613800138000)
             String normalizedPhone = normalizePhoneNumber(phone);
             
             SendSmsRequest request = new SendSmsRequest();
