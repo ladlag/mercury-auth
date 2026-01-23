@@ -36,6 +36,11 @@ public enum ErrorCodes {
     // ========== 40 08 参数校验 ==========
     VALIDATION_FAILED    ("400801", "Validation failed", HttpStatus.BAD_REQUEST),
 
+    // ========== 40 09 通用 ==========
+    NOT_FOUND            ("400901", "资源不存在", HttpStatus.NOT_FOUND),
+    DUPLICATE_ENTRY      ("400902", "重复条目", HttpStatus.CONFLICT),
+    PERMISSION_DENIED    ("400903", "权限不足", HttpStatus.FORBIDDEN),
+
     // ========== 40 99 系统 ==========
     INTERNAL_ERROR       ("409901", "Internal error", HttpStatus.INTERNAL_SERVER_ERROR);
 
