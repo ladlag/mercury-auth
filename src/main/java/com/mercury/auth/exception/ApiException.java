@@ -16,8 +16,4 @@ public class ApiException extends RuntimeException {
     public String getCodeValue() {
         return code.getCode();
     }
-
-    public String getCodeMessage() {
-        return code.getMessage();
-    }
 }

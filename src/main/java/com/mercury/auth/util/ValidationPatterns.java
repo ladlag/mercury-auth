@@ -15,4 +15,11 @@ public final class ValidationPatterns {
      * Examples: 13812345678, 15912345678, 18812345678
      */
     public static final String CHINESE_MOBILE_PHONE = "^1[3-9]\\d{9}$";
+    
+    /**
+     * Username pattern
+     * Format: 3-20 characters, alphanumeric and underscore only, must start with letter
+     * Examples: user123, john_doe, admin_user
+     */
+    public static final String USERNAME = "^[a-zA-Z][a-zA-Z0-9_]{2,19}$";
 }

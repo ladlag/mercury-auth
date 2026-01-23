@@ -1,6 +1,7 @@
 package com.mercury.auth.exception;
 
 import com.mercury.auth.dto.ApiError;
+import com.mercury.auth.service.LocalizationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,11 +21,17 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String INVALID_FIELD_MESSAGE = "invalid";
+    private final LocalizationService localizationService;
+
+    public GlobalExceptionHandler(LocalizationService localizationService) {
+        this.localizationService = localizationService;
+    }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), ex.getCodeMessage()));
+        String localizedMessage = localizationService.getMessage(ex.getCode().getMessageKey());
+        return ResponseEntity.ok().body(new ApiError(ex.getCodeValue(), localizedMessage));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -53,14 +60,16 @@ public class GlobalExceptionHandler {
                     return new ApiError.FieldError("general", message);
                 })
                 .collect(Collectors.toList());
-        return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), ErrorCodes.VALIDATION_FAILED.getMessage(), errors));
+        String localizedMessage = localizationService.getMessage(ErrorCodes.VALIDATION_FAILED.getMessageKey());
+        return ResponseEntity.ok()
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), localizedMessage, errors));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), ErrorCodes.INTERNAL_ERROR.getMessage()));
+        String localizedMessage = localizationService.getMessage(ErrorCodes.INTERNAL_ERROR.getMessageKey());
+        return ResponseEntity.ok()
+                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), localizedMessage));
     }
 }

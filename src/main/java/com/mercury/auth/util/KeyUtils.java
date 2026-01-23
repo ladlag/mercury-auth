@@ -35,4 +35,26 @@ public final class KeyUtils {
         String safeIdentifier = identifier == null ? "unknown" : identifier;
         return "captcha:fail:" + action.name() + ":" + tenantId + ":" + safeIdentifier;
     }
+
+    /**
+     * Build a password reset code key
+     *
+     * @param tenantId Tenant identifier
+     * @param email    Email address
+     * @return Password reset code cache key
+     */
+    public static String passwordResetCodeKey(String tenantId, String email) {
+        return "code:password-reset:" + tenantId + ":" + email;
+    }
+
+    /**
+     * Build an email verification code key
+     *
+     * @param tenantId Tenant identifier
+     * @param email    Email address
+     * @return Email verification code cache key
+     */
+    public static String emailVerificationKey(String tenantId, String email) {
+        return "code:email-verify:" + tenantId + ":" + email;
+    }
 }

@@ -4,7 +4,9 @@ import com.mercury.auth.dto.ApiError;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.exception.GlobalExceptionHandler;
+import com.mercury.auth.service.LocalizationService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindException;
@@ -23,7 +25,7 @@ public class ValidationMessagesTest {
 
     private LocalValidatorFactoryBean createValidator(Locale locale) {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:ValidationMessages");
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setDefaultLocale(locale);
         
@@ -33,10 +35,20 @@ public class ValidationMessagesTest {
         return validator;
     }
 
+    private GlobalExceptionHandler createHandler(Locale locale) {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setDefaultLocale(locale);
+        LocalizationService localizationService = new LocalizationService(messageSource);
+        return new GlobalExceptionHandler(localizationService);
+    }
+
     @Test
     void passwordRegister_validation_returns_specific_messages() {
         // Setup validator with English locale
         LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
 
         // Create request with missing required fields
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
@@ -54,14 +66,14 @@ public class ValidationMessagesTest {
         assertThat(bindingResult.hasErrors()).isTrue();
 
         // Process through GlobalExceptionHandler
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
         // Verify response structure
         assertThat(response).isNotNull();
         assertThat(response.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
-        assertThat(response.getMessage()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getMessage());
+        assertThat(response.getMessage()).isEqualTo("Validation failed");
         assertThat(response.getErrors()).isNotEmpty();
 
         // Verify that error messages are NOT "invalid" but actual validation messages
@@ -90,7 +102,9 @@ public class ValidationMessagesTest {
                 .findFirst()
                 .orElse(null);
         assertThat(usernameError).isNotNull();
-        assertThat(usernameError.getMessage()).isEqualTo("Username is required");
+        assertThat(usernameError.getMessage())
+                .as("Username validation message should be one of the two English messages")
+                .isIn("Username is required", "Username must be 3-20 characters, start with a letter, and contain only letters, numbers, and underscores");
 
         // Password has both @NotBlank and @Size constraints
         // When empty, it may trigger either constraint first
@@ -114,6 +128,7 @@ public class ValidationMessagesTest {
     @Test
     void emailRegister_validation_returns_specific_messages() {
         LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
 
         AuthRequests.EmailRegister request = new AuthRequests.EmailRegister();
         request.setTenantId("tenant1");
@@ -124,7 +139,7 @@ public class ValidationMessagesTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -152,6 +167,7 @@ public class ValidationMessagesTest {
     void passwordRegister_validation_returns_chinese_messages() {
         // Setup validator with Chinese locale
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
 
         // Create request with missing required fields
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
@@ -169,7 +185,7 @@ public class ValidationMessagesTest {
         assertThat(bindingResult.hasErrors()).isTrue();
 
         // Process through GlobalExceptionHandler
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -198,7 +214,9 @@ public class ValidationMessagesTest {
                 .findFirst()
                 .orElse(null);
         assertThat(usernameError).isNotNull();
-        assertThat(usernameError.getMessage()).isEqualTo("用户名必填");
+        assertThat(usernameError.getMessage())
+                .as("Username validation message should be one of the two Chinese messages")
+                .isIn("用户名必填", "用户名必须是3-20个字符，以字母开头，只能包含字母、数字和下划线");
 
         // Password has both @NotBlank and @Size constraints
         // When empty, it may trigger either constraint first
@@ -222,6 +240,7 @@ public class ValidationMessagesTest {
     @Test
     void emailRegister_validation_returns_chinese_messages() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.EmailRegister request = new AuthRequests.EmailRegister();
         request.setTenantId("tenant1");
@@ -232,7 +251,7 @@ public class ValidationMessagesTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 

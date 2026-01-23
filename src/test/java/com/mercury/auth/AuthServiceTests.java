@@ -5,13 +5,7 @@ import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.security.JwtService;
-import com.mercury.auth.service.AuthService;
-import com.mercury.auth.service.AuthLogService;
-import com.mercury.auth.service.CaptchaService;
-import com.mercury.auth.service.RateLimitService;
-import com.mercury.auth.service.TenantService;
-import com.mercury.auth.service.TokenService;
-import com.mercury.auth.service.VerificationService;
+import com.mercury.auth.service.*;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,11 +22,11 @@ public class AuthServiceTests {
     private JwtService jwtService;
     private VerificationService verificationService;
     private RateLimitService rateLimitService;
-    private TokenService tokenService;
     private TenantService tenantService;
     private AuthLogService authLogService;
     private CaptchaService captchaService;
-    private AuthService authService;
+    private PasswordAuthService passwordAuthService;
+    private EmailAuthService emailAuthService;
 
     @BeforeEach
     void setup() {
@@ -41,11 +35,13 @@ public class AuthServiceTests {
         jwtService = Mockito.mock(JwtService.class);
         verificationService = Mockito.mock(VerificationService.class);
         rateLimitService = Mockito.mock(RateLimitService.class);
-        tokenService = Mockito.mock(TokenService.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService, captchaService);
+        passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, 
+            verificationService, rateLimitService, tenantService, authLogService, captchaService);
+        emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, 
+            verificationService, rateLimitService, tenantService, authLogService, captchaService);
     }
 
     @Test
@@ -56,7 +52,7 @@ public class AuthServiceTests {
         req.setUsername("u1");
         req.setPassword("pass1234");
         req.setConfirmPassword("pass12345");
-        assertThatThrownBy(() -> authService.registerPassword(req)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> passwordAuthService.registerPassword(req)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -77,7 +73,7 @@ public class AuthServiceTests {
         Mockito.when(passwordEncoder.matches("p", "hash")).thenReturn(true);
         Mockito.when(jwtService.generate("t1", 1L, "u1")).thenReturn("token");
         Mockito.when(jwtService.getTtlSeconds()).thenReturn(10L);
-        AuthResponse resp = authService.loginPassword(req);
+        AuthResponse resp = passwordAuthService.loginPassword(req);
         assertThat(resp.getAccessToken()).isEqualTo("token");
         assertThat(resp.getExpiresInSeconds()).isEqualTo(10L);
     }
@@ -90,6 +86,6 @@ public class AuthServiceTests {
         req.setEmail("a@b.com");
         req.setPurpose(AuthRequests.VerificationPurpose.REGISTER);
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(1L);
-        assertThatThrownBy(() -> authService.sendEmailCode(req)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> emailAuthService.sendEmailCode(req)).isInstanceOf(RuntimeException.class);
     }
 }

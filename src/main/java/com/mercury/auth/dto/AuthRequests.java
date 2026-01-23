@@ -20,6 +20,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordRegister extends BaseTenantRequest {
         @NotBlank(message = "{validation.username.required}")
+        @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
         @NotBlank(message = "{validation.password.required}")
         @Size(min = 8, message = "{validation.password.size}")
@@ -37,6 +38,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PasswordLogin extends BaseTenantRequest {
         @NotBlank(message = "{validation.username.required}")
+        @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
         @NotBlank(message = "{validation.password.required}")
         private String password;
@@ -62,6 +64,7 @@ public class AuthRequests {
         @NotBlank(message = "{validation.code.required}")
         private String code;
         @NotBlank(message = "{validation.username.required}")
+        @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
         @NotBlank(message = "{validation.password.required}")
         @Size(min = 8, message = "{validation.password.size}")
@@ -175,5 +178,39 @@ public class AuthRequests {
     public static class TokenRefresh extends BaseTenantRequest {
         @NotBlank(message = "{validation.token.required}")
         private String token;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class ForgotPassword extends BaseTenantRequest {
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
+        private String email;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class ResetPassword extends BaseTenantRequest {
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
+        private String email;
+        @NotBlank(message = "{validation.code.required}")
+        private String code;
+        @NotBlank(message = "{validation.newPassword.required}")
+        @Size(min = 8, message = "{validation.newPassword.size}")
+        private String newPassword;
+        @NotBlank(message = "{validation.confirmPassword.required}")
+        @Size(min = 8, message = "{validation.confirmPassword.size}")
+        private String confirmPassword;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class VerifyEmailAfterRegister extends BaseTenantRequest {
+        @NotBlank(message = "{validation.email.required}")
+        @Email(message = "{validation.email.invalid}")
+        private String email;
+        @NotBlank(message = "{validation.code.required}")
+        private String code;
     }
 }

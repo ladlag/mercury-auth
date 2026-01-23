@@ -4,6 +4,7 @@ import com.mercury.auth.dto.ApiError;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.exception.GlobalExceptionHandler;
+import com.mercury.auth.service.LocalizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -31,6 +32,15 @@ public class PhoneValidationTest {
         return validator;
     }
 
+    private GlobalExceptionHandler createHandler(Locale locale) {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setDefaultLocale(locale);
+        LocalizationService localizationService = new LocalizationService(messageSource);
+        return new GlobalExceptionHandler(localizationService);
+    }
+
     @Test
     void phoneRegister_invalidPhone_returnsChineseError() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
@@ -46,7 +56,7 @@ public class PhoneValidationTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.SIMPLIFIED_CHINESE);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
@@ -96,7 +106,7 @@ public class PhoneValidationTest {
 
         assertThat(bindingResult.hasErrors()).isTrue();
 
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        GlobalExceptionHandler handler = createHandler(Locale.ENGLISH);
         BindException bindException = new BindException(bindingResult);
         ApiError response = handler.handleBindValidation(bindException).getBody();
 
