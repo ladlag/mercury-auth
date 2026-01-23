@@ -3,6 +3,8 @@ package com.mercury.auth.exception;
 import com.mercury.auth.dto.ApiError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -20,11 +23,18 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String INVALID_FIELD_MESSAGE = "invalid";
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
         logger.warn("api error code={} message={}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), ex.getCodeMessage()));
+        Locale locale = LocaleContextHolder.getLocale();
+        String localizedMessage = messageSource.getMessage(ex.getCode().getMessageKey(), null, locale);
+        return ResponseEntity.badRequest().body(new ApiError(ex.getCodeValue(), localizedMessage));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -53,14 +63,18 @@ public class GlobalExceptionHandler {
                     return new ApiError.FieldError("general", message);
                 })
                 .collect(Collectors.toList());
+        Locale locale = LocaleContextHolder.getLocale();
+        String localizedMessage = messageSource.getMessage(ErrorCodes.VALIDATION_FAILED.getMessageKey(), null, locale);
         return ResponseEntity.badRequest()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), ErrorCodes.VALIDATION_FAILED.getMessage(), errors));
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), localizedMessage, errors));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         logger.error("internal error", ex);
+        Locale locale = LocaleContextHolder.getLocale();
+        String localizedMessage = messageSource.getMessage(ErrorCodes.INTERNAL_ERROR.getMessageKey(), null, locale);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), ErrorCodes.INTERNAL_ERROR.getMessage()));
+                .body(new ApiError(ErrorCodes.INTERNAL_ERROR.getCode(), localizedMessage));
     }
 }

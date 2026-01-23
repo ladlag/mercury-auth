@@ -34,13 +34,14 @@ public class LocaleConfig {
     }
 
     /**
-     * Configure message source for validation messages
+     * Configure message source for validation and error messages
      * Supports ValidationMessages.properties (English) and ValidationMessages_zh_CN.properties (Chinese)
+     * Supports ErrorMessages.properties (English) and ErrorMessages_zh_CN.properties (Chinese)
      */
     @Bean
     public MessageSource messageSource() {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:ValidationMessages");
+        messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setCacheSeconds(3600);
         return messageSource;
