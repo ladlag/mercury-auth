@@ -87,6 +87,32 @@ Key properties (see `application.yml`, with overrides in `application-dev.yml`, 
 - `security.captcha.threshold` - Failed attempts before captcha required (default: 3)
 - `security.captcha.ttl-minutes` - Captcha validity period (default: 5 minutes)
 
+### SMS Configuration
+SMS verification codes are sent via cloud SMS providers. Configure one of the supported providers:
+
+#### Alibaba Cloud (Aliyun) SMS
+- `sms.aliyun.enabled` - Enable Aliyun SMS provider (true/false)
+- `sms.aliyun.access-key-id` - Aliyun access key ID
+- `sms.aliyun.access-key-secret` - Aliyun access key secret
+- `sms.aliyun.sign-name` - SMS signature name
+- `sms.aliyun.template-code` - SMS template code (e.g., SMS_123456789)
+- `sms.aliyun.region-id` - Region ID (default: cn-hangzhou)
+
+**Template format**: Your Aliyun SMS template should use `${code}` as the verification code variable.
+
+#### Tencent Cloud SMS
+- `sms.tencent.enabled` - Enable Tencent SMS provider (true/false)
+- `sms.tencent.secret-id` - Tencent Cloud secret ID
+- `sms.tencent.secret-key` - Tencent Cloud secret key
+- `sms.tencent.sdk-app-id` - SMS SDK application ID
+- `sms.tencent.sign-name` - SMS signature name
+- `sms.tencent.template-id` - SMS template ID
+- `sms.tencent.region` - Region (default: ap-guangzhou)
+
+**Template format**: Your Tencent SMS template should have one parameter for the verification code.
+
+**Note**: Only one SMS provider needs to be configured. If both are configured, the first successfully initialized provider will be used.
+
 ## Database
 Initialize tables from `src/main/resources/schema.sql` (includes `users`, `tenants`, `auth_logs`, `token_blacklist`).
 
@@ -276,4 +302,22 @@ MAIL_PORT=587
 MAIL_USERNAME=noreply@example.com
 MAIL_PASSWORD=mail_password
 MAIL_FROM=noreply@example.com
+
+# SMS Configuration (choose one provider)
+# Option 1: Alibaba Cloud (Aliyun) SMS
+SMS_ALIYUN_ENABLED=true
+SMS_ALIYUN_ACCESS_KEY_ID=your-aliyun-access-key-id
+SMS_ALIYUN_ACCESS_KEY_SECRET=your-aliyun-access-key-secret
+SMS_ALIYUN_SIGN_NAME=your-sign-name
+SMS_ALIYUN_TEMPLATE_CODE=SMS_123456789
+SMS_ALIYUN_REGION_ID=cn-hangzhou
+
+# Option 2: Tencent Cloud SMS
+SMS_TENCENT_ENABLED=true
+SMS_TENCENT_SECRET_ID=your-tencent-secret-id
+SMS_TENCENT_SECRET_KEY=your-tencent-secret-key
+SMS_TENCENT_SDK_APP_ID=your-sdk-app-id
+SMS_TENCENT_SIGN_NAME=your-sign-name
+SMS_TENCENT_TEMPLATE_ID=123456
+SMS_TENCENT_REGION=ap-guangzhou
 ```

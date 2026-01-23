@@ -8,6 +8,7 @@ import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.PhoneAuthService;
 import com.mercury.auth.service.RateLimitService;
+import com.mercury.auth.service.SmsService;
 import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class PhoneAuthServiceTests {
 
     private VerificationService verificationService;
+    private SmsService smsService;
     private UserMapper userMapper;
     private JwtService jwtService;
     private RateLimitService rateLimitService;
@@ -32,13 +34,14 @@ public class PhoneAuthServiceTests {
     @BeforeEach
     void setup() {
         verificationService = Mockito.mock(VerificationService.class);
+        smsService = Mockito.mock(SmsService.class);
         userMapper = Mockito.mock(UserMapper.class);
         jwtService = Mockito.mock(JwtService.class);
         rateLimitService = Mockito.mock(RateLimitService.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
-        phoneAuthService = new PhoneAuthService(verificationService, userMapper, jwtService, rateLimitService, tenantService, authLogService, captchaService);
+        phoneAuthService = new PhoneAuthService(verificationService, smsService, userMapper, jwtService, rateLimitService, tenantService, authLogService, captchaService);
     }
 
     @Test
@@ -71,6 +74,8 @@ public class PhoneAuthServiceTests {
         User result = phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER);
         assertThat(result).isNull(); // For REGISTER purpose, no user exists yet
         Mockito.verify(verificationService).storeCode(Mockito.eq("phone:t1:138"), Mockito.eq("123456"), Mockito.any());
+        // Verify SMS is sent
+        Mockito.verify(smsService).sendVerificationCode(Mockito.eq("138"), Mockito.eq("123456"));
     }
 
     @Test
@@ -81,5 +86,7 @@ public class PhoneAuthServiceTests {
         assertThat(result).isNull();
         // Verify that code is NOT stored when phone already exists
         Mockito.verify(verificationService, Mockito.never()).storeCode(Mockito.any(), Mockito.any(), Mockito.any());
+        // Verify that SMS is NOT sent when phone already exists
+        Mockito.verify(smsService, Mockito.never()).sendVerificationCode(Mockito.any(), Mockito.any());
     }
 }
