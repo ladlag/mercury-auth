@@ -1,5 +1,7 @@
 package com.mercury.auth.service;
 
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +38,17 @@ public class VerificationService {
             // Check if mail properties are configured
             String host = mailProperties.getHost();
             Integer port = mailProperties.getPort();
+            String username = mailProperties.getUsername();
+            String password = mailProperties.getPassword();
             
-            if (host != null && !host.trim().isEmpty() && port != null) {
+            if (host != null && !host.trim().isEmpty() && 
+                port != null && 
+                username != null && !username.trim().isEmpty() &&
+                password != null && !password.trim().isEmpty()) {
                 emailConfigured = true;
-                logger.info("Email server configured: host={}, port={}", host, port);
+                logger.info("Email server configured: host={}, port={}, username={}", host, port, username);
             } else {
-                logger.warn("Email server not fully configured. Email sending will be disabled.");
+                logger.warn("Email server not fully configured. Missing required properties. Email sending will be disabled.");
             }
         } catch (Exception e) {
             logger.warn("Failed to check email configuration: {}", e.getMessage());
@@ -74,7 +81,7 @@ public class VerificationService {
     public void sendEmailCode(String to, String code) {
         if (!emailConfigured) {
             logger.warn("Email server not configured. Cannot send email to: {}", to);
-            throw new IllegalStateException("Email service not configured");
+            throw new ApiException(ErrorCodes.EMAIL_SERVICE_UNAVAILABLE, "email service not configured");
         }
         
         try {
@@ -87,7 +94,7 @@ public class VerificationService {
             logger.info("Verification code sent to: {}", to);
         } catch (MailException e) {
             logger.error("Failed to send email to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send verification email", e);
+            throw new ApiException(ErrorCodes.EMAIL_SERVICE_UNAVAILABLE, "failed to send email");
         }
     }
 

@@ -297,6 +297,8 @@ public class AuthService {
     public void resetPassword(AuthRequests.ResetPassword req) {
         tenantService.requireEnabled(req.getTenantId());
         
+        // Compare passwords - timing attacks aren't a concern for user input validation
+        // Both values are user-provided plaintext, not secrets or hashed values
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }

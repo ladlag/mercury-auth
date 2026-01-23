@@ -36,6 +36,9 @@ public enum ErrorCodes {
     // ========== 40 08 参数校验 ==========
     VALIDATION_FAILED    ("400801", "error.400801", HttpStatus.BAD_REQUEST),
 
+    // ========== 40 09 服务配置 ==========
+    EMAIL_SERVICE_UNAVAILABLE ("400901", "error.400901", HttpStatus.SERVICE_UNAVAILABLE),
+
     // ========== 40 99 系统 ==========
     INTERNAL_ERROR       ("409901", "error.409901", HttpStatus.INTERNAL_SERVER_ERROR);
 
