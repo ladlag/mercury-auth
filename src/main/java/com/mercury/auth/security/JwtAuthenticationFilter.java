@@ -59,22 +59,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String token = authHeader.substring(BEARER_PREFIX.length());
-            String tenantId = request.getHeader(TENANT_ID_HEADER);
             
             // Parse and validate token
             Claims claims = jwtService.parse(token);
-            
-            // Validate tenant match if X-Tenant-Id header is present
-            if (tenantId != null) {
-                String tokenTenantId = String.valueOf(claims.get("tenantId"));
-                if (!tenantId.equals(tokenTenantId)) {
-                    logger.warn("Tenant mismatch: header={} token={}", tenantId, tokenTenantId);
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"code\":\"TENANT_MISMATCH\",\"message\":\"tenant mismatch\"}");
-                    return;
-                }
-            }
             
             // Extract user information
             Object tenantIdObj = claims.get("tenantId");
@@ -90,6 +77,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             
             String tokenTenantId = String.valueOf(tenantIdObj);
+            
+            // CRITICAL: Validate tenant match with X-Tenant-Id header
+            // The header is mandatory for multi-tenant isolation
+            String headerTenantId = request.getHeader(TENANT_ID_HEADER);
+            if (headerTenantId == null) {
+                logger.warn("Missing X-Tenant-Id header for authenticated request from user={}", usernameObj);
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"code\":\"MISSING_TENANT_HEADER\",\"message\":\"X-Tenant-Id header is required\"}");
+                return;
+            }
+            
+            if (!headerTenantId.equals(tokenTenantId)) {
+                logger.warn("Tenant mismatch: header={} token={}", headerTenantId, tokenTenantId);
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"code\":\"TENANT_MISMATCH\",\"message\":\"tenant mismatch\"}");
+                return;
+            }
+            
             Long userId = Long.valueOf(String.valueOf(userIdObj));
             String username = String.valueOf(usernameObj);
             
