@@ -48,6 +48,9 @@ public class TokenVerifyResponseTest {
     private TokenBlacklistMapper tokenBlacklistMapper;
     
     @Mock
+    private com.mercury.auth.service.RateLimitService rateLimitService;
+    
+    @Mock
     private ValueOperations<String, String> valueOperations;
 
     private TokenService tokenService;
@@ -55,7 +58,7 @@ public class TokenVerifyResponseTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, authLogService, tokenBlacklistMapper);
+        tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, authLogService, tokenBlacklistMapper, rateLimitService);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 

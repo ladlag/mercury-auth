@@ -3,6 +3,7 @@ package com.mercury.auth.security;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.service.TokenService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -39,6 +40,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         
+        // Skip JWT authentication for public endpoints
+        String requestPath = request.getServletPath();
+        if (isPublicEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         
         // If no Authorization header or already authenticated, continue
@@ -53,7 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String tenantId = request.getHeader(TENANT_ID_HEADER);
             
             // Parse and validate token
-            var claims = jwtService.parse(token);
+            Claims claims = jwtService.parse(token);
             
             // Validate tenant match if X-Tenant-Id header is present
             if (tenantId != null) {
@@ -98,6 +106,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+    
+    /**
+     * Check if the request path is a public endpoint that doesn't require JWT authentication
+     */
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/api/auth/login-") ||
+               path.startsWith("/api/auth/register-") ||
+               path.startsWith("/api/auth/send-") ||
+               path.startsWith("/api/auth/verify-") ||
+               path.startsWith("/api/auth/wechat-") ||
+               path.equals("/api/auth/refresh-token") ||
+               path.equals("/api/auth/verify-token") ||
+               path.equals("/api/auth/captcha") ||
+               path.equals("/api/auth/forgot-password") ||
+               path.equals("/api/auth/reset-password") ||
+               path.startsWith("/v3/api-docs") ||
+               path.startsWith("/swagger-ui") ||
+               path.startsWith("/actuator");
     }
 
     /**
