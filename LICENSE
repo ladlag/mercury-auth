@@ -1,0 +1,153 @@
+Copyright (c) 2026 ladlag
+
+All rights reserved.
+
+================================================================
+COMMUNITY LICENSE AGREEMENT (LEGALLY BINDING)
+================================================================
+
+Permission is hereby granted to any person obtaining a copy
+of this software and associated documentation files (the "Software"),
+to use, modify, and redistribute the Software, subject to the
+following terms and conditions.
+
+----------------------------------------------------------------
+1. Copyright and Attribution
+----------------------------------------------------------------
+
+All copies of the Software, whether modified or unmodified,
+must retain the original copyright notice and this License file.
+Attribution to the original author is required in all derivative works.
+
+----------------------------------------------------------------
+2. Commercial Use Policy
+----------------------------------------------------------------
+
+2.1 Internal Commercial Use (Authorization Not Required)
+
+Commercial use of the Software for internal purposes only within
+a for-profit organization is permitted without prior authorization,
+provided that:
+
+- The Software is not exposed to external users, customers,
+  or third parties
+- The Software is not offered as a service, product, or API
+  outside the organization
+- Internal use explicitly excludes deployment in subsidiaries,
+  affiliates, partner organizations, or customer environments
+
+2.2 External Commercial Use (Authorization Required)
+
+Any commercial use of the Software that involves:
+
+- Providing services to external users or customers
+- Offering SaaS, PaaS, API, or hosted services
+- Integrating the Software into products distributed to customers
+- Any form of external-facing or revenue-related service
+
+requires prior explicit written authorization from the
+copyright holder.
+
+Commercial authorization may be granted free of charge
+at the discretion of the copyright holder.
+
+----------------------------------------------------------------
+3. Modification and Redistribution
+----------------------------------------------------------------
+
+You are permitted to modify and redistribute the Software,
+in source or binary form, provided that:
+
+- This License is included in all copies or substantial portions
+  of the Software
+- Original copyright notices are preserved
+- Modifications are clearly documented
+
+----------------------------------------------------------------
+4. AI and Model Usage Restrictions
+----------------------------------------------------------------
+
+The Software, in whole or in part, may NOT be used without
+prior written authorization for any of the following purposes:
+
+- Training, fine-tuning, or validating machine learning or AI models
+- Generating datasets for AI or machine learning purposes
+- Providing AI model inference, agent, or automation services
+- Redistributing the Software as part of AI platforms, agents,
+  SDKs, or model-based services
+
+----------------------------------------------------------------
+5. No Trademark or Sublicense Rights
+----------------------------------------------------------------
+
+This License does not grant any rights to use the trade names,
+trademarks, service marks, or product names of the copyright holder.
+
+Sublicensing the Software as a standalone product or service
+is prohibited without explicit authorization.
+
+----------------------------------------------------------------
+6. Termination
+----------------------------------------------------------------
+
+This License and any granted permissions terminate automatically
+and immediately upon any breach of its terms and conditions,
+including but not limited to:
+
+- Unauthorized commercial use requiring prior authorization
+- Unauthorized AI or model-related usage
+- Failure to preserve copyright notices or attribution
+- Violation of trademark or sublicensing restrictions
+
+Upon termination, you must immediately cease all use of the
+Software and destroy all copies in your possession or control.
+No notice or declaration from the copyright holder is required
+for termination to take effect.
+
+----------------------------------------------------------------
+7. Disclaimer of Warranty and Liability
+----------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
+
+================================================================
+CHINESE EXPLANATION (FOR REFERENCE ONLY)
+================================================================
+
+本中文部分仅用于理解说明，不具有法律效力，
+以以上英文条款为唯一有效版本。
+
+1. 版权要求
+- 允许修改、发布、再分发代码
+- 必须保留作者版权信息和本 LICENSE 文件
+- 不得删除或篡改署名
+
+2. 商业使用说明
+- 企业**仅内部使用**（不对外提供服务）可直接使用，无需授权
+- **内部使用明确不包括**：子公司、关联公司、合作伙伴或客户环境中的部署
+- 任何**对外服务、SaaS、API、产品集成**等商业行为，均需事先获得授权
+- 商业授权可免费，但必须明确取得
+
+3. AI 使用限制
+- 不得用于大模型或 AI 模型训练、微调、验证
+- 不得生成 AI 训练数据集
+- 不得封装为 AI Agent、模型服务、SDK 或平台能力对外提供
+- 所有 AI 相关用途必须单独授权
+
+4. 其他说明
+- 本许可不授予任何商标或品牌使用权
+- 不得将本软件作为独立商业产品再次授权或出售
+
+5. 终止条款
+- 一旦违反本许可的任何条款，授权自动立即失效
+- 无需版权持有人发出通知或声明
+- 违规后必须立即停止使用并销毁所有副本
