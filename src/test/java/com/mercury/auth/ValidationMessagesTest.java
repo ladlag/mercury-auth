@@ -5,6 +5,7 @@ import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindException;
@@ -45,6 +46,7 @@ public class ValidationMessagesTest {
     void passwordRegister_validation_returns_specific_messages() {
         // Setup validator with English locale
         LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
 
         // Create request with missing required fields
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
@@ -122,6 +124,7 @@ public class ValidationMessagesTest {
     @Test
     void emailRegister_validation_returns_specific_messages() {
         LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
 
         AuthRequests.EmailRegister request = new AuthRequests.EmailRegister();
         request.setTenantId("tenant1");
@@ -160,6 +163,7 @@ public class ValidationMessagesTest {
     void passwordRegister_validation_returns_chinese_messages() {
         // Setup validator with Chinese locale
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
 
         // Create request with missing required fields
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
@@ -230,6 +234,7 @@ public class ValidationMessagesTest {
     @Test
     void emailRegister_validation_returns_chinese_messages() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.EmailRegister request = new AuthRequests.EmailRegister();
         request.setTenantId("tenant1");
