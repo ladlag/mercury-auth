@@ -1,5 +1,6 @@
 package com.mercury.auth.dto;
 
+import com.mercury.auth.util.ValidationPatterns;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -28,7 +29,7 @@ public class AuthRequests {
         private String confirmPassword;
         @Email(message = "{validation.email.invalid}")
         private String email;
-        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
     }
 
@@ -86,7 +87,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class SendPhoneCode extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
-        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
         private VerificationPurpose purpose;
     }
@@ -118,7 +119,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneLogin extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
-        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
         @NotBlank(message = "{validation.code.required}")
         private String code;
@@ -130,7 +131,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneRegister extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
-        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
         @NotBlank(message = "{validation.code.required}")
         private String code;
