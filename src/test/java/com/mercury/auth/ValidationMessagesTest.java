@@ -100,7 +100,9 @@ public class ValidationMessagesTest {
                 .findFirst()
                 .orElse(null);
         assertThat(usernameError).isNotNull();
-        assertThat(usernameError.getMessage()).isEqualTo("Username is required");
+        assertThat(usernameError.getMessage())
+                .as("Username validation message should be one of the two English messages")
+                .isIn("Username is required", "Username must be 3-20 characters, start with a letter, and contain only letters, numbers, and underscores");
 
         // Password has both @NotBlank and @Size constraints
         // When empty, it may trigger either constraint first
@@ -210,7 +212,9 @@ public class ValidationMessagesTest {
                 .findFirst()
                 .orElse(null);
         assertThat(usernameError).isNotNull();
-        assertThat(usernameError.getMessage()).isEqualTo("用户名必填");
+        assertThat(usernameError.getMessage())
+                .as("Username validation message should be one of the two Chinese messages")
+                .isIn("用户名必填", "用户名必须是3-20个字符，以字母开头，只能包含字母、数字和下划线");
 
         // Password has both @NotBlank and @Size constraints
         // When empty, it may trigger either constraint first
