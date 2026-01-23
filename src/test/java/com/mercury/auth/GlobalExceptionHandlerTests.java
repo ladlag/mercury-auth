@@ -10,6 +10,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 
@@ -64,5 +65,40 @@ public class GlobalExceptionHandlerTests {
                 .containsExactlyInAnyOrder(
                         tuple("password", "Password must be at least 8 characters"),
                         tuple("confirmPassword", "Confirm password is required"));
+    }
+
+    @Test
+    void handleMessageNotReadable_returns_invalid_request_body_error() {
+        GlobalExceptionHandler handler = createHandler();
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+        HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
+                "Required request body is missing",
+                (Throwable) null);
+
+        ResponseEntity<ApiError> response = handler.handleMessageNotReadable(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ApiError body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.INVALID_REQUEST_BODY.getCode());
+        assertThat(body.getMessage()).isEqualTo("Invalid or missing request body");
+        assertThat(body.getErrors()).isNull();
+    }
+
+    @Test
+    void handleMessageNotReadable_returns_chinese_message() {
+        GlobalExceptionHandler handler = createHandler();
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
+                "Required request body is missing",
+                (Throwable) null);
+
+        ResponseEntity<ApiError> response = handler.handleMessageNotReadable(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ApiError body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.INVALID_REQUEST_BODY.getCode());
+        assertThat(body.getMessage()).isEqualTo("请求体无效或缺失");
     }
 }
