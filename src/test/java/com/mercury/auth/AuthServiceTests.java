@@ -86,6 +86,8 @@ public class AuthServiceTests {
         req.setEmail("a@b.com");
         req.setPurpose(AuthRequests.VerificationPurpose.REGISTER);
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(1L);
-        assertThatThrownBy(() -> emailAuthService.sendEmailCode(req)).isInstanceOf(RuntimeException.class);
+        // New behavior: returns null instead of throwing exception to prevent account enumeration
+        User result = emailAuthService.sendEmailCode(req);
+        assertThat(result).isNull();
     }
 }
