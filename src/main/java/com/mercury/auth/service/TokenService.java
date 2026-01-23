@@ -130,7 +130,7 @@ public class TokenService {
 
     public AuthResponse refreshToken(String tenantId, String token) {
         // Apply rate limiting for refresh token endpoint
-        rateLimitService.checkIpRateLimit("REFRESH_TOKEN");
+        rateLimitService.checkIpRateLimit(AuthAction.RATE_LIMIT_REFRESH_TOKEN.name());
         
         if (isBlacklisted(token)) {
             logger.warn("refreshToken blacklisted tenant={}", tenantId);

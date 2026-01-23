@@ -35,22 +35,8 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
-                // Public endpoints - authentication APIs
-                // Login, registration, and code sending endpoints are public
-                .antMatchers("/api/auth/login-**").permitAll()
-                .antMatchers("/api/auth/register-**").permitAll()
-                .antMatchers("/api/auth/send-**").permitAll()
-                .antMatchers("/api/auth/verify-**").permitAll()
-                .antMatchers("/api/auth/wechat-**").permitAll()
-                .antMatchers("/api/auth/refresh-token").permitAll()
-                .antMatchers("/api/auth/verify-token").permitAll()
-                .antMatchers("/api/auth/captcha").permitAll()
-                .antMatchers("/api/auth/forgot-password").permitAll()
-                .antMatchers("/api/auth/reset-password").permitAll()
-                // Swagger/OpenAPI endpoints - configured via springdoc.swagger-ui.enabled
-                .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // Actuator health endpoints
-                .antMatchers("/actuator/**").permitAll()
+                // Public endpoints - authentication APIs defined in SecurityConstants
+                .antMatchers(SecurityConstants.PUBLIC_ENDPOINTS).permitAll()
                 // Protected endpoints requiring JWT authentication
                 // Logout requires valid JWT token
                 .antMatchers("/api/auth/logout").authenticated()

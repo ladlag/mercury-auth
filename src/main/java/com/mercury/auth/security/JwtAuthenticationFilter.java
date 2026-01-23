@@ -1,5 +1,6 @@
 package com.mercury.auth.security;
 
+import com.mercury.auth.config.SecurityConstants;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.service.TokenService;
@@ -42,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Skip JWT authentication for public endpoints
         String requestPath = request.getServletPath();
-        if (isPublicEndpoint(requestPath)) {
+        if (SecurityConstants.isPublicEndpoint(requestPath)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -76,9 +77,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             
             // Extract user information
-            String tokenTenantId = String.valueOf(claims.get("tenantId"));
-            Long userId = Long.valueOf(String.valueOf(claims.get("userId")));
-            String username = String.valueOf(claims.get("username"));
+            Object tenantIdObj = claims.get("tenantId");
+            Object userIdObj = claims.get("userId");
+            Object usernameObj = claims.get("username");
+            
+            if (tenantIdObj == null || userIdObj == null || usernameObj == null) {
+                logger.warn("JWT missing required claims");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"code\":\"INVALID_TOKEN\",\"message\":\"invalid token\"}");
+                return;
+            }
+            
+            String tokenTenantId = String.valueOf(tenantIdObj);
+            Long userId = Long.valueOf(String.valueOf(userIdObj));
+            String username = String.valueOf(usernameObj);
             
             // Create authentication token with user details
             JwtUserDetails userDetails = new JwtUserDetails(tokenTenantId, userId, username);
@@ -108,25 +121,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
     
-    /**
-     * Check if the request path is a public endpoint that doesn't require JWT authentication
-     */
-    private boolean isPublicEndpoint(String path) {
-        return path.startsWith("/api/auth/login-") ||
-               path.startsWith("/api/auth/register-") ||
-               path.startsWith("/api/auth/send-") ||
-               path.startsWith("/api/auth/verify-") ||
-               path.startsWith("/api/auth/wechat-") ||
-               path.equals("/api/auth/refresh-token") ||
-               path.equals("/api/auth/verify-token") ||
-               path.equals("/api/auth/captcha") ||
-               path.equals("/api/auth/forgot-password") ||
-               path.equals("/api/auth/reset-password") ||
-               path.startsWith("/v3/api-docs") ||
-               path.startsWith("/swagger-ui") ||
-               path.startsWith("/actuator");
-    }
-
     /**
      * Simple user details class to hold JWT claims
      */

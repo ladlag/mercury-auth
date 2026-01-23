@@ -67,8 +67,10 @@ public class RateLimitService {
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            // Don't fail requests if IP extraction fails, just log and continue
-            // This ensures the service remains available even if there are issues
+            // Log IP extraction failure but don't fail the request to maintain service availability
+            // This ensures the service remains available even if there are issues with IP extraction
+            org.slf4j.LoggerFactory.getLogger(RateLimitService.class)
+                .debug("Failed to extract IP for rate limiting, continuing without IP-based limit: {}", e.getMessage());
         }
     }
 }
