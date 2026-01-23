@@ -4,7 +4,9 @@ import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.CaptchaChallenge;
+import com.mercury.auth.dto.RegisterResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.service.AuthService;
@@ -30,9 +32,13 @@ public class AuthController {
     private final CaptchaService captchaService;
 
     @PostMapping("/register-password")
-    public ResponseEntity<Void> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
-        authService.registerPassword(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RegisterResponse> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
+        User user = authService.registerPassword(req);
+        return ResponseEntity.ok(RegisterResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/login-password")
@@ -47,9 +53,13 @@ public class AuthController {
     }
 
     @PostMapping("/register-email")
-    public ResponseEntity<Void> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
-        authService.registerEmail(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RegisterResponse> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
+        User user = authService.registerEmail(req);
+        return ResponseEntity.ok(RegisterResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/login-email")
@@ -88,9 +98,13 @@ public class AuthController {
     }
 
     @PostMapping("/register-phone")
-    public ResponseEntity<Void> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
-        phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<RegisterResponse> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
+        User user = phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
+        return ResponseEntity.ok(RegisterResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/wechat-login")

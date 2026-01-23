@@ -34,7 +34,7 @@ public class AuthService {
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
 
-    public void registerPassword(AuthRequests.PasswordRegister req) {
+    public User registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         User user;
         try {
@@ -46,6 +46,7 @@ public class AuthService {
             throw ex;
         }
         safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_PASSWORD, true);
+        return user;
     }
 
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
@@ -105,7 +106,7 @@ public class AuthService {
         return "OK";
     }
 
-    public void registerEmail(AuthRequests.EmailRegister req) {
+    public User registerEmail(AuthRequests.EmailRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         if (!verificationService.verifyAndConsume(buildEmailKey(req.getTenantId(), req.getEmail()), req.getCode())) {
             logger.warn("registerEmail invalid code tenant={} email={}", req.getTenantId(), req.getEmail());
@@ -128,6 +129,7 @@ public class AuthService {
             throw ex;
         }
         safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_EMAIL, true);
+        return user;
     }
 
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {

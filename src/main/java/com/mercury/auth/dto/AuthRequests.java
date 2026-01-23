@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class AuthRequests {
@@ -27,6 +28,7 @@ public class AuthRequests {
         private String confirmPassword;
         @Email(message = "{validation.email.invalid}")
         private String email;
+        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
         private String phone;
     }
 
@@ -84,6 +86,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class SendPhoneCode extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
         private String phone;
         private VerificationPurpose purpose;
     }
@@ -115,6 +118,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneLogin extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
         private String phone;
         @NotBlank(message = "{validation.code.required}")
         private String code;
@@ -126,6 +130,7 @@ public class AuthRequests {
     @EqualsAndHashCode(callSuper = true)
     public static class PhoneRegister extends BaseTenantRequest {
         @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "{validation.phone.invalid}")
         private String phone;
         @NotBlank(message = "{validation.code.required}")
         private String code;
