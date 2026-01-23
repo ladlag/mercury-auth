@@ -6,6 +6,6 @@ import javax.validation.constraints.NotBlank;
 
 @Data
 public class BaseTenantRequest {
-    @NotBlank(message = "Tenant ID is required")
+    @NotBlank(message = "{validation.tenantId.required}")
     private String tenantId;
 }
