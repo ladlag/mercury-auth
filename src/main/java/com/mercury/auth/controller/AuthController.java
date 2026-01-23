@@ -134,6 +134,11 @@ public class AuthController {
         return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha()));
     }
 
+    @PostMapping("/quick-login-phone")
+    public ResponseEntity<AuthResponse> quickLoginPhone(@Validated @RequestBody AuthRequests.PhoneQuickLogin req) {
+        return ResponseEntity.ok(phoneAuthService.quickLoginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha()));
+    }
+
     // WeChat authentication endpoints
     
     @PostMapping("/wechat-login")

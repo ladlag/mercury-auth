@@ -142,6 +142,15 @@ curl -X POST http://localhost:10000/auth/api/auth/login-password \
     "password": "password123"
   }'
 
+# Phone quick login - automatically registers new users or logs in existing users
+curl -X POST http://localhost:10000/auth/api/auth/quick-login-phone \
+  -H "X-Tenant-Id: tenant1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "13800138000",
+    "code": "123456"
+  }'
+
 # Response includes JWT token
 {
   "accessToken": "eyJhbGc...",

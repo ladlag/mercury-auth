@@ -156,6 +156,76 @@ public class PhoneAuthService {
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
+    /**
+     * Quick login with phone - register if user doesn't exist, login if exists
+     * This combines registration and login for a seamless user experience
+     */
+    public AuthResponse quickLoginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
+        tenantService.requireEnabled(tenantId);
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("QUICK_LOGIN_PHONE");
+        
+        // Apply per-phone rate limiting
+        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_QUICK_LOGIN_PHONE, tenantId, phone));
+        ensureCaptcha(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
+        
+        // Verify code first
+        if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
+            logger.warn("quickLoginPhone invalid code tenant={} phone={}", tenantId, phone);
+            recordFailure(tenantId, null, AuthAction.QUICK_LOGIN_PHONE);
+            captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+            throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
+        }
+        
+        // Check if user exists
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId).eq("phone", phone);
+        User user = userMapper.selectOne(wrapper);
+        
+        if (user == null) {
+            // User doesn't exist - register new user
+            // Generate username from phone number (use last 8 digits + random suffix)
+            String username = "user_" + phone.substring(Math.max(0, phone.length() - 8));
+            
+            // Check if username already exists, add suffix if needed
+            int suffix = 1;
+            String finalUsername = username;
+            QueryWrapper<User> usernameCheck = new QueryWrapper<>();
+            usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
+            while (userMapper.selectCount(usernameCheck) > 0) {
+                finalUsername = username + "_" + suffix++;
+                usernameCheck = new QueryWrapper<>();
+                usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
+            }
+            
+            user = new User();
+            user.setTenantId(tenantId);
+            user.setUsername(finalUsername);
+            user.setPhone(phone);
+            user.setPasswordHash("");
+            user.setEnabled(true);
+            userMapper.insert(user);
+            logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, finalUsername);
+        } else {
+            // User exists - check if enabled
+            if (Boolean.FALSE.equals(user.getEnabled())) {
+                logger.warn("quickLoginPhone user disabled tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, user.getId(), AuthAction.QUICK_LOGIN_PHONE);
+                captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+                throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
+            }
+            logger.info("quickLoginPhone existing user tenant={} phone={} username={}", tenantId, phone, user.getUsername());
+        }
+        
+        // Generate token for the user (new or existing)
+        String token = jwtService.generate(tenantId, user.getId(), user.getUsername());
+        captchaService.reset(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+        safeRecord(tenantId, user.getId(), AuthAction.QUICK_LOGIN_PHONE, true);
+        
+        return new AuthResponse(token, jwtService.getTtlSeconds());
+    }
+
     private String buildPhoneKey(String tenantId, String phone) {
         return "phone:" + tenantId + ":" + phone;
     }

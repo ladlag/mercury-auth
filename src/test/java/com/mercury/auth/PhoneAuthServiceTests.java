@@ -89,4 +89,80 @@ public class PhoneAuthServiceTests {
         // Verify that SMS is NOT sent when phone already exists
         Mockito.verify(smsService, Mockito.never()).sendVerificationCode(Mockito.any(), Mockito.any());
     }
+
+    @Test
+    void quickLoginPhone_new_user_registers_and_logs_in() {
+        Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:13800138000", "123456")).thenReturn(true);
+        // First call returns null (user doesn't exist), subsequent calls for username check return 0
+        Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(null);
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
+        Mockito.when(jwtService.generate(Mockito.eq("t1"), Mockito.any(), Mockito.any())).thenReturn("new_token");
+        Mockito.when(jwtService.getTtlSeconds()).thenReturn(7200L);
+        
+        AuthResponse resp = phoneAuthService.quickLoginPhone("t1", "13800138000", "123456", null, null);
+        
+        assertThat(resp.getAccessToken()).isEqualTo("new_token");
+        assertThat(resp.getExpiresInSeconds()).isEqualTo(7200L);
+        // Verify user was inserted
+        Mockito.verify(userMapper).insert(Mockito.argThat(user -> 
+            user.getTenantId().equals("t1") && 
+            user.getPhone().equals("13800138000") &&
+            user.getUsername().startsWith("user_")
+        ));
+    }
+
+    @Test
+    void quickLoginPhone_existing_user_logs_in() {
+        Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:13800138000", "123456")).thenReturn(true);
+        User existingUser = new User();
+        existingUser.setId(5L);
+        existingUser.setTenantId("t1");
+        existingUser.setUsername("existing_user");
+        existingUser.setPhone("13800138000");
+        existingUser.setEnabled(true);
+        Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(existingUser);
+        Mockito.when(jwtService.generate("t1", 5L, "existing_user")).thenReturn("existing_token");
+        Mockito.when(jwtService.getTtlSeconds()).thenReturn(7200L);
+        
+        AuthResponse resp = phoneAuthService.quickLoginPhone("t1", "13800138000", "123456", null, null);
+        
+        assertThat(resp.getAccessToken()).isEqualTo("existing_token");
+        assertThat(resp.getExpiresInSeconds()).isEqualTo(7200L);
+        // Verify user was NOT inserted (existing user)
+        Mockito.verify(userMapper, Mockito.never()).insert(Mockito.any());
+    }
+
+    @Test
+    void quickLoginPhone_invalid_code() {
+        Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:13800138000", "wrong_code")).thenReturn(false);
+        
+        assertThatThrownBy(() -> phoneAuthService.quickLoginPhone("t1", "13800138000", "wrong_code", null, null))
+            .isInstanceOf(RuntimeException.class);
+        
+        // Verify no user operations were performed
+        Mockito.verify(userMapper, Mockito.never()).selectOne(Mockito.any());
+        Mockito.verify(userMapper, Mockito.never()).insert(Mockito.any());
+    }
+
+    @Test
+    void quickLoginPhone_disabled_user() {
+        Mockito.when(captchaService.isRequired(Mockito.any())).thenReturn(false);
+        Mockito.when(verificationService.verifyAndConsume("phone:t1:13800138000", "123456")).thenReturn(true);
+        User disabledUser = new User();
+        disabledUser.setId(6L);
+        disabledUser.setTenantId("t1");
+        disabledUser.setUsername("disabled_user");
+        disabledUser.setPhone("13800138000");
+        disabledUser.setEnabled(false);
+        Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(disabledUser);
+        
+        assertThatThrownBy(() -> phoneAuthService.quickLoginPhone("t1", "13800138000", "123456", null, null))
+            .isInstanceOf(RuntimeException.class);
+        
+        // Verify no token was generated
+        Mockito.verify(jwtService, Mockito.never()).generate(Mockito.any(), Mockito.any(), Mockito.any());
+    }
 }
