@@ -33,6 +33,8 @@ provided that:
   or third parties
 - The Software is not offered as a service, product, or API
   outside the organization
+- Internal use explicitly excludes deployment in subsidiaries,
+  affiliates, partner organizations, or customer environments
 
 2.2 External Commercial Use (Authorization Required)
 
@@ -85,7 +87,25 @@ Sublicensing the Software as a standalone product or service
 is prohibited without explicit authorization.
 
 ----------------------------------------------------------------
-6. Disclaimer of Warranty and Liability
+6. Termination
+----------------------------------------------------------------
+
+This License and any granted permissions terminate automatically
+and immediately upon any breach of its terms and conditions,
+including but not limited to:
+
+- Unauthorized commercial use requiring prior authorization
+- Unauthorized AI or model-related usage
+- Failure to preserve copyright notices or attribution
+- Violation of trademark or sublicensing restrictions
+
+Upon termination, you must immediately cease all use of the
+Software and destroy all copies in your possession or control.
+No notice or declaration from the copyright holder is required
+for termination to take effect.
+
+----------------------------------------------------------------
+7. Disclaimer of Warranty and Liability
 ----------------------------------------------------------------
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -113,6 +133,7 @@ CHINESE EXPLANATION (FOR REFERENCE ONLY)
 
 2. 商业使用说明
 - 企业**仅内部使用**（不对外提供服务）可直接使用，无需授权
+- **内部使用明确不包括**：子公司、关联公司、合作伙伴或客户环境中的部署
 - 任何**对外服务、SaaS、API、产品集成**等商业行为，均需事先获得授权
 - 商业授权可免费，但必须明确取得
 
@@ -125,3 +146,8 @@ CHINESE EXPLANATION (FOR REFERENCE ONLY)
 4. 其他说明
 - 本许可不授予任何商标或品牌使用权
 - 不得将本软件作为独立商业产品再次授权或出售
+
+5. 终止条款
+- 一旦违反本许可的任何条款，授权自动立即失效
+- 无需版权持有人发出通知或声明
+- 违规后必须立即停止使用并销毁所有副本
