@@ -1,6 +1,4 @@
 spring:
-  application:
-    name: mercury-auth
   datasource:
     url: jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC
     username: root
@@ -11,6 +9,7 @@ spring:
     port: 6379
     database: 0
   mail:
+    from: "no-reply@example.com"
     host: smtp.example.com
     port: 25
     username: user
@@ -18,9 +17,10 @@ spring:
     properties:
       mail:
         smtp:
-          auth: false
+          auth: true
           starttls:
             enable: false
+
 
 mybatis-plus:
   configuration:
@@ -49,9 +49,6 @@ security:
   captcha:
     threshold: 3
     ttl-minutes: 5
-
-mail:
-  from: "no-reply@example.com"
 
 # Swagger/OpenAPI configuration
 springdoc:

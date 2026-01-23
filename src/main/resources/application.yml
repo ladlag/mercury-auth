@@ -1,12 +1,12 @@
 server:
   port: 10000
   servlet:
-    context-path: /auth
+    context-path: /auth-api
   shutdown: graceful
 
 spring:
   application:
-    name: auth
+    name: auth-api
   profiles:
     active: dev
 

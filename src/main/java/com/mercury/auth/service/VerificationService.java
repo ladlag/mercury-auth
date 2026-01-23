@@ -27,7 +27,7 @@ public class VerificationService {
     private final JavaMailSender mailSender;
     private final MailProperties mailProperties;
     private final LocalizationService localizationService;
-    @Value("${mail.from:no-reply@example.com}")
+    @Value("${spring.mail.from:no-reply@example.com}")
     private String mailFrom;
     @Value("${security.code.ttl-minutes:10}")
     private long ttlMinutes;
@@ -48,11 +48,8 @@ public class VerificationService {
             Integer port = mailProperties.getPort();
             String username = mailProperties.getUsername();
             String password = mailProperties.getPassword();
-            
-            if (host != null && !host.trim().isEmpty() && 
-                port != null && 
-                username != null && !username.trim().isEmpty() &&
-                password != null && !password.trim().isEmpty()) {
+
+            if (host != null && !host.trim().isEmpty() && port != null && username != null && !username.trim().isEmpty() && password != null && !password.trim().isEmpty()) {
                 emailConfigured = true;
                 logger.info("Email server configured: host={}, port={}, username={}", host, port, username);
             } else {
@@ -77,10 +74,9 @@ public class VerificationService {
         // Check cooldown period - prevent sending codes too frequently
         String cooldownKey = key + ":cooldown";
         if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) {
-            throw new ApiException(ErrorCodes.RATE_LIMITED, 
-                "verification code sent recently, please wait before requesting again");
+            throw new ApiException(ErrorCodes.RATE_LIMITED, "verification code sent recently, please wait before requesting again");
         }
-        
+
         // Check daily limit - prevent abuse
         String dailyKey = key + ":daily";
         Long dailyCount = redisTemplate.opsForValue().increment(dailyKey);
@@ -88,16 +84,15 @@ public class VerificationService {
             redisTemplate.expire(dailyKey, Duration.ofDays(1));
         }
         if (dailyCount != null && dailyCount > maxDailyRequests) {
-            throw new ApiException(ErrorCodes.RATE_LIMITED, 
-                "daily verification code limit exceeded");
+            throw new ApiException(ErrorCodes.RATE_LIMITED, "daily verification code limit exceeded");
         }
-        
+
         // Store the code
         redisTemplate.opsForValue().set(key, code, ttl);
-        
+
         // Set cooldown period
         redisTemplate.opsForValue().set(cooldownKey, "1", Duration.ofSeconds(cooldownSeconds));
-        
+
         // Reset verification attempt counter
         String attemptsKey = key + ":attempts";
         redisTemplate.delete(attemptsKey);
@@ -114,10 +109,9 @@ public class VerificationService {
         if (attempts != null && attempts > maxVerifyAttempts) {
             // Too many failed attempts, lock out
             redisTemplate.delete(key);
-            throw new ApiException(ErrorCodes.RATE_LIMITED, 
-                "too many verification attempts, please request a new code");
+            throw new ApiException(ErrorCodes.RATE_LIMITED, "too many verification attempts, please request a new code");
         }
-        
+
         String val = redisTemplate.opsForValue().get(key);
         if (val != null && MessageDigest.isEqual(val.getBytes(), code.getBytes())) {
             // Success: delete code, cooldown, and attempts
@@ -134,12 +128,12 @@ public class VerificationService {
             logger.warn("Email server not configured. Cannot send email to: {}", to);
             throw new ApiException(ErrorCodes.EMAIL_SERVICE_UNAVAILABLE, "email service not configured");
         }
-        
+
         try {
             // Get localized subject and body using LocalizationService
             String subject = localizationService.getMessage("email.verification.subject");
             String body = localizationService.getMessage("email.verification.body", new Object[]{code});
-            
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailFrom);
             message.setTo(to);

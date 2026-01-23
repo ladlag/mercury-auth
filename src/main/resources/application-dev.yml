@@ -11,6 +11,7 @@ spring:
     port: 6379
     database: 0
   mail:
+    from: "no-reply@example.com"
     host: smtp.example.com
     port: 25
     username: user
@@ -18,7 +19,7 @@ spring:
     properties:
       mail:
         smtp:
-          auth: false
+          auth: true
           starttls:
             enable: false
 
@@ -60,9 +61,6 @@ security:
   captcha:
     threshold: 3
     ttl-minutes: 5
-
-mail:
-  from: "no-reply@example.com"
 
 # Swagger/OpenAPI configuration
 springdoc:
