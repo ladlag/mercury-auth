@@ -4,6 +4,7 @@ import com.mercury.auth.dto.ApiError;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.exception.GlobalExceptionHandler;
+import com.mercury.auth.service.LocalizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
@@ -24,7 +25,8 @@ public class GlobalExceptionHandlerTests {
         messageSource.setBasenames("classpath:ValidationMessages", "classpath:ErrorMessages");
         messageSource.setDefaultEncoding("UTF-8");
         messageSource.setDefaultLocale(Locale.ENGLISH);
-        return new GlobalExceptionHandler(messageSource);
+        LocalizationService localizationService = new LocalizationService(messageSource);
+        return new GlobalExceptionHandler(localizationService);
     }
 
     @Test
