@@ -3,3 +3,5 @@
 /out/
 *.iml
 .idea/
+/logs/
+*.log
