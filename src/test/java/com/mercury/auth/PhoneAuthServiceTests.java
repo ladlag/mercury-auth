@@ -104,11 +104,11 @@ public class PhoneAuthServiceTests {
         
         assertThat(resp.getAccessToken()).isEqualTo("new_token");
         assertThat(resp.getExpiresInSeconds()).isEqualTo(7200L);
-        // Verify user was inserted
+        // Verify user was inserted with phone number as username
         Mockito.verify(userMapper).insert(Mockito.argThat(user -> 
             user.getTenantId().equals("t1") && 
             user.getPhone().equals("13800138000") &&
-            user.getUsername().startsWith("user_")
+            user.getUsername().equals("13800138000")
         ));
     }
 

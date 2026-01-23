@@ -24,7 +24,6 @@ import java.time.Duration;
 public class PhoneAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PhoneAuthService.class);
-    private static final int PHONE_SUFFIX_LENGTH = 8;
     private final VerificationService verificationService;
     private final SmsService smsService;
     private final UserMapper userMapper;
@@ -186,29 +185,29 @@ public class PhoneAuthService {
         
         if (user == null) {
             // User doesn't exist - register new user
-            // Generate username from phone number (use last digits based on PHONE_SUFFIX_LENGTH)
-            String baseUsername = "user_" + phone.substring(Math.max(0, phone.length() - PHONE_SUFFIX_LENGTH));
+            // Use phone number directly as username
+            String username = phone;
             
-            // Check if username already exists, add suffix if needed
-            String finalUsername = baseUsername;
+            // Check if username already exists (in case phone is used as username by another user)
             QueryWrapper<User> usernameCheck = new QueryWrapper<>();
-            usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
+            usernameCheck.eq("tenant_id", tenantId).eq("username", username);
             
-            int suffix = 1;
-            while (userMapper.selectCount(usernameCheck) > 0) {
-                finalUsername = baseUsername + "_" + suffix++;
-                usernameCheck.clear();
-                usernameCheck.eq("tenant_id", tenantId).eq("username", finalUsername);
+            if (userMapper.selectCount(usernameCheck) > 0) {
+                // Phone number already used as username by another user in this tenant
+                logger.warn("quickLoginPhone username conflict tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, null, AuthAction.QUICK_LOGIN_PHONE);
+                captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+                throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username already exists");
             }
             
             user = new User();
             user.setTenantId(tenantId);
-            user.setUsername(finalUsername);
+            user.setUsername(username);
             user.setPhone(phone);
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
-            logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, finalUsername);
+            logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, username);
         } else {
             // User exists - check if enabled
             if (Boolean.FALSE.equals(user.getEnabled())) {
