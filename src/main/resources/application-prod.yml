@@ -53,6 +53,19 @@ security:
 mail:
   from: ${MAIL_FROM:no-reply@example.com}
 
+# Swagger/OpenAPI configuration - DISABLED in production for security
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    com.mercury.auth: INFO
+    org.springframework: WARN
+    org.springframework.security: WARN
+
 # SECURITY NOTE: Never commit secrets to version control
 # Set JWT_SECRET, DB_PASSWORD, MAIL_PASSWORD, etc. via environment variables
 # For production deployment, use secrets management (e.g., Kubernetes Secrets, AWS Secrets Manager)

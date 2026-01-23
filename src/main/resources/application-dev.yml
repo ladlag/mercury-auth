@@ -55,6 +55,19 @@ security:
 mail:
   from: "no-reply@example.com"
 
+# Swagger/OpenAPI configuration
+springdoc:
+  api-docs:
+    enabled: true  # Enable in dev for testing
+  swagger-ui:
+    enabled: true  # Enable in dev for testing
+
+logging:
+  level:
+    com.mercury.auth: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+
 # NOTE: This is development configuration
 # For production, use environment variables and secrets management
 

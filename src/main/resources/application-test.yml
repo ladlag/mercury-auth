@@ -53,4 +53,17 @@ security:
 mail:
   from: "no-reply@example.com"
 
+# Swagger/OpenAPI configuration
+springdoc:
+  api-docs:
+    enabled: true  # Enable in test for integration testing
+  swagger-ui:
+    enabled: true  # Enable in test for integration testing
+
+logging:
+  level:
+    com.mercury.auth: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
 # Profiles are defined in application-dev.yml, application-test.yml, application-prod.yml
