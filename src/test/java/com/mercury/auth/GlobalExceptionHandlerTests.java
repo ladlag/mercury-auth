@@ -98,7 +98,7 @@ public class GlobalExceptionHandlerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getCode()).isEqualTo("400802");
+        assertThat(body.getCode()).isEqualTo(ErrorCodes.INVALID_REQUEST_BODY.getCode());
         assertThat(body.getMessage()).isEqualTo("请求体无效或缺失");
     }
 }
