@@ -25,7 +25,17 @@ public class SecurityConfig {
         // For stateless JWT authentication, CSRF protection is not required
         http.csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/api/auth/**", "/api/tenants/**", "/v3/api-docs/**", "/swagger-ui/**", "/actuator/**").permitAll()
+                // Public endpoints - authentication APIs
+                .antMatchers("/api/auth/**").permitAll()
+                // Swagger/OpenAPI endpoints - configured via springdoc.swagger-ui.enabled
+                .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // Actuator health endpoints
+                .antMatchers("/actuator/**").permitAll()
+                // Tenant management APIs - require authentication
+                // These are administrative operations that should not be publicly accessible
+                // TODO: Implement JWT authentication filter to validate Bearer tokens
+                .antMatchers("/api/tenants/**").authenticated()
+                // All other endpoints require authentication
                 .anyRequest().authenticated();
         return http.build();
     }
