@@ -2,6 +2,7 @@ package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
+import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
@@ -38,6 +39,27 @@ public class TokenService {
     private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final TokenBlacklistMapper tokenBlacklistMapper;
+
+    /**
+     * Verify token using request DTO
+     */
+    public TokenVerifyResponse verifyToken(AuthRequests.TokenVerify req) {
+        return verifyToken(req.getTenantId(), req.getToken());
+    }
+
+    /**
+     * Refresh token using request DTO
+     */
+    public AuthResponse refreshToken(AuthRequests.TokenRefresh req) {
+        return refreshToken(req.getTenantId(), req.getToken());
+    }
+
+    /**
+     * Logout (blacklist token) using request DTO
+     */
+    public void logout(AuthRequests.TokenLogout req) {
+        blacklistToken(req.getTenantId(), req.getToken());
+    }
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
         if (isBlacklisted(token)) {

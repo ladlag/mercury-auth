@@ -5,7 +5,8 @@ import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
-import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.PasswordAuthService;
+import com.mercury.auth.service.EmailAuthService;
 import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.RateLimitService;
@@ -37,7 +38,8 @@ public class VerificationFlowTests {
     private TenantService tenantService;
     private AuthLogService authLogService;
     private CaptchaService captchaService;
-    private AuthService authService;
+    private PasswordAuthService passwordAuthService;
+    private EmailAuthService emailAuthService;
 
     @BeforeEach
     void setup() {
@@ -53,7 +55,8 @@ public class VerificationFlowTests {
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tokenService, tenantService, authLogService, captchaService);
+        passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService);
+        emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService);
     }
 
     @Test
@@ -66,10 +69,10 @@ public class VerificationFlowTests {
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
         Mockito.when(verificationService.generateCode()).thenReturn("123456");
         Mockito.when(verificationService.defaultTtl()).thenReturn(Duration.ofMinutes(10));
-        String code = authService.sendEmailCode(req);
+        String code = emailAuthService.sendEmailCode(req);
         Mockito.verify(verificationService).storeCode(Mockito.eq("email:t1:a@b.com"), Mockito.eq("123456"), Mockito.any());
         Mockito.verify(verificationService).sendEmailCode("a@b.com", "123456");
-        assertThat(code).isEqualTo("OK");
+        assertThat(code).isEqualTo("123456");
     }
 
     @Test
@@ -88,7 +91,7 @@ public class VerificationFlowTests {
         Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(u);
         Mockito.when(jwtService.generate("t1", 2L, "u1")).thenReturn("token2");
         Mockito.when(jwtService.getTtlSeconds()).thenReturn(20L);
-        AuthResponse resp = authService.loginEmail(req);
+        AuthResponse resp = emailAuthService.loginEmail(req);
         assertThat(resp.getAccessToken()).isEqualTo("token2");
         assertThat(resp.getExpiresInSeconds()).isEqualTo(20L);
     }
@@ -101,6 +104,6 @@ public class VerificationFlowTests {
         req.setTenantId("t1");
         req.setEmail("a@b.com");
         req.setCode("000000");
-        assertThatThrownBy(() -> authService.loginEmail(req)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> emailAuthService.loginEmail(req)).isInstanceOf(RuntimeException.class);
     }
 }

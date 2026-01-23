@@ -9,7 +9,8 @@ import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthLogService;
-import com.mercury.auth.service.AuthService;
+import com.mercury.auth.service.PasswordAuthService;
+import com.mercury.auth.service.EmailAuthService;
 import com.mercury.auth.service.CaptchaService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
@@ -36,7 +37,8 @@ public class CaptchaIntegrationTest {
     private StringRedisTemplate redisTemplate;
     private ValueOperations<String, String> valueOps;
     private CaptchaService captchaService;
-    private AuthService authService;
+    private PasswordAuthService passwordAuthService;
+    private EmailAuthService emailAuthService;
     private UserMapper userMapper;
     private PasswordEncoder passwordEncoder;
     private JwtService jwtService;
@@ -62,8 +64,11 @@ public class CaptchaIntegrationTest {
         tenantService = Mockito.mock(TenantService.class);
         AuthLogService authLogService = Mockito.mock(AuthLogService.class);
         
-        authService = new AuthService(userMapper, passwordEncoder, jwtService, 
-            verificationService, rateLimitService, tokenService, tenantService, 
+        passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, 
+            verificationService, rateLimitService, tenantService, 
+            authLogService, captchaService);
+        emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, 
+            verificationService, rateLimitService, tenantService, 
             authLogService, captchaService);
     }
 
@@ -120,7 +125,7 @@ public class CaptchaIntegrationTest {
         loginReq.setCaptcha(answerStr);
         
         // This should succeed
-        AuthResponse response = authService.loginPassword(loginReq);
+        AuthResponse response = passwordAuthService.loginPassword(loginReq);
         assertThat(response.getAccessToken()).isEqualTo("token123");
     }
 
@@ -173,7 +178,7 @@ public class CaptchaIntegrationTest {
         loginReq.setCaptcha(answerStr);  // Correct answer
         
         // After the fix, this should now SUCCEED because identifier mismatch no longer matters
-        AuthResponse response = authService.loginPassword(loginReq);
+        AuthResponse response = passwordAuthService.loginPassword(loginReq);
         assertThat(response.getAccessToken()).isEqualTo("token123");
     }
 }

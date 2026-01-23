@@ -9,10 +9,7 @@ import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
-import com.mercury.auth.service.AuthService;
-import com.mercury.auth.service.CaptchaService;
-import com.mercury.auth.service.PhoneAuthService;
-import com.mercury.auth.service.WeChatAuthService;
+import com.mercury.auth.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -26,14 +23,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+    private final PasswordAuthService passwordAuthService;
+    private final EmailAuthService emailAuthService;
     private final PhoneAuthService phoneAuthService;
     private final WeChatAuthService weChatAuthService;
+    private final TokenService tokenService;
+    private final UserService userService;
     private final CaptchaService captchaService;
 
+    // Password-based authentication endpoints
+    
     @PostMapping("/register-password")
     public ResponseEntity<BaseAuthResponse> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
-        User user = authService.registerPassword(req);
+        User user = passwordAuthService.registerPassword(req);
         return ResponseEntity.ok(BaseAuthResponse.builder()
                 .tenantId(user.getTenantId())
                 .userId(user.getId())
@@ -43,18 +45,38 @@ public class AuthController {
 
     @PostMapping("/login-password")
     public ResponseEntity<AuthResponse> loginPassword(@Validated @RequestBody AuthRequests.PasswordLogin req) {
-        return ResponseEntity.ok(authService.loginPassword(req));
+        return ResponseEntity.ok(passwordAuthService.loginPassword(req));
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
+        passwordAuthService.changePassword(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
+        passwordAuthService.forgotPassword(req);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
+        passwordAuthService.resetPassword(req);
+        return ResponseEntity.ok().build();
+    }
+
+    // Email-based authentication endpoints
+    
     @PostMapping("/send-email-code")
     public ResponseEntity<Void> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
-        authService.sendEmailCode(req);
+        emailAuthService.sendEmailCode(req);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/register-email")
     public ResponseEntity<BaseAuthResponse> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
-        User user = authService.registerEmail(req);
+        User user = emailAuthService.registerEmail(req);
         return ResponseEntity.ok(BaseAuthResponse.builder()
                 .tenantId(user.getTenantId())
                 .userId(user.getId())
@@ -64,13 +86,31 @@ public class AuthController {
 
     @PostMapping("/login-email")
     public ResponseEntity<AuthResponse> loginEmail(@Validated @RequestBody AuthRequests.EmailLogin req) {
-        return ResponseEntity.ok(authService.loginEmail(req));
+        return ResponseEntity.ok(emailAuthService.loginEmail(req));
     }
 
+    @PostMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
+        emailAuthService.verifyEmailAfterRegister(req);
+        return ResponseEntity.ok().build();
+    }
+
+    // Phone-based authentication endpoints
+    
     @PostMapping("/send-phone-code")
     public ResponseEntity<Void> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
         phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone(), req.getPurpose());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/register-phone")
+    public ResponseEntity<BaseAuthResponse> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
+        User user = phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/login-phone")
@@ -78,6 +118,41 @@ public class AuthController {
         return ResponseEntity.ok(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha()));
     }
 
+    // WeChat authentication endpoints
+    
+    @PostMapping("/wechat-login")
+    public ResponseEntity<AuthResponse> wechatLogin(@Validated @RequestBody AuthRequests.WeChatLogin req) {
+        return ResponseEntity.ok(weChatAuthService.loginOrRegister(req.getTenantId(), req.getOpenId(), req.getUsername()));
+    }
+
+    // Token management endpoints
+    
+    @PostMapping("/verify-token")
+    public ResponseEntity<TokenVerifyResponse> verifyToken(@Validated @RequestBody AuthRequests.TokenVerify req) {
+        return ResponseEntity.ok(tokenService.verifyToken(req));
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@Validated @RequestBody AuthRequests.TokenRefresh req) {
+        return ResponseEntity.ok(tokenService.refreshToken(req));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
+        tokenService.logout(req);
+        return ResponseEntity.ok().build();
+    }
+
+    // User management endpoints
+    
+    @PostMapping("/user-status")
+    public ResponseEntity<Void> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
+        userService.updateUserStatus(req);
+        return ResponseEntity.ok().build();
+    }
+
+    // Captcha endpoints
+    
     @PostMapping("/captcha")
     public ResponseEntity<CaptchaChallenge> getCaptcha(@Validated @RequestBody AuthRequests.CaptchaRequest req) {
         AuthAction action;
@@ -95,66 +170,5 @@ public class AuthController {
                     "invalid captcha action. valid actions: " + validActions);
         }
         return ResponseEntity.ok(captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier()));
-    }
-
-    @PostMapping("/register-phone")
-    public ResponseEntity<BaseAuthResponse> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
-        User user = phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
-        return ResponseEntity.ok(BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build());
-    }
-
-    @PostMapping("/wechat-login")
-    public ResponseEntity<AuthResponse> wechatLogin(@Validated @RequestBody AuthRequests.WeChatLogin req) {
-        return ResponseEntity.ok(weChatAuthService.loginOrRegister(req.getTenantId(), req.getOpenId(), req.getUsername()));
-    }
-
-    @PostMapping("/verify-token")
-    public ResponseEntity<TokenVerifyResponse> verifyToken(@Validated @RequestBody AuthRequests.TokenVerify req) {
-        return ResponseEntity.ok(authService.verifyToken(req));
-    }
-
-    @PostMapping("/refresh-token")
-    public ResponseEntity<AuthResponse> refreshToken(@Validated @RequestBody AuthRequests.TokenRefresh req) {
-        return ResponseEntity.ok(authService.refreshToken(req));
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
-        authService.logout(req);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/user-status")
-    public ResponseEntity<Void> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
-        authService.updateUserStatus(req);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/change-password")
-    public ResponseEntity<Void> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
-        authService.changePassword(req);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
-        authService.forgotPassword(req);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
-        authService.resetPassword(req);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/verify-email")
-    public ResponseEntity<Void> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
-        authService.verifyEmailAfterRegister(req);
-        return ResponseEntity.ok().build();
     }
 }
