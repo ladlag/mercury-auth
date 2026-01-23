@@ -90,6 +90,11 @@ public class PasswordAuthService {
      */
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("LOGIN_PASSWORD");
+        
+        // Apply per-username rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), 

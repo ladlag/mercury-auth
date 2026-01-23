@@ -30,6 +30,12 @@ public class VerificationService {
     private String mailFrom;
     @Value("${security.code.ttl-minutes:10}")
     private long ttlMinutes;
+    @Value("${security.code.cooldown-seconds:60}")
+    private long cooldownSeconds;
+    @Value("${security.code.max-daily-requests:20}")
+    private long maxDailyRequests;
+    @Value("${security.code.max-verify-attempts:5}")
+    private long maxVerifyAttempts;
     private final SecureRandom random = new SecureRandom();
     private boolean emailConfigured = false;
 
@@ -67,13 +73,56 @@ public class VerificationService {
     }
 
     public void storeCode(String key, String code, Duration ttl) {
+        // Check cooldown period - prevent sending codes too frequently
+        String cooldownKey = key + ":cooldown";
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) {
+            throw new ApiException(ErrorCodes.RATE_LIMITED, 
+                "verification code sent recently, please wait before requesting again");
+        }
+        
+        // Check daily limit - prevent abuse
+        String dailyKey = key + ":daily";
+        Long dailyCount = redisTemplate.opsForValue().increment(dailyKey);
+        if (dailyCount != null && dailyCount == 1) {
+            redisTemplate.expire(dailyKey, Duration.ofDays(1));
+        }
+        if (dailyCount != null && dailyCount > maxDailyRequests) {
+            throw new ApiException(ErrorCodes.RATE_LIMITED, 
+                "daily verification code limit exceeded");
+        }
+        
+        // Store the code
         redisTemplate.opsForValue().set(key, code, ttl);
+        
+        // Set cooldown period
+        redisTemplate.opsForValue().set(cooldownKey, "1", Duration.ofSeconds(cooldownSeconds));
+        
+        // Reset verification attempt counter
+        String attemptsKey = key + ":attempts";
+        redisTemplate.delete(attemptsKey);
     }
 
     public boolean verifyAndConsume(String key, String code) {
+        // Check verification attempts to prevent brute force
+        String attemptsKey = key + ":attempts";
+        Long attempts = redisTemplate.opsForValue().increment(attemptsKey);
+        if (attempts != null && attempts == 1) {
+            // Set expiration same as code TTL
+            redisTemplate.expire(attemptsKey, Duration.ofMinutes(ttlMinutes));
+        }
+        if (attempts != null && attempts > maxVerifyAttempts) {
+            // Too many failed attempts, lock out
+            redisTemplate.delete(key);
+            throw new ApiException(ErrorCodes.RATE_LIMITED, 
+                "too many verification attempts, please request a new code");
+        }
+        
         String val = redisTemplate.opsForValue().get(key);
         if (val != null && val.equals(code)) {
+            // Success: delete code, cooldown, and attempts
             redisTemplate.delete(key);
+            redisTemplate.delete(key + ":cooldown");
+            redisTemplate.delete(attemptsKey);
             return true;
         }
         return false;

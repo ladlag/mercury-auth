@@ -39,6 +39,7 @@ public class TokenService {
     private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final TokenBlacklistMapper tokenBlacklistMapper;
+    private final RateLimitService rateLimitService;
 
     /**
      * Verify token using request DTO
@@ -68,6 +69,15 @@ public class TokenService {
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
+        
+        // Check JTI blacklist if present
+        String jti = claims.getId();
+        if (jti != null && isJtiBlacklisted(jti)) {
+            logger.warn("verifyToken JTI blacklisted tenant={} jti={}", tenantId, jti);
+            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
+            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
+        }
+        
         String tokenTenant = requireTenantMatch(tenantId, claims);
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
@@ -94,7 +104,16 @@ public class TokenService {
             recordFailure(tenantId, userId, AuthAction.LOGOUT);
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
+        
+        // Blacklist by token hash
         redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+        
+        // Also blacklist by JTI if present for distributed tracking
+        String jti = claims.getId();
+        if (jti != null) {
+            redisTemplate.opsForValue().set(buildJtiBlacklistKey(jti), tokenTenant, ttl);
+        }
+        
         TokenBlacklist entry = new TokenBlacklist();
         entry.setTokenHash(hashToken(token));
         entry.setTenantId(tokenTenant);
@@ -110,20 +129,43 @@ public class TokenService {
     }
 
     public AuthResponse refreshToken(String tenantId, String token) {
+        // Apply rate limiting for refresh token endpoint
+        rateLimitService.checkIpRateLimit("REFRESH_TOKEN");
+        
         if (isBlacklisted(token)) {
             logger.warn("refreshToken blacklisted tenant={}", tenantId);
             recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
+        
+        // Check JTI blacklist if present
+        String jti = claims.getId();
+        if (jti != null && isJtiBlacklisted(jti)) {
+            logger.warn("refreshToken JTI blacklisted tenant={} jti={}", tenantId, jti);
+            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
+            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
+        }
+        
         String tokenTenant = requireTenantMatch(tenantId, claims);
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
+        
+        // Apply per-user rate limiting
+        rateLimitService.check("rate:RATE_LIMIT_REFRESH_TOKEN:" + tokenTenant + ":" + userId);
+        
         String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (!ttl.isNegative() && !ttl.isZero()) {
+            // Blacklist old token by hash
             redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+            
+            // Also blacklist by JTI if present
+            if (jti != null) {
+                redisTemplate.opsForValue().set(buildJtiBlacklistKey(jti), tokenTenant, ttl);
+            }
+            
             TokenBlacklist entry = new TokenBlacklist();
             entry.setTokenHash(hashToken(token));
             entry.setTenantId(tokenTenant);
@@ -142,9 +184,17 @@ public class TokenService {
     private boolean isBlacklisted(String token) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
     }
+    
+    private boolean isJtiBlacklisted(String jti) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(buildJtiBlacklistKey(jti)));
+    }
 
     private String buildBlacklistKey(String token) {
         return "blacklist:" + hashToken(token);
+    }
+    
+    private String buildJtiBlacklistKey(String jti) {
+        return "blacklist:jti:" + jti;
     }
 
     private String hashToken(String token) {

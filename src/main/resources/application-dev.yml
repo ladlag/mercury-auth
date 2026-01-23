@@ -35,6 +35,10 @@ security:
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5
+    # OTP protection settings
+    cooldown-seconds: 60  # Minimum time between code requests
+    max-daily-requests: 20  # Maximum code requests per day per identifier
+    max-verify-attempts: 5  # Maximum verification attempts before lockout
   rate-limit:
     # Rate limiting configuration for various auth operations
     # max-attempts: Maximum number of requests allowed within the window
@@ -45,9 +49,14 @@ security:
     # - Password login attempts (RATE_LIMIT_LOGIN_PASSWORD)
     # - Email login attempts (RATE_LIMIT_LOGIN_EMAIL)
     # - Phone login attempts (RATE_LIMIT_LOGIN_PHONE)
+    # - Token refresh requests (RATE_LIMIT_REFRESH_TOKEN)
     # - Captcha generation requests (per action type)
     max-attempts: 10
     window-minutes: 1
+    # IP-based rate limiting for additional protection
+    ip:
+      max-attempts: 50  # Higher limit for IP-based rate limiting
+      window-minutes: 1
   captcha:
     threshold: 3
     ttl-minutes: 5

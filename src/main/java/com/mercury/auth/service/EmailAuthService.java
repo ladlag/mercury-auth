@@ -39,6 +39,11 @@ public class EmailAuthService {
      */
     public User sendEmailCode(AuthRequests.SendEmailCode req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("SEND_EMAIL_CODE");
+        
+        // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()));
         
@@ -127,6 +132,11 @@ public class EmailAuthService {
      */
     public AuthResponse loginEmail(AuthRequests.EmailLogin req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("LOGIN_EMAIL");
+        
+        // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), 
