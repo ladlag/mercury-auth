@@ -37,7 +37,7 @@ public class EmailAuthService {
     /**
      * Send verification code to email for registration or login
      */
-    public String sendEmailCode(AuthRequests.SendEmailCode req) {
+    public User sendEmailCode(AuthRequests.SendEmailCode req) {
         tenantService.requireEnabled(req.getTenantId());
         rateLimitService.check(KeyUtils.buildRateLimitKey(
             AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()));
@@ -47,6 +47,8 @@ public class EmailAuthService {
             purpose = AuthRequests.VerificationPurpose.REGISTER;
         }
         
+        User user = null;
+        
         if (AuthRequests.VerificationPurpose.REGISTER.equals(purpose)
                 && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
             logger.warn("sendEmailCode duplicate email tenant={} email={}", 
@@ -55,12 +57,16 @@ public class EmailAuthService {
             throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
         }
         
-        if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)
-                && !existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            logger.warn("sendEmailCode user not found tenant={} email={}", 
-                req.getTenantId(), req.getEmail());
-            recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
-            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        if (AuthRequests.VerificationPurpose.LOGIN.equals(purpose)) {
+            QueryWrapper<User> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", req.getTenantId()).eq("email", req.getEmail());
+            user = userMapper.selectOne(qw);
+            if (user == null) {
+                logger.warn("sendEmailCode user not found tenant={} email={}", 
+                    req.getTenantId(), req.getEmail());
+                recordFailure(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE);
+                throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+            }
         }
         
         String code = verificationService.generateCode();
@@ -68,8 +74,8 @@ public class EmailAuthService {
         verificationService.storeCode(key, code, verificationService.defaultTtl());
         verificationService.sendEmailCode(req.getEmail(), code);
         
-        safeRecord(req.getTenantId(), null, AuthAction.SEND_EMAIL_CODE, true);
-        return code;
+        safeRecord(req.getTenantId(), user != null ? user.getId() : null, AuthAction.SEND_EMAIL_CODE, true);
+        return user;
     }
 
     /**
@@ -169,7 +175,7 @@ public class EmailAuthService {
     /**
      * Verify email address after registration
      */
-    public void verifyEmailAfterRegister(AuthRequests.VerifyEmailAfterRegister req) {
+    public User verifyEmailAfterRegister(AuthRequests.VerifyEmailAfterRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         
         String key = KeyUtils.emailVerificationKey(req.getTenantId(), req.getEmail());
@@ -188,6 +194,7 @@ public class EmailAuthService {
         
         logger.info("Email verified tenant={} email={}", req.getTenantId(), req.getEmail());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.EMAIL_VERIFY, true);
+        return user;
     }
 
     // Helper methods

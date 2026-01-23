@@ -38,7 +38,7 @@ public class ChineseValidationIntegrationTest {
         }
 
         // Test with Chinese locale in Accept-Language header
-        mockMvc.perform(post("/api/auth/password/register")
+        mockMvc.perform(post("/api/auth/register-password")
                         .header("Accept-Language", "zh-CN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
@@ -59,7 +59,7 @@ public class ChineseValidationIntegrationTest {
         }
 
         // Test with English locale in Accept-Language header
-        mockMvc.perform(post("/api/auth/password/register")
+        mockMvc.perform(post("/api/auth/register-password")
                         .header("Accept-Language", "en")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
@@ -80,7 +80,7 @@ public class ChineseValidationIntegrationTest {
         }
 
         // Test without Accept-Language header - should default to Chinese
-        mockMvc.perform(post("/api/auth/password/register")
+        mockMvc.perform(post("/api/auth/register-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())

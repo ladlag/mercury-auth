@@ -49,29 +49,53 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Void> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
-        passwordAuthService.changePassword(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
+        User user = passwordAuthService.changePassword(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
-        passwordAuthService.forgotPassword(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
+        User user = passwordAuthService.forgotPassword(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
-        passwordAuthService.resetPassword(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
+        User user = passwordAuthService.resetPassword(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     // Email-based authentication endpoints
     
     @PostMapping("/send-email-code")
-    public ResponseEntity<Void> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
-        emailAuthService.sendEmailCode(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> sendEmailCode(@Validated @RequestBody AuthRequests.SendEmailCode req) {
+        User user = emailAuthService.sendEmailCode(req);
+        // For REGISTER purpose, user will be null (not yet created)
+        if (user == null) {
+            return ResponseEntity.ok(BaseAuthResponse.builder()
+                    .tenantId(req.getTenantId())
+                    .userId(null)
+                    .username(null)
+                    .build());
+        }
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/register-email")
@@ -90,17 +114,33 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<Void> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
-        emailAuthService.verifyEmailAfterRegister(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
+        User user = emailAuthService.verifyEmailAfterRegister(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     // Phone-based authentication endpoints
     
     @PostMapping("/send-phone-code")
-    public ResponseEntity<Void> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
-        phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone(), req.getPurpose());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> sendPhoneCode(@Validated @RequestBody AuthRequests.SendPhoneCode req) {
+        User user = phoneAuthService.sendPhoneCode(req.getTenantId(), req.getPhone(), req.getPurpose());
+        // For REGISTER purpose, user will be null (not yet created)
+        if (user == null) {
+            return ResponseEntity.ok(BaseAuthResponse.builder()
+                    .tenantId(req.getTenantId())
+                    .userId(null)
+                    .username(null)
+                    .build());
+        }
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     @PostMapping("/register-phone")
@@ -138,17 +178,25 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
-        tokenService.logout(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
+        User user = tokenService.logout(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     // User management endpoints
     
     @PostMapping("/user-status")
-    public ResponseEntity<Void> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
-        userService.updateUserStatus(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<BaseAuthResponse> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
+        User user = userService.updateUserStatus(req);
+        return ResponseEntity.ok(BaseAuthResponse.builder()
+                .tenantId(user.getTenantId())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .build());
     }
 
     // Captcha endpoints

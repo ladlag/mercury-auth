@@ -57,8 +57,8 @@ public class TokenService {
     /**
      * Logout (blacklist token) using request DTO
      */
-    public void logout(AuthRequests.TokenLogout req) {
-        blacklistToken(req.getTenantId(), req.getToken());
+    public User logout(AuthRequests.TokenLogout req) {
+        return blacklistToken(req.getTenantId(), req.getToken());
     }
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
@@ -82,12 +82,12 @@ public class TokenService {
                 .build();
     }
 
-    public void blacklistToken(String tenantId, String token) {
+    public User blacklistToken(String tenantId, String token) {
         Claims claims = parseClaims(token);
         String tokenTenant = requireTenantMatch(tenantId, claims);
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
-        loadActiveUser(tokenTenant, userId);
+        User user = loadActiveUser(tokenTenant, userId);
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (ttl.isNegative() || ttl.isZero()) {
             logger.warn("logout token expired tenant={} userId={}", tenantId, userId);
@@ -106,6 +106,7 @@ public class TokenService {
             logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
         }
         safeRecord(tenantId, userId, AuthAction.LOGOUT, true);
+        return user;
     }
 
     public AuthResponse refreshToken(String tenantId, String token) {

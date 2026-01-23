@@ -28,7 +28,7 @@ public class UserService {
     /**
      * Update user's enabled/disabled status
      */
-    public void updateUserStatus(AuthRequests.UserStatusUpdate req) {
+    public User updateUserStatus(AuthRequests.UserStatusUpdate req) {
         tenantService.requireEnabled(req.getTenantId());
         
         QueryWrapper<User> wrapper = new QueryWrapper<>();
@@ -45,6 +45,7 @@ public class UserService {
         logger.info("User status updated tenant={} username={} enabled={}", 
             req.getTenantId(), req.getUsername(), req.isEnabled());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.UPDATE_USER_STATUS, true);
+        return user;
     }
 
     /**

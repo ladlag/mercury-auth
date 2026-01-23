@@ -68,8 +68,8 @@ public class PhoneAuthServiceTests {
     void sendPhoneCode_returns_ok() {
         Mockito.when(verificationService.generateCode()).thenReturn("123456");
         Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
-        String result = phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER);
-        assertThat(result).isEqualTo("OK");
+        User result = phoneAuthService.sendPhoneCode("t1", "138", AuthRequests.VerificationPurpose.REGISTER);
+        assertThat(result).isNull(); // For REGISTER purpose, no user exists yet
         Mockito.verify(verificationService).storeCode(Mockito.eq("phone:t1:138"), Mockito.eq("123456"), Mockito.any());
     }
 

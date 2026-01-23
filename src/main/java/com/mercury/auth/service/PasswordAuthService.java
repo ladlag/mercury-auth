@@ -137,7 +137,7 @@ public class PasswordAuthService {
     /**
      * Change user's password (requires old password verification)
      */
-    public void changePassword(AuthRequests.ChangePassword req) {
+    public User changePassword(AuthRequests.ChangePassword req) {
         tenantService.requireEnabled(req.getTenantId());
         
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
@@ -169,12 +169,13 @@ public class PasswordAuthService {
         
         logger.info("Password changed tenant={} username={}", req.getTenantId(), req.getUsername());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.CHANGE_PASSWORD, true);
+        return user;
     }
 
     /**
      * Send password reset code to user's email
      */
-    public void forgotPassword(AuthRequests.ForgotPassword req) {
+    public User forgotPassword(AuthRequests.ForgotPassword req) {
         tenantService.requireEnabled(req.getTenantId());
         
         QueryWrapper<User> qw = new QueryWrapper<>();
@@ -192,12 +193,13 @@ public class PasswordAuthService {
         verificationService.sendEmailCode(req.getEmail(), code);
         
         logger.info("Password reset code sent tenant={} email={}", req.getTenantId(), req.getEmail());
+        return user;
     }
 
     /**
      * Reset password using verification code
      */
-    public void resetPassword(AuthRequests.ResetPassword req) {
+    public User resetPassword(AuthRequests.ResetPassword req) {
         tenantService.requireEnabled(req.getTenantId());
         
         // Compare passwords - timing attacks aren't a concern for user input validation
@@ -225,6 +227,7 @@ public class PasswordAuthService {
         
         logger.info("Password reset successful tenant={} email={}", req.getTenantId(), req.getEmail());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.PASSWORD_RESET, true);
+        return user;
     }
 
     // Helper methods
