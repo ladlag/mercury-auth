@@ -144,6 +144,18 @@ public class AuthRequests {
 
     @Data
     @EqualsAndHashCode(callSuper = true)
+    public static class PhoneQuickLogin extends BaseTenantRequest {
+        @NotBlank(message = "{validation.phone.required}")
+        @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
+        private String phone;
+        @NotBlank(message = "{validation.code.required}")
+        private String code;
+        private String captchaId;
+        private String captcha;
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class CaptchaRequest extends BaseTenantRequest {
         @NotBlank(message = "{validation.action.required}")
         private String action;

@@ -40,6 +40,7 @@ public enum ErrorCodes {
 
     // ========== 40 09 服务配置 ==========
     EMAIL_SERVICE_UNAVAILABLE ("400901", "error.400901", HttpStatus.SERVICE_UNAVAILABLE),
+    SMS_SERVICE_UNAVAILABLE   ("400902", "error.400902", HttpStatus.SERVICE_UNAVAILABLE),
 
     // ========== 40 99 系统 ==========
     INTERNAL_ERROR       ("409901", "error.409901", HttpStatus.INTERNAL_SERVER_ERROR);

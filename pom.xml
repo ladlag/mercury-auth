@@ -15,6 +15,9 @@
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <!-- Updated to fix CVE vulnerabilities - MySQL 8.2.0+ recommended -->
         <mysql.version>8.2.0</mysql.version>
+        <aliyun-java-sdk-core.version>4.6.4</aliyun-java-sdk-core.version>
+        <aliyun-dysmsapi.version>2.2.1</aliyun-dysmsapi.version>
+        <tencentcloud-sdk-java.version>3.1.912</tencentcloud-sdk-java.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -99,6 +102,23 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!-- Alibaba Cloud SMS SDK -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>aliyun-java-sdk-core</artifactId>
+            <version>${aliyun-java-sdk-core.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>aliyun-java-sdk-dysmsapi</artifactId>
+            <version>${aliyun-dysmsapi.version}</version>
+        </dependency>
+        <!-- Tencent Cloud SMS SDK -->
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java</artifactId>
+            <version>${tencentcloud-sdk-java.version}</version>
         </dependency>
     </dependencies>
     <build>

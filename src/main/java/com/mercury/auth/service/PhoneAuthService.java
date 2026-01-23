@@ -25,6 +25,7 @@ public class PhoneAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PhoneAuthService.class);
     private final VerificationService verificationService;
+    private final SmsService smsService;
     private final UserMapper userMapper;
     private final JwtService jwtService;
     private final RateLimitService rateLimitService;
@@ -78,6 +79,8 @@ public class PhoneAuthService {
         if (shouldSendCode) {
             String code = verificationService.generateCode();
             verificationService.storeCode(buildPhoneKey(tenantId, phone), code, Duration.ofMinutes(phoneTtlMinutes));
+            // Send SMS with verification code
+            smsService.sendVerificationCode(phone, code);
             safeRecord(tenantId, user != null ? user.getId() : null, AuthAction.SEND_PHONE_CODE, true);
         }
         
@@ -150,6 +153,77 @@ public class PhoneAuthService {
         String token = jwtService.generate(tenantId, user.getId(), user.getUsername());
         captchaService.reset(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone));
         safeRecord(tenantId, user.getId(), AuthAction.LOGIN_PHONE, true);
+        return new AuthResponse(token, jwtService.getTtlSeconds());
+    }
+
+    /**
+     * Quick login with phone - register if user doesn't exist, login if exists
+     * This combines registration and login for a seamless user experience
+     */
+    public AuthResponse quickLoginPhone(String tenantId, String phone, String code, String captchaId, String captcha) {
+        tenantService.requireEnabled(tenantId);
+        
+        // Apply IP-based rate limiting
+        rateLimitService.checkIpRateLimit("QUICK_LOGIN_PHONE");
+        
+        // Apply per-phone rate limiting
+        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_QUICK_LOGIN_PHONE, tenantId, phone));
+        ensureCaptcha(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
+        
+        // Verify code first
+        if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
+            logger.warn("quickLoginPhone invalid code tenant={} phone={}", tenantId, phone);
+            recordFailure(tenantId, null, AuthAction.QUICK_LOGIN_PHONE);
+            captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+            throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
+        }
+        
+        // Check if user exists
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId).eq("phone", phone);
+        User user = userMapper.selectOne(wrapper);
+        
+        if (user == null) {
+            // User doesn't exist - register new user
+            // Use phone number directly as username
+            String username = phone;
+            
+            // Check if username already exists (in case phone is used as username by another user)
+            QueryWrapper<User> usernameCheck = new QueryWrapper<>();
+            usernameCheck.eq("tenant_id", tenantId).eq("username", username);
+            
+            if (userMapper.selectCount(usernameCheck) > 0) {
+                // Phone number already used as username by another user in this tenant
+                logger.warn("quickLoginPhone username conflict tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, null, AuthAction.QUICK_LOGIN_PHONE);
+                captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+                throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username already exists");
+            }
+            
+            user = new User();
+            user.setTenantId(tenantId);
+            user.setUsername(username);
+            user.setPhone(phone);
+            user.setPasswordHash("");
+            user.setEnabled(true);
+            userMapper.insert(user);
+            logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, username);
+        } else {
+            // User exists - check if enabled
+            if (Boolean.FALSE.equals(user.getEnabled())) {
+                logger.warn("quickLoginPhone user disabled tenant={} phone={}", tenantId, phone);
+                recordFailure(tenantId, user.getId(), AuthAction.QUICK_LOGIN_PHONE);
+                captchaService.recordFailure(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+                throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
+            }
+            logger.info("quickLoginPhone existing user tenant={} phone={} username={}", tenantId, phone, user.getUsername());
+        }
+        
+        // Generate token for the user (new or existing)
+        String token = jwtService.generate(tenantId, user.getId(), user.getUsername());
+        captchaService.reset(KeyUtils.buildCaptchaKey(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone));
+        safeRecord(tenantId, user.getId(), AuthAction.QUICK_LOGIN_PHONE, true);
+        
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
