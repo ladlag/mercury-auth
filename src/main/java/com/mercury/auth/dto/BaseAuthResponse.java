@@ -5,12 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * Response for registration operations
+ * Base response for authentication operations
  */
 @Data
 @Builder
 @AllArgsConstructor
-public class RegisterResponse {
+public class BaseAuthResponse {
     private String tenantId;
     private Long userId;
     private String username;

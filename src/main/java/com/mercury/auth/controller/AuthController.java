@@ -3,8 +3,8 @@ package com.mercury.auth.controller;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.BaseAuthResponse;
 import com.mercury.auth.dto.CaptchaChallenge;
-import com.mercury.auth.dto.RegisterResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
@@ -32,9 +32,9 @@ public class AuthController {
     private final CaptchaService captchaService;
 
     @PostMapping("/register-password")
-    public ResponseEntity<RegisterResponse> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
+    public ResponseEntity<BaseAuthResponse> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
         User user = authService.registerPassword(req);
-        return ResponseEntity.ok(RegisterResponse.builder()
+        return ResponseEntity.ok(BaseAuthResponse.builder()
                 .tenantId(user.getTenantId())
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -53,9 +53,9 @@ public class AuthController {
     }
 
     @PostMapping("/register-email")
-    public ResponseEntity<RegisterResponse> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
+    public ResponseEntity<BaseAuthResponse> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
         User user = authService.registerEmail(req);
-        return ResponseEntity.ok(RegisterResponse.builder()
+        return ResponseEntity.ok(BaseAuthResponse.builder()
                 .tenantId(user.getTenantId())
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -98,9 +98,9 @@ public class AuthController {
     }
 
     @PostMapping("/register-phone")
-    public ResponseEntity<RegisterResponse> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
+    public ResponseEntity<BaseAuthResponse> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
         User user = phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
-        return ResponseEntity.ok(RegisterResponse.builder()
+        return ResponseEntity.ok(BaseAuthResponse.builder()
                 .tenantId(user.getTenantId())
                 .userId(user.getId())
                 .username(user.getUsername())
