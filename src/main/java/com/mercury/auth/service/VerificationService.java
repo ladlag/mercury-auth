@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.mail.MailProperties;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class VerificationService {
     private final StringRedisTemplate redisTemplate;
     private final JavaMailSender mailSender;
     private final MailProperties mailProperties;
+    private final MessageSource messageSource;
     @Value("${mail.from:no-reply@example.com}")
     private String mailFrom;
     @Value("${security.code.ttl-minutes:10}")
@@ -85,11 +89,18 @@ public class VerificationService {
         }
         
         try {
+            // Get locale from context, default to Chinese
+            Locale locale = LocaleContextHolder.getLocale();
+            
+            // Get localized subject and body
+            String subject = messageSource.getMessage("email.verification.subject", null, locale);
+            String body = messageSource.getMessage("email.verification.body", new Object[]{code}, locale);
+            
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailFrom);
             message.setTo(to);
-            message.setSubject("Your verification code");
-            message.setText("Your verification code is: " + code);
+            message.setSubject(subject);
+            message.setText(body);
             mailSender.send(message);
             logger.info("Verification code sent to: {}", to);
         } catch (MailException e) {
