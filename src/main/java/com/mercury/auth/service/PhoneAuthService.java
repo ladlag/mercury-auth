@@ -25,6 +25,7 @@ public class PhoneAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PhoneAuthService.class);
     private final VerificationService verificationService;
+    private final SmsService smsService;
     private final UserMapper userMapper;
     private final JwtService jwtService;
     private final RateLimitService rateLimitService;
@@ -78,6 +79,8 @@ public class PhoneAuthService {
         if (shouldSendCode) {
             String code = verificationService.generateCode();
             verificationService.storeCode(buildPhoneKey(tenantId, phone), code, Duration.ofMinutes(phoneTtlMinutes));
+            // Send SMS with verification code
+            smsService.sendVerificationCode(phone, code);
             safeRecord(tenantId, user != null ? user.getId() : null, AuthAction.SEND_PHONE_CODE, true);
         }
         

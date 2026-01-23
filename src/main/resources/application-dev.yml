@@ -23,6 +23,30 @@ spring:
           starttls:
             enable: false
 
+# SMS Configuration (optional)
+# Configure either Aliyun or Tencent Cloud SMS provider
+# Only one provider needs to be configured
+
+# Alibaba Cloud (Aliyun) SMS Configuration
+sms:
+  aliyun:
+    enabled: false  # Set to true to enable Aliyun SMS
+    access-key-id: your-aliyun-access-key-id
+    access-key-secret: your-aliyun-access-key-secret
+    sign-name: your-sign-name  # SMS signature
+    template-code: SMS_123456789  # SMS template code
+    region-id: cn-hangzhou  # Region ID (default: cn-hangzhou)
+  
+  # Tencent Cloud SMS Configuration
+  tencent:
+    enabled: false  # Set to true to enable Tencent SMS
+    secret-id: your-tencent-secret-id
+    secret-key: your-tencent-secret-key
+    sdk-app-id: your-sdk-app-id  # SMS SDK App ID
+    sign-name: your-sign-name  # SMS signature
+    template-id: "123456"  # SMS template ID
+    region: ap-guangzhou  # Region (default: ap-guangzhou)
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
