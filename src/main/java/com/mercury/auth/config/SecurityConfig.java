@@ -33,11 +33,10 @@ public class SecurityConfig {
                 .antMatchers("/actuator/**").permitAll()
                 // Tenant management APIs - require authentication
                 // These are administrative operations that should not be publicly accessible
+                // TODO: Implement JWT authentication filter to validate Bearer tokens
                 .antMatchers("/api/tenants/**").authenticated()
                 // All other endpoints require authentication
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic();  // Enable HTTP Basic authentication as fallback
+                .anyRequest().authenticated();
         return http.build();
     }
 
