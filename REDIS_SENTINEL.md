@@ -100,8 +100,8 @@ Look for the master name (e.g., "mymaster") in the output.
 Start the application with sentinel configuration and check the logs for successful Redis connection:
 
 ```bash
-# Look for successful connection messages
-2026-01-24 07:00:00.000  INFO --- [main] o.s.d.r.c.l.LettuceConnectionFactory     : Initializing Lettuce connection factory
+# Look for successful connection messages like:
+YYYY-MM-DD HH:mm:ss.SSS  INFO --- [main] o.s.d.r.c.l.LettuceConnectionFactory     : Initializing Lettuce connection factory
 ```
 
 ## Troubleshooting
@@ -141,6 +141,6 @@ unset REDIS_SENTINEL_NODES
 ## Additional Resources
 
 - [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
-- [Spring Boot Redis Properties](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#application-properties.data.spring.data.redis)
+- [Spring Boot Redis Configuration Properties](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#appendix.application-properties.data)
 - [Spring Data Redis - Sentinel Support](https://docs.spring.io/spring-data/redis/docs/current/reference/html/#redis:sentinel)
 - [Lettuce Redis Client](https://lettuce.io/)
