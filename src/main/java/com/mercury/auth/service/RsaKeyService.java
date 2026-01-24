@@ -1,6 +1,8 @@
 package com.mercury.auth.service;
 
 import com.mercury.auth.entity.Tenant;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.store.TenantMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,16 +21,18 @@ public class RsaKeyService {
 
     private static final int DEFAULT_KEY_SIZE = 2048;
     private final TenantMapper tenantMapper;
+    private final TenantService tenantService;
 
-    public RsaKeyService(TenantMapper tenantMapper) {
+    public RsaKeyService(TenantMapper tenantMapper, TenantService tenantService) {
         this.tenantMapper = tenantMapper;
+        this.tenantService = tenantService;
     }
 
     /**
      * Get tenant configuration
      */
     private Tenant getTenant(String tenantId) {
-        return tenantMapper.selectById(tenantId);
+        return tenantService.getById(tenantId);
     }
 
     /**
@@ -39,7 +43,7 @@ public class RsaKeyService {
      */
     public boolean isEncryptionEnabled(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        return tenant != null && Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled());
+        return Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled());
     }
 
     /**
@@ -50,7 +54,7 @@ public class RsaKeyService {
      */
     public String getPublicKeyBase64(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null || !Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
+        if (!Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
             return null;
         }
         return tenant.getRsaPublicKey();
@@ -64,7 +68,7 @@ public class RsaKeyService {
      */
     public PrivateKey getPrivateKey(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null || !Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
+        if (!Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
             return null;
         }
 
@@ -92,7 +96,7 @@ public class RsaKeyService {
      */
     public PublicKey getPublicKey(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null || !Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
+        if (!Boolean.TRUE.equals(tenant.getPasswordEncryptionEnabled())) {
             return null;
         }
 
@@ -116,52 +120,53 @@ public class RsaKeyService {
      * Generate and store RSA key pair for a tenant
      *
      * @param tenantId Tenant identifier
-     * @throws Exception if key generation fails
+     * @return Updated tenant with keys
      */
-    public void generateAndStoreKeyPair(String tenantId) throws Exception {
+    public Tenant generateAndStoreKeyPair(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null) {
-            throw new IllegalArgumentException("Tenant not found: " + tenantId);
+
+        try {
+            // Generate key pair
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(DEFAULT_KEY_SIZE);
+            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+            // Encode keys to Base64
+            String publicKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+            String privateKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+
+            // Update tenant with keys
+            tenant.setRsaPublicKey(publicKeyBase64);
+            tenant.setRsaPrivateKey(privateKeyBase64);
+            tenant.setPasswordEncryptionEnabled(true);
+            tenantMapper.updateById(tenant);
+
+            log.info("Generated and stored RSA key pair for tenant: {}", tenantId);
+            return tenant;
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Failed to generate RSA key pair for tenant: {}", tenantId, e);
+            throw new ApiException(ErrorCodes.INTERNAL_ERROR, "Failed to generate encryption keys");
         }
-
-        // Generate key pair
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-        keyPairGenerator.initialize(DEFAULT_KEY_SIZE);
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
-        // Encode keys to Base64
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        String privateKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
-
-        // Update tenant with keys
-        tenant.setRsaPublicKey(publicKeyBase64);
-        tenant.setRsaPrivateKey(privateKeyBase64);
-        tenant.setPasswordEncryptionEnabled(true);
-        tenantMapper.updateById(tenant);
-
-        log.info("Generated and stored RSA key pair for tenant: {}", tenantId);
     }
 
     /**
      * Enable password encryption for a tenant (generates keys if not present)
      *
      * @param tenantId Tenant identifier
-     * @throws Exception if operation fails
+     * @return Updated tenant
      */
-    public void enableEncryption(String tenantId) throws Exception {
+    public Tenant enableEncryption(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null) {
-            throw new IllegalArgumentException("Tenant not found: " + tenantId);
-        }
 
         // Generate keys if not present
         if (tenant.getRsaPublicKey() == null || tenant.getRsaPrivateKey() == null) {
-            generateAndStoreKeyPair(tenantId);
+            return generateAndStoreKeyPair(tenantId);
         } else {
             // Just enable encryption
             tenant.setPasswordEncryptionEnabled(true);
             tenantMapper.updateById(tenant);
             log.info("Enabled password encryption for tenant: {}", tenantId);
+            return tenant;
         }
     }
 
@@ -169,15 +174,14 @@ public class RsaKeyService {
      * Disable password encryption for a tenant (keeps keys for potential re-enable)
      *
      * @param tenantId Tenant identifier
+     * @return Updated tenant
      */
-    public void disableEncryption(String tenantId) {
+    public Tenant disableEncryption(String tenantId) {
         Tenant tenant = getTenant(tenantId);
-        if (tenant == null) {
-            throw new IllegalArgumentException("Tenant not found: " + tenantId);
-        }
 
         tenant.setPasswordEncryptionEnabled(false);
         tenantMapper.updateById(tenant);
         log.info("Disabled password encryption for tenant: {}", tenantId);
+        return tenant;
     }
 }

@@ -51,24 +51,18 @@ public class TenantController {
 
     @PostMapping("/password-encryption/enable")
     public ResponseEntity<TenantResponse> enablePasswordEncryption(@Validated @RequestBody TenantRequests.UpdateStatus req) {
-        try {
-            rsaKeyService.enableEncryption(req.getTenantId());
-            Tenant tenant = tenantService.getById(req.getTenantId());
-            return ResponseEntity.ok(TenantResponse.builder()
-                    .tenantId(tenant.getTenantId())
-                    .name(tenant.getName())
-                    .enabled(tenant.getEnabled())
-                    .passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled())
-                    .build());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to enable password encryption", e);
-        }
+        Tenant tenant = rsaKeyService.enableEncryption(req.getTenantId());
+        return ResponseEntity.ok(TenantResponse.builder()
+                .tenantId(tenant.getTenantId())
+                .name(tenant.getName())
+                .enabled(tenant.getEnabled())
+                .passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled())
+                .build());
     }
 
     @PostMapping("/password-encryption/disable")
     public ResponseEntity<TenantResponse> disablePasswordEncryption(@Validated @RequestBody TenantRequests.UpdateStatus req) {
-        rsaKeyService.disableEncryption(req.getTenantId());
-        Tenant tenant = tenantService.getById(req.getTenantId());
+        Tenant tenant = rsaKeyService.disableEncryption(req.getTenantId());
         return ResponseEntity.ok(TenantResponse.builder()
                 .tenantId(tenant.getTenantId())
                 .name(tenant.getName())
