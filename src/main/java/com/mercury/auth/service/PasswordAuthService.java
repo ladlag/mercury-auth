@@ -47,12 +47,12 @@ public class PasswordAuthService {
     public User registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
 
-        // Decrypt passwords if encrypted
+        // Decrypt passwords if encrypted (based on tenant configuration)
         String password;
         String confirmPassword;
         try {
-            password = passwordEncryptionService.processPassword(req.getPassword(), req.getEncrypted());
-            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+            password = passwordEncryptionService.processPassword(req.getTenantId(), req.getPassword());
+            confirmPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getConfirmPassword());
         } catch (Exception e) {
             logger.error("Failed to decrypt password tenant={} username={}", 
                     req.getTenantId(), req.getUsername(), e);
@@ -148,10 +148,10 @@ public class PasswordAuthService {
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
 
-        // Decrypt password if encrypted
+        // Decrypt password if encrypted (based on tenant configuration)
         String password;
         try {
-            password = passwordEncryptionService.processPassword(req.getPassword(), req.getEncrypted());
+            password = passwordEncryptionService.processPassword(req.getTenantId(), req.getPassword());
         } catch (Exception e) {
             logger.error("Failed to decrypt password tenant={} username={}", 
                     req.getTenantId(), req.getUsername(), e);
@@ -184,14 +184,14 @@ public class PasswordAuthService {
     public User changePassword(AuthRequests.ChangePassword req) {
         tenantService.requireEnabled(req.getTenantId());
 
-        // Decrypt passwords if encrypted
+        // Decrypt passwords if encrypted (based on tenant configuration)
         String oldPassword;
         String newPassword;
         String confirmPassword;
         try {
-            oldPassword = passwordEncryptionService.processPassword(req.getOldPassword(), req.getEncrypted());
-            newPassword = passwordEncryptionService.processPassword(req.getNewPassword(), req.getEncrypted());
-            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+            oldPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getOldPassword());
+            newPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getNewPassword());
+            confirmPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getConfirmPassword());
         } catch (Exception e) {
             logger.error("Failed to decrypt password tenant={} username={}", 
                     req.getTenantId(), req.getUsername(), e);
@@ -260,12 +260,12 @@ public class PasswordAuthService {
     public User resetPassword(AuthRequests.ResetPassword req) {
         tenantService.requireEnabled(req.getTenantId());
 
-        // Decrypt passwords if encrypted
+        // Decrypt passwords if encrypted (based on tenant configuration)
         String newPassword;
         String confirmPassword;
         try {
-            newPassword = passwordEncryptionService.processPassword(req.getNewPassword(), req.getEncrypted());
-            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+            newPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getNewPassword());
+            confirmPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getConfirmPassword());
         } catch (Exception e) {
             logger.error("Failed to decrypt password tenant={} email={}", 
                     req.getTenantId(), req.getEmail(), e);

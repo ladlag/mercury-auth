@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS tenants (
   tenant_id VARCHAR(64) PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   enabled TINYINT(1) NOT NULL DEFAULT 1,
+  password_encryption_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether RSA password encryption is enabled for this tenant',
+  rsa_public_key TEXT COMMENT 'Base64 encoded RSA public key for password encryption',
+  rsa_private_key TEXT COMMENT 'Base64 encoded RSA private key for password decryption',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

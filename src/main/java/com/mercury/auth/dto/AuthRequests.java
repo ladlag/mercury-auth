@@ -32,7 +32,6 @@ public class AuthRequests {
         private String email;
         @Pattern(regexp = ValidationPatterns.CHINESE_MOBILE_PHONE, message = "{validation.phone.invalid}")
         private String phone;
-        private Boolean encrypted;
     }
 
     @Data
@@ -45,7 +44,6 @@ public class AuthRequests {
         private String password;
         private String captchaId;
         private String captcha;
-        private Boolean encrypted;
     }
 
     @Data
@@ -74,7 +72,6 @@ public class AuthRequests {
         @NotBlank(message = "{validation.confirmPassword.required}")
         @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
-        private Boolean encrypted;
     }
 
     @Data
@@ -119,7 +116,6 @@ public class AuthRequests {
         @NotBlank(message = "{validation.confirmPassword.required}")
         @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
-        private Boolean encrypted;
     }
 
     @Data
@@ -218,7 +214,6 @@ public class AuthRequests {
         @NotBlank(message = "{validation.confirmPassword.required}")
         @Size(min = 8, message = "{validation.confirmPassword.size}")
         private String confirmPassword;
-        private Boolean encrypted;
     }
 
     @Data

@@ -37,11 +37,11 @@ public class AuthController {
     // Public key endpoint for password encryption
     
     @GetMapping("/public-key")
-    public ResponseEntity<PublicKeyResponse> getPublicKey() {
+    public ResponseEntity<PublicKeyResponse> getPublicKey(@org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId) {
         return ResponseEntity.ok(PublicKeyResponse.builder()
-                .publicKey(rsaKeyService.getPublicKeyBase64())
-                .encryptionEnabled(rsaKeyService.isEncryptionEnabled())
-                .keySize(rsaKeyService.isEncryptionEnabled() ? 2048 : 0)
+                .publicKey(rsaKeyService.getPublicKeyBase64(tenantId))
+                .encryptionEnabled(rsaKeyService.isEncryptionEnabled(tenantId))
+                .keySize(rsaKeyService.isEncryptionEnabled(tenantId) ? 2048 : 0)
                 .build());
     }
 

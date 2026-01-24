@@ -99,12 +99,12 @@ public class EmailAuthService {
     public User registerEmail(AuthRequests.EmailRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         
-        // Decrypt passwords if encrypted
+        // Decrypt passwords if encrypted (based on tenant configuration)
         String password;
         String confirmPassword;
         try {
-            password = passwordEncryptionService.processPassword(req.getPassword(), req.getEncrypted());
-            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+            password = passwordEncryptionService.processPassword(req.getTenantId(), req.getPassword());
+            confirmPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getConfirmPassword());
         } catch (Exception e) {
             logger.error("Failed to decrypt password tenant={} email={}", 
                     req.getTenantId(), req.getEmail(), e);

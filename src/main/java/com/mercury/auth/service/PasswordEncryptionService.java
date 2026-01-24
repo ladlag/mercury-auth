@@ -9,7 +9,7 @@ import java.security.PrivateKey;
 import java.util.Base64;
 
 /**
- * Service for encrypting and decrypting passwords using RSA
+ * Service for encrypting and decrypting passwords using RSA at tenant level
  */
 @Slf4j
 @Service
@@ -22,20 +22,21 @@ public class PasswordEncryptionService {
     }
 
     /**
-     * Decrypt an RSA encrypted password
+     * Decrypt an RSA encrypted password for a tenant
      *
+     * @param tenantId          Tenant identifier
      * @param encryptedPassword Base64 encoded encrypted password
      * @return Decrypted password in plaintext
      * @throws Exception if decryption fails
      */
-    public String decrypt(String encryptedPassword) throws Exception {
-        if (!rsaKeyService.isEncryptionEnabled()) {
-            throw new IllegalStateException("Password encryption is not enabled");
+    public String decrypt(String tenantId, String encryptedPassword) throws Exception {
+        if (!rsaKeyService.isEncryptionEnabled(tenantId)) {
+            throw new IllegalStateException("Password encryption is not enabled for tenant: " + tenantId);
         }
 
-        PrivateKey privateKey = rsaKeyService.getPrivateKey();
+        PrivateKey privateKey = rsaKeyService.getPrivateKey(tenantId);
         if (privateKey == null) {
-            throw new IllegalStateException("Private key is not available");
+            throw new IllegalStateException("Private key is not available for tenant: " + tenantId);
         }
 
         try {
@@ -49,33 +50,28 @@ public class PasswordEncryptionService {
 
             return new String(decryptedBytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.error("Failed to decrypt password", e);
+            log.error("Failed to decrypt password for tenant: {}", tenantId, e);
             throw new Exception("Failed to decrypt password", e);
         }
     }
 
     /**
-     * Process password based on encryption mode
-     * If encryption is enabled and password appears to be encrypted, decrypt it
-     * Otherwise, return the password as-is
+     * Process password based on tenant configuration
+     * If encryption is enabled for the tenant, decrypt the password
+     * If encryption is disabled, return password as-is
      *
-     * @param password    The password (either plaintext or encrypted)
-     * @param isEncrypted Flag indicating if the password is encrypted
+     * @param tenantId Tenant identifier
+     * @param password The password (either plaintext or encrypted based on tenant configuration)
      * @return Plaintext password
-     * @throws Exception if decryption fails
+     * @throws Exception if decryption fails when encryption is enabled
      */
-    public String processPassword(String password, Boolean isEncrypted) throws Exception {
-        // If encryption is not enabled, always return password as-is
-        if (!rsaKeyService.isEncryptionEnabled()) {
+    public String processPassword(String tenantId, String password) throws Exception {
+        // If encryption is not enabled for this tenant, return password as-is
+        if (!rsaKeyService.isEncryptionEnabled(tenantId)) {
             return password;
         }
 
-        // If encryption is enabled but password is not encrypted, return as-is
-        if (isEncrypted == null || !isEncrypted) {
-            return password;
-        }
-
-        // Decrypt the encrypted password
-        return decrypt(password);
+        // If encryption is enabled, decrypt the password
+        return decrypt(tenantId, password);
     }
 }
