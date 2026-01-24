@@ -9,13 +9,14 @@ spring:
     host: localhost
     port: 6379
     database: 0
-    # password: your-redis-password  # Uncomment if password is required
+    # password: your-redis-password  # Password for Redis master/slaves (uncomment if required)
     
     # Sentinel mode configuration (uncomment to enable)
     # When sentinel configuration is provided, standalone mode is ignored
     # sentinel:
     #   master: mymaster  # The master name configured in sentinel
     #   nodes: sentinel1:26379,sentinel2:26379,sentinel3:26379  # Comma-separated list of sentinel nodes
+    #   password: your-sentinel-password  # Password for Sentinel nodes (uncomment if authentication enabled)
   mail:
     from: "no-reply@example.com"
     host: smtp.example.com
