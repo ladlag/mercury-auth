@@ -8,11 +8,22 @@ When deploying Redis in Sentinel mode (for high availability), the application n
 
 ## Solution
 
-The updated RedisConfig now supports both standalone and sentinel modes. To use Sentinel mode, configure the sentinel properties instead of the standalone host/port.
+Spring Boot 2.7+ has built-in support for both standalone and sentinel Redis modes through auto-configuration. Simply configure the appropriate properties in `application.yml` or via environment variables - **no custom code needed**.
 
 ## Configuration Examples
 
-### Option 1: Using application.yml
+### Option 1: Standalone Mode (Default)
+
+```yaml
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    password: your-redis-password  # Optional, only if Redis requires authentication
+```
+
+### Option 2: Sentinel Mode
 
 ```yaml
 spring:
@@ -24,19 +35,21 @@ spring:
       nodes: sentinel1:26379,sentinel2:26379,sentinel3:26379  # Comma-separated list of sentinel nodes
 ```
 
-**Note**: When sentinel configuration is provided, the standalone `host` and `port` properties are ignored.
+**Note**: When sentinel configuration is provided, the standalone `host` and `port` properties are automatically ignored by Spring Boot.
 
-### Option 2: Using Environment Variables (Recommended for Production)
+### Option 3: Using Environment Variables (Recommended for Production)
 
 Set the following environment variables:
 
 ```bash
-# Sentinel configuration
+# For Sentinel mode
 export REDIS_SENTINEL_MASTER=mymaster
 export REDIS_SENTINEL_NODES=sentinel1:26379,sentinel2:26379,sentinel3:26379
 export REDIS_PASSWORD=your-redis-password  # Optional
 export REDIS_DATABASE=0
 ```
+
+Spring Boot will automatically detect these and configure Redis Sentinel mode.
 
 ### Example for Container/Kubernetes Deployment
 
@@ -50,6 +63,14 @@ environment:
   - REDIS_PASSWORD=${REDIS_PASSWORD}
   - REDIS_DATABASE=0
 ```
+
+## How It Works
+
+Spring Boot's `spring-boot-starter-data-redis` automatically configures Redis based on your properties:
+- If `spring.redis.sentinel.master` is set, it uses **Sentinel mode**
+- Otherwise, it uses **Standalone mode** with `spring.redis.host` and `spring.redis.port`
+
+No custom `@Configuration` class is needed - Spring Boot handles everything automatically!
 
 ## Testing the Configuration
 
@@ -80,7 +101,7 @@ Start the application with sentinel configuration and check the logs for success
 
 ```bash
 # Look for successful connection messages
-2026-01-24 07:00:00.000  INFO --- [main] o.s.d.r.c.l.LettuceConnectionFactory     : Connecting to Redis Sentinel
+2026-01-24 07:00:00.000  INFO --- [main] o.s.d.r.c.l.LettuceConnectionFactory     : Initializing Lettuce connection factory
 ```
 
 ## Troubleshooting
@@ -98,9 +119,9 @@ If you still see connection errors:
    redis-cli -h sentinel1 -p 26379 sentinel get-master-addr-by-name mymaster
    ```
 
-### Switching Back to Standalone Mode
+### Switching Between Standalone and Sentinel Mode
 
-To use standalone Redis instead of Sentinel, simply remove or comment out the sentinel configuration:
+To switch from Sentinel to Standalone mode, simply remove the sentinel configuration:
 
 ```yaml
 spring:
@@ -108,13 +129,18 @@ spring:
     host: localhost
     port: 6379
     database: 0
-    # sentinel:  # Comment out or remove sentinel config
-    #   master: mymaster
-    #   nodes: sentinel1:26379,sentinel2:26379
+    # Don't set sentinel properties for standalone mode
+```
+
+Or unset the environment variables:
+```bash
+unset REDIS_SENTINEL_MASTER
+unset REDIS_SENTINEL_NODES
 ```
 
 ## Additional Resources
 
 - [Redis Sentinel Documentation](https://redis.io/topics/sentinel)
+- [Spring Boot Redis Properties](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html#application-properties.data.spring.data.redis)
 - [Spring Data Redis - Sentinel Support](https://docs.spring.io/spring-data/redis/docs/current/reference/html/#redis:sentinel)
 - [Lettuce Redis Client](https://lettuce.io/)
