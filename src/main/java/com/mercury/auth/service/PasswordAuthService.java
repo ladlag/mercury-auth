@@ -25,12 +25,12 @@ import org.springframework.stereotype.Service;
 public class PasswordAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PasswordAuthService.class);
-    
+
     /**
      * RFC 5322 simplified email validation pattern
      */
     private static final String EMAIL_PATTERN = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
-    
+
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -45,45 +45,45 @@ public class PasswordAuthService {
      */
     public User registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
-        
+
         // Validate password confirmation
         if (!req.getPassword().equals(req.getConfirmPassword())) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
-        
-        // Auto-populate email if username is a valid email address
-        if ((req.getEmail() == null || req.getEmail().trim().isEmpty()) && isValidEmail(req.getUsername())) {
-            req.setEmail(req.getUsername());
-            logger.info("registerPassword auto-populated email from username tenant={} email={}", 
-                req.getTenantId(), req.getUsername());
-        }
-        
+
         // Check for duplicate username
         if (existsByTenantAndUsername(req.getTenantId(), req.getUsername())) {
-            logger.warn("registerPassword duplicate username tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("registerPassword duplicate username tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), null, AuthAction.REGISTER_PASSWORD);
             throw new ApiException(ErrorCodes.DUPLICATE_USERNAME, "username exists");
         }
-        
+
+        // Auto-populate email if username is a valid email address
+        if ((req.getEmail() == null || req.getEmail().trim().isEmpty()) && isValidEmail(req.getUsername())) {
+            req.setEmail(req.getUsername());
+            logger.info("registerPassword auto-populated email from username tenant={} email={}",
+                    req.getTenantId(), req.getUsername());
+        }
+
         // Check for duplicate email if provided
-        if (req.getEmail() != null && !req.getEmail().trim().isEmpty() 
+        if (req.getEmail() != null && !req.getEmail().trim().isEmpty()
                 && existsByTenantAndEmail(req.getTenantId(), req.getEmail())) {
-            logger.warn("registerPassword duplicate email tenant={} email={}", 
-                req.getTenantId(), req.getEmail());
+            logger.warn("registerPassword duplicate email tenant={} email={}",
+                    req.getTenantId(), req.getEmail());
             recordFailure(req.getTenantId(), null, AuthAction.REGISTER_PASSWORD);
             throw new ApiException(ErrorCodes.DUPLICATE_EMAIL, "email exists");
         }
-        
+
         // Check for duplicate phone if provided
-        if (req.getPhone() != null && !req.getPhone().trim().isEmpty() 
+        if (req.getPhone() != null && !req.getPhone().trim().isEmpty()
                 && existsByTenantAndPhone(req.getTenantId(), req.getPhone())) {
-            logger.warn("registerPassword duplicate phone tenant={} phone={}", 
-                req.getTenantId(), req.getPhone());
+            logger.warn("registerPassword duplicate phone tenant={} phone={}",
+                    req.getTenantId(), req.getPhone());
             recordFailure(req.getTenantId(), null, AuthAction.REGISTER_PASSWORD);
             throw new ApiException(ErrorCodes.DUPLICATE_PHONE, "phone exists");
         }
-        
+
         // Create user
         User user = new User();
         user.setTenantId(req.getTenantId());
@@ -93,7 +93,7 @@ public class PasswordAuthService {
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         user.setEnabled(true);
         userMapper.insert(user);
-        
+
         safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_PASSWORD, true);
         return user;
     }
@@ -103,52 +103,52 @@ public class PasswordAuthService {
      */
     public AuthResponse loginPassword(AuthRequests.PasswordLogin req) {
         tenantService.requireEnabled(req.getTenantId());
-        
+
         // Apply IP-based rate limiting
         rateLimitService.checkIpRateLimit("LOGIN_PASSWORD");
-        
+
         // Apply per-username rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
-            AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
-        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), 
-            req.getUsername(), req.getCaptchaId(), req.getCaptcha());
-        
+                AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+        ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(),
+                req.getUsername(), req.getCaptchaId(), req.getCaptcha());
+
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
-        
+
         if (user == null) {
-            logger.warn("loginPassword user not found tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("loginPassword user not found tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
-                AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+                    AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
-        
+
         if (Boolean.FALSE.equals(user.getEnabled())) {
-            logger.warn("loginPassword user disabled tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("loginPassword user disabled tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
-                AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+                    AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
-        
+
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
-            logger.warn("loginPassword bad credentials tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("loginPassword bad credentials tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
-                AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+                    AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
-        
+
         String token = jwtService.generate(req.getTenantId(), user.getId(), user.getUsername());
         captchaService.reset(KeyUtils.buildCaptchaKey(
-            AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+                AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
         safeRecord(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD, true);
-        
+
         return new AuthResponse(token, jwtService.getTtlSeconds());
     }
 
@@ -157,34 +157,34 @@ public class PasswordAuthService {
      */
     public User changePassword(AuthRequests.ChangePassword req) {
         tenantService.requireEnabled(req.getTenantId());
-        
+
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
-        
+
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
         User user = userMapper.selectOne(wrapper);
-        
+
         if (user == null) {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
-        
+
         if (!passwordEncoder.matches(req.getOldPassword(), user.getPasswordHash())) {
-            logger.warn("changePassword old password mismatch tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("changePassword old password mismatch tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
-        
+
         if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
-            logger.warn("changePassword same as old tenant={} username={}", 
-                req.getTenantId(), req.getUsername());
+            logger.warn("changePassword same as old tenant={} username={}",
+                    req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
-        
+
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userMapper.updateById(user);
-        
+
         logger.info("Password changed tenant={} username={}", req.getTenantId(), req.getUsername());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.CHANGE_PASSWORD, true);
         return user;
@@ -195,21 +195,21 @@ public class PasswordAuthService {
      */
     public User forgotPassword(AuthRequests.ForgotPassword req) {
         tenantService.requireEnabled(req.getTenantId());
-        
+
         QueryWrapper<User> qw = new QueryWrapper<>();
         qw.eq("tenant_id", req.getTenantId());
         qw.eq("email", req.getEmail());
         User user = userMapper.selectOne(qw);
-        
+
         if (user == null) {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
-        
+
         String code = verificationService.generateCode();
         String key = KeyUtils.passwordResetCodeKey(req.getTenantId(), req.getEmail());
         verificationService.storeCode(key, code, verificationService.defaultTtl());
         verificationService.sendEmailCode(req.getEmail(), code);
-        
+
         logger.info("Password reset code sent tenant={} email={}", req.getTenantId(), req.getEmail());
         return user;
     }
@@ -219,49 +219,49 @@ public class PasswordAuthService {
      */
     public User resetPassword(AuthRequests.ResetPassword req) {
         tenantService.requireEnabled(req.getTenantId());
-        
+
         // Compare passwords - timing attacks aren't a concern for user input validation
         // Both values are user-provided plaintext, not secrets or hashed values
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
-        
+
         String key = KeyUtils.passwordResetCodeKey(req.getTenantId(), req.getEmail());
         if (!verificationService.verifyAndConsume(key, req.getCode())) {
             throw new ApiException(ErrorCodes.INVALID_CODE, "invalid code");
         }
-        
+
         QueryWrapper<User> qw = new QueryWrapper<>();
         qw.eq("tenant_id", req.getTenantId());
         qw.eq("email", req.getEmail());
         User user = userMapper.selectOne(qw);
-        
+
         if (user == null) {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
-        
+
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userMapper.updateById(user);
-        
+
         logger.info("Password reset successful tenant={} email={}", req.getTenantId(), req.getEmail());
         safeRecord(req.getTenantId(), user.getId(), AuthAction.PASSWORD_RESET, true);
         return user;
     }
 
     // Helper methods
-    
-    private void ensureCaptcha(AuthAction action, String tenantId, String identifier, 
+
+    private void ensureCaptcha(AuthAction action, String tenantId, String identifier,
                                String captchaId, String captcha) {
         String key = KeyUtils.buildCaptchaKey(action, tenantId, identifier);
         if (captchaService.isRequired(key)) {
             if (captchaId == null || captcha == null) {
-                logger.warn("captcha required action={} tenant={} identifier={}", 
-                    action, tenantId, identifier);
+                logger.warn("captcha required action={} tenant={} identifier={}",
+                        action, tenantId, identifier);
                 throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
             }
             if (!captchaService.verifyChallenge(captchaId, captcha)) {
-                logger.warn("captcha invalid action={} tenant={} identifier={}", 
-                    action, tenantId, identifier);
+                logger.warn("captcha invalid action={} tenant={} identifier={}",
+                        action, tenantId, identifier);
                 throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
             }
         }
