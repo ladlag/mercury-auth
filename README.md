@@ -61,6 +61,7 @@ The following endpoints don't require authentication but are rate limited:
 ## Documentation
 - [Rate Limiting Guide](RATE_LIMITING.md) - Detailed guide on rate limiting configuration and usage
 - [Identifier Field Guide](IDENTIFIER_GUIDE.md) - Explanation of the identifier field usage in authentication (中英文)
+- [Redis Sentinel Configuration](REDIS_SENTINEL.md) - Guide for configuring Redis Sentinel mode for high availability (哨兵模式配置)
 - [Requirements](REQUIREMENTS.md) - Full system requirements (中文)
 
 ## Configuration
