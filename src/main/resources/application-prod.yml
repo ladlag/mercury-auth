@@ -5,9 +5,17 @@ spring:
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
+    # Standalone mode configuration
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    database: 0
+    database: ${REDIS_DATABASE:0}
+    password: ${REDIS_PASSWORD:#{null}}
+    
+    # Sentinel mode configuration (automatically enabled when REDIS_SENTINEL_MASTER is set)
+    # When sentinel configuration is provided, standalone mode is ignored
+    sentinel:
+      master: ${REDIS_SENTINEL_MASTER:#{null}}
+      nodes: ${REDIS_SENTINEL_NODES:#{null}}  # Format: host1:port1,host2:port2,host3:port3
   mail:
     from: "no-reply@example.com"
     host: smtp.example.com
