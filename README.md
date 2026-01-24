@@ -87,6 +87,33 @@ Key properties (see `application.yml`, with overrides in `application-dev.yml`, 
 - `security.captcha.threshold` - Failed attempts before captcha required (default: 3)
 - `security.captcha.ttl-minutes` - Captcha validity period (default: 5 minutes)
 
+### Redis Configuration
+Redis is used for token blacklist, rate limiting, and verification code storage. Both standalone and sentinel modes are supported.
+
+#### Standalone Mode (default)
+```yaml
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    password: your-password  # Optional
+```
+
+#### Sentinel Mode
+For high availability deployments, configure Redis Sentinel:
+```yaml
+spring:
+  redis:
+    database: 0
+    password: your-password  # Optional
+    sentinel:
+      master: mymaster  # Master name configured in sentinel
+      nodes: sentinel1:26379,sentinel2:26379,sentinel3:26379
+```
+
+**Note**: When sentinel configuration is provided, standalone configuration (host/port) is ignored.
+
 ### SMS Configuration
 SMS verification codes are sent via cloud SMS providers. Configure one of the supported providers:
 
@@ -293,6 +320,12 @@ DB_PASSWORD=secure_password
 # Redis
 REDIS_HOST=redis-host
 REDIS_PORT=6379
+
+# Redis Sentinel Mode (optional - use instead of REDIS_HOST/REDIS_PORT)
+# Uncomment these lines to enable Redis Sentinel mode
+# REDIS_SENTINEL_MASTER=mymaster
+# REDIS_SENTINEL_NODES=sentinel1:26379,sentinel2:26379,sentinel3:26379
+# REDIS_PASSWORD=your-redis-password  # Optional password for Redis
 
 # Rate Limiting (optional, defaults shown)
 RATE_LIMIT_MAX_ATTEMPTS=10
