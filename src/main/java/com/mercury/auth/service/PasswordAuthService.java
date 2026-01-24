@@ -25,6 +25,12 @@ import org.springframework.stereotype.Service;
 public class PasswordAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PasswordAuthService.class);
+    
+    /**
+     * RFC 5322 simplified email validation pattern
+     */
+    private static final String EMAIL_PATTERN = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+    
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -298,8 +304,6 @@ public class PasswordAuthService {
         if (email == null || email.trim().isEmpty()) {
             return false;
         }
-        // RFC 5322 simplified email validation pattern
-        String emailPattern = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
-        return email.matches(emailPattern);
+        return email.matches(EMAIL_PATTERN);
     }
 }
