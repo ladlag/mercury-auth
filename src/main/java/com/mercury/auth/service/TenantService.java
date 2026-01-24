@@ -53,4 +53,12 @@ public class TenantService {
         }
         return tenant;
     }
+
+    public Tenant getById(String tenantId) {
+        Tenant tenant = tenantMapper.selectById(tenantId);
+        if (tenant == null) {
+            throw new ApiException(ErrorCodes.TENANT_NOT_FOUND, "tenant not found");
+        }
+        return tenant;
+    }
 }
