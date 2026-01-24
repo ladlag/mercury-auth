@@ -39,6 +39,7 @@ public class PasswordAuthService {
     private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
+    private final PasswordEncryptionService passwordEncryptionService;
 
     /**
      * Register a new user with username and password
@@ -46,8 +47,20 @@ public class PasswordAuthService {
     public User registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
 
+        // Decrypt passwords if encrypted
+        String password;
+        String confirmPassword;
+        try {
+            password = passwordEncryptionService.processPassword(req.getPassword(), req.getEncrypted());
+            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+        } catch (Exception e) {
+            logger.error("Failed to decrypt password tenant={} username={}", 
+                    req.getTenantId(), req.getUsername(), e);
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "invalid password format");
+        }
+
         // Validate password confirmation
-        if (!req.getPassword().equals(req.getConfirmPassword())) {
+        if (!password.equals(confirmPassword)) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
 
@@ -90,7 +103,7 @@ public class PasswordAuthService {
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
-        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);
         userMapper.insert(user);
 
@@ -135,7 +148,20 @@ public class PasswordAuthService {
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
 
-        if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
+        // Decrypt password if encrypted
+        String password;
+        try {
+            password = passwordEncryptionService.processPassword(req.getPassword(), req.getEncrypted());
+        } catch (Exception e) {
+            logger.error("Failed to decrypt password tenant={} username={}", 
+                    req.getTenantId(), req.getUsername(), e);
+            recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
+            captchaService.recordFailure(KeyUtils.buildCaptchaKey(
+                    AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
+        }
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             logger.warn("loginPassword bad credentials tenant={} username={}",
                     req.getTenantId(), req.getUsername());
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
@@ -158,7 +184,21 @@ public class PasswordAuthService {
     public User changePassword(AuthRequests.ChangePassword req) {
         tenantService.requireEnabled(req.getTenantId());
 
-        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+        // Decrypt passwords if encrypted
+        String oldPassword;
+        String newPassword;
+        String confirmPassword;
+        try {
+            oldPassword = passwordEncryptionService.processPassword(req.getOldPassword(), req.getEncrypted());
+            newPassword = passwordEncryptionService.processPassword(req.getNewPassword(), req.getEncrypted());
+            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+        } catch (Exception e) {
+            logger.error("Failed to decrypt password tenant={} username={}", 
+                    req.getTenantId(), req.getUsername(), e);
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "invalid password format");
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
 
@@ -170,19 +210,19 @@ public class PasswordAuthService {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
 
-        if (!passwordEncoder.matches(req.getOldPassword(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
             logger.warn("changePassword old password mismatch tenant={} username={}",
                     req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
 
-        if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             logger.warn("changePassword same as old tenant={} username={}",
                     req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
 
-        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
 
         logger.info("Password changed tenant={} username={}", req.getTenantId(), req.getUsername());
@@ -220,9 +260,21 @@ public class PasswordAuthService {
     public User resetPassword(AuthRequests.ResetPassword req) {
         tenantService.requireEnabled(req.getTenantId());
 
+        // Decrypt passwords if encrypted
+        String newPassword;
+        String confirmPassword;
+        try {
+            newPassword = passwordEncryptionService.processPassword(req.getNewPassword(), req.getEncrypted());
+            confirmPassword = passwordEncryptionService.processPassword(req.getConfirmPassword(), req.getEncrypted());
+        } catch (Exception e) {
+            logger.error("Failed to decrypt password tenant={} email={}", 
+                    req.getTenantId(), req.getEmail(), e);
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "invalid password format");
+        }
+
         // Compare passwords - timing attacks aren't a concern for user input validation
         // Both values are user-provided plaintext, not secrets or hashed values
-        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+        if (!newPassword.equals(confirmPassword)) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
 
@@ -240,7 +292,7 @@ public class PasswordAuthService {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
 
-        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
 
         logger.info("Password reset successful tenant={} email={}", req.getTenantId(), req.getEmail());

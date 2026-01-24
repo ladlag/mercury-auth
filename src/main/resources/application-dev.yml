@@ -66,6 +66,12 @@ security:
     # Use JWT_SECRET environment variable to override
     secret: ${JWT_SECRET:dev-secret-change-in-production-f136803ab9c241079ba0cc1b5d02ee77}
     ttl-seconds: 7200
+  password:
+    # Password encryption configuration
+    # When enabled, frontend can encrypt passwords with RSA public key
+    # When disabled, passwords are transmitted in plaintext (over HTTPS)
+    encryption-enabled: false  # Set to true to enable password encryption
+    key-size: 2048  # RSA key size in bits (1024, 2048, 4096)
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5
