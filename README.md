@@ -51,6 +51,7 @@ The following endpoints don't require authentication but are rate limited:
 ## Features
 - Multi-tenant registration/login with JWT issuance and refresh
 - Email/SMS verification codes (one-time, Redis-backed)
+- Password reset with email verification code
 - Token verification + blacklist (Redis + database)
 - Audit logs persisted in `auth_logs` with IP tracking
 - Tenant management (create/list/enable/disable)
@@ -211,6 +212,56 @@ curl -X POST http://localhost:10000/auth/api/auth/verify-token \
     "token": "eyJhbGc..."
   }'
 ```
+
+#### 5. Password Reset with Email Verification Code (Public Endpoint)
+The password reset flow uses email verification codes to securely reset user passwords.
+
+**Step 1: Request password reset code**
+```bash
+# Send verification code to user's email
+curl -X POST http://localhost:10000/auth/api/auth/forgot-password \
+  -H "X-Tenant-Id: tenant1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com"
+  }'
+
+# Response
+{
+  "tenantId": "tenant1",
+  "userId": 123,
+  "username": "user1"
+}
+```
+
+**Step 2: Reset password with verification code**
+```bash
+# Use the code received in email to reset password
+curl -X POST http://localhost:10000/auth/api/auth/reset-password \
+  -H "X-Tenant-Id: tenant1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "code": "123456",
+    "newPassword": "newPassword123",
+    "confirmPassword": "newPassword123"
+  }'
+
+# Response
+{
+  "tenantId": "tenant1",
+  "userId": 123,
+  "username": "user1"
+}
+```
+
+**Security Notes**:
+- Verification codes expire after 10 minutes (configurable)
+- Codes can only be used once (consumed after verification)
+- Rate limiting applies to prevent abuse
+- Returns `USER_NOT_FOUND` if email doesn't exist
+- Returns `INVALID_CODE` if code is wrong or expired
+- Returns `PASSWORD_MISMATCH` if passwords don't match
 
 ### Rate Limiting Behavior
 - When rate limit is exceeded, API returns `RATE_LIMITED` error (HTTP 429)
