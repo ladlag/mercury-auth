@@ -25,6 +25,12 @@ import org.springframework.stereotype.Service;
 public class PasswordAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(PasswordAuthService.class);
+    
+    /**
+     * RFC 5322 simplified email validation pattern
+     */
+    private static final String EMAIL_PATTERN = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+    
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -43,6 +49,13 @@ public class PasswordAuthService {
         // Validate password confirmation
         if (!req.getPassword().equals(req.getConfirmPassword())) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
+        }
+        
+        // Auto-populate email if username is a valid email address
+        if ((req.getEmail() == null || req.getEmail().trim().isEmpty()) && isValidEmail(req.getUsername())) {
+            req.setEmail(req.getUsername());
+            logger.info("registerPassword auto-populated email from username tenant={} email={}", 
+                req.getTenantId(), req.getUsername());
         }
         
         // Check for duplicate username
@@ -282,5 +295,15 @@ public class PasswordAuthService {
         } catch (Exception ex) {
             logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
         }
+    }
+
+    /**
+     * Check if a string is a valid email address
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return email.matches(EMAIL_PATTERN);
     }
 }
