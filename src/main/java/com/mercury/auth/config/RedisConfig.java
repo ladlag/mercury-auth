@@ -1,5 +1,7 @@
 package com.mercury.auth.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,8 @@ import java.util.Set;
 
 @Configuration
 public class RedisConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisConfig.class);
 
     @Value("${spring.redis.host:localhost}")
     private String host;
@@ -39,6 +43,7 @@ public class RedisConfig {
         // Check if sentinel configuration is provided
         if (StringUtils.hasText(sentinelMaster) && StringUtils.hasText(sentinelNodes)) {
             // Sentinel mode
+            logger.info("Configuring Redis in Sentinel mode with master: {}", sentinelMaster);
             RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration();
             sentinelConfig.setMaster(sentinelMaster);
             
@@ -46,11 +51,30 @@ public class RedisConfig {
             String[] nodes = sentinelNodes.split(",");
             Set<RedisNode> sentinelNodesSet = new HashSet<>();
             for (String node : nodes) {
-                String[] parts = node.trim().split(":");
+                String trimmedNode = node.trim();
+                if (trimmedNode.isEmpty()) {
+                    continue;
+                }
+                
+                String[] parts = trimmedNode.split(":");
                 if (parts.length == 2) {
-                    sentinelNodesSet.add(new RedisNode(parts[0], Integer.parseInt(parts[1])));
+                    try {
+                        String nodeHost = parts[0].trim();
+                        int nodePort = Integer.parseInt(parts[1].trim());
+                        sentinelNodesSet.add(new RedisNode(nodeHost, nodePort));
+                        logger.debug("Added sentinel node: {}:{}", nodeHost, nodePort);
+                    } catch (NumberFormatException e) {
+                        logger.warn("Invalid port number in sentinel node '{}': {}. Skipping this node.", trimmedNode, e.getMessage());
+                    }
+                } else {
+                    logger.warn("Invalid sentinel node format '{}'. Expected format is 'host:port'. Skipping this node.", trimmedNode);
                 }
             }
+            
+            if (sentinelNodesSet.isEmpty()) {
+                throw new IllegalStateException("No valid sentinel nodes configured. Please check spring.redis.sentinel.nodes configuration.");
+            }
+            
             sentinelConfig.setSentinels(sentinelNodesSet);
             sentinelConfig.setDatabase(database);
             
@@ -59,8 +83,10 @@ public class RedisConfig {
             }
             
             factory = new LettuceConnectionFactory(sentinelConfig);
+            logger.info("Redis Sentinel configuration complete with {} sentinel nodes", sentinelNodesSet.size());
         } else {
             // Standalone mode
+            logger.info("Configuring Redis in standalone mode: {}:{}", host, port);
             RedisStandaloneConfiguration standaloneConfig = new RedisStandaloneConfiguration();
             standaloneConfig.setHostName(host);
             standaloneConfig.setPort(port);
