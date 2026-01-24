@@ -9,13 +9,14 @@ spring:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
     database: ${REDIS_DATABASE:0}
-    password: ${REDIS_PASSWORD:#{null}}
+    password: ${REDIS_PASSWORD:#{null}}  # Password for Redis master/slaves
     
     # Sentinel mode configuration (automatically enabled when REDIS_SENTINEL_MASTER is set)
     # When sentinel configuration is provided, standalone mode is ignored
     sentinel:
-      master: ${REDIS_SENTINEL_MASTER:#{null}}
+      master: ${REDIS_SENTINEL_MASTER:#{null}}  # Sentinel master name
       nodes: ${REDIS_SENTINEL_NODES:#{null}}  # Format: host1:port1,host2:port2,host3:port3
+      password: ${REDIS_SENTINEL_PASSWORD:#{null}}  # Password for Sentinel nodes (if authentication enabled)
   mail:
     from: "no-reply@example.com"
     host: smtp.example.com

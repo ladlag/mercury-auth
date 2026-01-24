@@ -29,10 +29,11 @@ spring:
 spring:
   redis:
     database: 0
-    password: your-redis-password  # Optional, only if Redis requires authentication
+    password: your-redis-password  # Password for Redis master/slaves (optional, only if Redis requires authentication)
     sentinel:
       master: mymaster  # The master name configured in your sentinel
       nodes: sentinel1:26379,sentinel2:26379,sentinel3:26379  # Comma-separated list of sentinel nodes
+      password: your-sentinel-password  # Password for Sentinel nodes (optional, only if Sentinel authentication enabled)
 ```
 
 **Note**: When sentinel configuration is provided, the standalone `host` and `port` properties are automatically ignored by Spring Boot.
@@ -45,7 +46,8 @@ Set the following environment variables:
 # For Sentinel mode
 export REDIS_SENTINEL_MASTER=mymaster
 export REDIS_SENTINEL_NODES=sentinel1:26379,sentinel2:26379,sentinel3:26379
-export REDIS_PASSWORD=your-redis-password  # Optional
+export REDIS_PASSWORD=your-redis-password  # Password for Redis master/slaves (optional)
+export REDIS_SENTINEL_PASSWORD=your-sentinel-password  # Password for Sentinel nodes (optional)
 export REDIS_DATABASE=0
 ```
 
@@ -60,7 +62,8 @@ If you're deploying in a container cloud environment with Redis Sentinel:
 environment:
   - REDIS_SENTINEL_MASTER=mymaster
   - REDIS_SENTINEL_NODES=redis-sentinel-0.redis-sentinel:26379,redis-sentinel-1.redis-sentinel:26379,redis-sentinel-2.redis-sentinel:26379
-  - REDIS_PASSWORD=${REDIS_PASSWORD}
+  - REDIS_PASSWORD=${REDIS_PASSWORD}  # Password for Redis master/slaves
+  - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASSWORD}  # Password for Sentinel nodes (if needed)
   - REDIS_DATABASE=0
 ```
 
@@ -71,6 +74,22 @@ Spring Boot's `spring-boot-starter-data-redis` automatically configures Redis ba
 - Otherwise, it uses **Standalone mode** with `spring.redis.host` and `spring.redis.port`
 
 No custom `@Configuration` class is needed - Spring Boot handles everything automatically!
+
+### Understanding Password Configuration
+
+There are two separate password configurations when using Sentinel mode:
+
+1. **`spring.redis.password`** (or `REDIS_PASSWORD` env var): 
+   - This is the password for the actual Redis master and slave instances
+   - Required if your Redis servers have `requirepass` configured
+   - Used to authenticate with Redis after Sentinel provides the master/slave addresses
+
+2. **`spring.redis.sentinel.password`** (or `REDIS_SENTINEL_PASSWORD` env var):
+   - This is the password for the Sentinel nodes themselves
+   - Required if your Sentinel nodes have `requirepass` configured (less common)
+   - Used to authenticate with Sentinel nodes to query master/slave information
+
+**Most deployments only need `spring.redis.password`** as Sentinel nodes typically don't require authentication.
 
 ## Testing the Configuration
 
