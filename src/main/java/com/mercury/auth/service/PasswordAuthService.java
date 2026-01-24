@@ -45,6 +45,13 @@ public class PasswordAuthService {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
         
+        // Auto-populate email if username is a valid email address
+        if ((req.getEmail() == null || req.getEmail().trim().isEmpty()) && isValidEmail(req.getUsername())) {
+            req.setEmail(req.getUsername());
+            logger.info("registerPassword auto-populated email from username tenant={} email={}", 
+                req.getTenantId(), req.getUsername());
+        }
+        
         // Check for duplicate username
         if (existsByTenantAndUsername(req.getTenantId(), req.getUsername())) {
             logger.warn("registerPassword duplicate username tenant={} username={}", 
@@ -282,5 +289,17 @@ public class PasswordAuthService {
         } catch (Exception ex) {
             logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
         }
+    }
+
+    /**
+     * Check if a string is a valid email address
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        // RFC 5322 simplified email validation pattern
+        String emailPattern = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        return email.matches(emailPattern);
     }
 }

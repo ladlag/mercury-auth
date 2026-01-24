@@ -90,4 +90,64 @@ public class AuthServiceTests {
         User result = emailAuthService.sendEmailCode(req);
         assertThat(result).isNull();
     }
+
+    @Test
+    void registerPassword_autoPopulates_email_when_username_is_email() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("hashed");
+        Mockito.when(userMapper.insert(Mockito.any())).thenReturn(1);
+        
+        AuthRequests.PasswordRegister req = new AuthRequests.PasswordRegister();
+        req.setTenantId("t1");
+        req.setUsername("user@example.com");
+        req.setPassword("password123");
+        req.setConfirmPassword("password123");
+        // Email is not set
+        
+        User result = passwordAuthService.registerPassword(req);
+        
+        // Verify email was auto-populated from username
+        assertThat(req.getEmail()).isEqualTo("user@example.com");
+    }
+
+    @Test
+    void registerPassword_does_not_overwrite_existing_email() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("hashed");
+        Mockito.when(userMapper.insert(Mockito.any())).thenReturn(1);
+        
+        AuthRequests.PasswordRegister req = new AuthRequests.PasswordRegister();
+        req.setTenantId("t1");
+        req.setUsername("user@example.com");
+        req.setPassword("password123");
+        req.setConfirmPassword("password123");
+        req.setEmail("other@example.com"); // Email is already set
+        
+        User result = passwordAuthService.registerPassword(req);
+        
+        // Verify email was NOT changed
+        assertThat(req.getEmail()).isEqualTo("other@example.com");
+    }
+
+    @Test
+    void registerPassword_does_not_populate_email_when_username_is_not_email() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        Mockito.when(userMapper.selectCount(Mockito.any())).thenReturn(0L);
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("hashed");
+        Mockito.when(userMapper.insert(Mockito.any())).thenReturn(1);
+        
+        AuthRequests.PasswordRegister req = new AuthRequests.PasswordRegister();
+        req.setTenantId("t1");
+        req.setUsername("john_doe");
+        req.setPassword("password123");
+        req.setConfirmPassword("password123");
+        // Email is not set
+        
+        User result = passwordAuthService.registerPassword(req);
+        
+        // Verify email remains null
+        assertThat(req.getEmail()).isNull();
+    }
 }
