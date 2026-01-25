@@ -45,12 +45,14 @@ public class JwtService {
             logger.error("Set JWT_SECRET environment variable with a strong random secret (min 32 bytes)");
             logger.error("========================================");
             // In production, this should throw an exception to prevent startup
-        } else if (secretBytes.length < 64) {
+        } else if (secretBytes.length < 48) {
+            // Recommend 48+ bytes for defense in depth, though 32 bytes is cryptographically sufficient for HS256
             logger.warn("========================================");
-            logger.warn("SECURITY WARNING");
-            logger.warn("JWT secret is less than 64 bytes (current: {} bytes)", secretBytes.length);
-            logger.warn("For production deployments, use at least 64 bytes for stronger security");
-            logger.warn("Generate with: openssl rand -base64 64");
+            logger.warn("SECURITY NOTICE");
+            logger.warn("JWT secret is less than 48 bytes (current: {} bytes)", secretBytes.length);
+            logger.warn("While 32 bytes is cryptographically sufficient for HS256,");
+            logger.warn("we recommend 48+ bytes for defense in depth and future-proofing");
+            logger.warn("Generate with: openssl rand -base64 48");
             logger.warn("========================================");
         }
         

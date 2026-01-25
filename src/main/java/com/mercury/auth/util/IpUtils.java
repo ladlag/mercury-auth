@@ -139,9 +139,13 @@ public final class IpUtils {
             return false;
         }
         
-        // Basic validation - IP should only contain valid characters
-        // IPv4: digits and dots (e.g., 192.168.1.1)
-        // IPv6: hex digits, colons, and dots (e.g., 2001:0db8:85a3::8a2e:0370:7334)
-        return ip.matches("^[0-9a-fA-F:.]+$") && ip.length() <= 45;
+        try {
+            // Use InetAddress for proper IPv4/IPv6 validation
+            // This handles edge cases like ':::' or '...' that regex might miss
+            java.net.InetAddress.getByName(ip);
+            return true;
+        } catch (java.net.UnknownHostException e) {
+            return false;
+        }
     }
 }

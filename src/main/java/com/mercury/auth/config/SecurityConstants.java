@@ -14,24 +14,26 @@ public final class SecurityConstants {
     
     // Public endpoint patterns for Spring Security antMatchers (Ant-style patterns)
     // Note: These are used by Spring Security's antMatchers() which uses path pattern matching
+    // Single asterisk (*) matches within a single path segment (no slashes)
+    // Double asterisk (**) would match across multiple path segments (but not used here for security)
     public static final String[] PUBLIC_ENDPOINTS = {
-        "/api/auth/login-*",
-        "/api/auth/register-*",
-        "/api/auth/send-*",
-        "/api/auth/verify-*",
-        "/api/auth/wechat-*",
-        "/api/auth/quick-login-*",
+        "/api/auth/login-*",           // Matches /api/auth/login-password, etc. (single segment after login-)
+        "/api/auth/register-*",        // Matches /api/auth/register-password, etc.
+        "/api/auth/send-*",            // Matches /api/auth/send-email-code, etc.
+        "/api/auth/verify-*",          // Matches /api/auth/verify-email-code, etc.
+        "/api/auth/wechat-*",          // Matches /api/auth/wechat-login, etc.
+        "/api/auth/quick-login-*",     // Matches /api/auth/quick-login-phone, etc.
         "/api/auth/refresh-token",
         "/api/auth/verify-token",
         "/api/auth/captcha",
         "/api/auth/forgot-password",
         "/api/auth/reset-password",
         "/api/auth/public-key",
-        "/v3/api-docs/**",
-        "/swagger-ui/**",
+        "/v3/api-docs/**",             // API docs (use ** for nested paths)
+        "/swagger-ui/**",              // Swagger UI (use ** for nested paths)
         "/swagger-ui.html",
         "/actuator/health",
-        "/actuator/health/**"
+        "/actuator/health/**"          // Health checks (use ** for nested paths)
     };
     
     // Precise regex patterns for runtime validation (used in JwtAuthenticationFilter)
