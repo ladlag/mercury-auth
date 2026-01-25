@@ -3,6 +3,7 @@ package com.mercury.auth.config;
 import com.mercury.auth.dto.BaseTenantRequest;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.service.TenantService;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -23,13 +24,15 @@ import java.lang.reflect.Type;
  * - Any tenantId in request body JSON is IGNORED and overwritten
  * 
  * Validation:
- * - Public endpoints (login, register, etc.): Just validate header exists
- * - Protected endpoints (logout, user management, etc.): JwtAuthenticationFilter validates header == JWT token's tenantId
+ * - Validates X-Tenant-Id header format (alphanumeric, underscore, hyphen, 1-50 chars)
+ * - Validates tenant exists and is enabled in the database (security critical)
+ * - Protected endpoints: JwtAuthenticationFilter additionally validates header == JWT token's tenantId
  * 
  * Benefits:
  * - Consistent API design - same header requirement for all endpoints
  * - Simpler client code - always include X-Tenant-Id header
  * - Better security - tenant context is explicit and validated
+ * - Early validation prevents processing requests for non-existent/disabled tenants
  * 
  * If X-Tenant-Id header is missing, an ApiException is thrown with MISSING_TENANT_HEADER error code.
  */
@@ -41,9 +44,11 @@ public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
     private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9_-]{1,50}$";
     
     private final HttpServletRequest request;
+    private final TenantService tenantService;
 
-    public TenantIdHeaderInjector(HttpServletRequest request) {
+    public TenantIdHeaderInjector(HttpServletRequest request, TenantService tenantService) {
         this.request = request;
+        this.tenantService = tenantService;
     }
 
     @Override
@@ -77,6 +82,11 @@ public class TenantIdHeaderInjector extends RequestBodyAdviceAdapter {
                 throw new ApiException(ErrorCodes.VALIDATION_FAILED, 
                     "X-Tenant-Id header contains invalid characters");
             }
+            
+            // SECURITY: Validate tenant exists and is enabled BEFORE processing any request
+            // This prevents attacks using non-existent tenant IDs to bypass rate limiting
+            // or enumerate tenants. This is a critical security control.
+            tenantService.requireEnabled(headerTenantId);
             
             // Inject tenantId from header (overwrites any value from body)
             tenantRequest.setTenantId(headerTenantId);

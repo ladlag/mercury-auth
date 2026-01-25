@@ -8,6 +8,22 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * Utility class for extracting client IP addresses from HTTP requests
+ * 
+ * SECURITY NOTICE:
+ * This utility trusts proxy headers (X-Forwarded-For, X-Real-IP, etc.) which can be
+ * spoofed by clients if the application is not behind a trusted reverse proxy.
+ * 
+ * For production deployments:
+ * 1. Ensure application is behind a trusted reverse proxy (nginx, HAProxy, AWS ALB, etc.)
+ * 2. Configure proxy to strip/override client-provided X-Forwarded-For headers
+ * 3. Use firewall rules to restrict direct access to application ports
+ * 4. Monitor audit logs for suspicious IP patterns
+ * 
+ * Example nginx configuration to prevent IP spoofing:
+ * ```
+ * proxy_set_header X-Real-IP $remote_addr;
+ * proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+ * ```
  */
 public final class IpUtils {
 
@@ -37,6 +53,17 @@ public final class IpUtils {
     /**
      * Get the real client IP address from an HTTP request.
      * Handles proxy headers like X-Forwarded-For, X-Real-IP, etc.
+     * 
+     * SECURITY NOTICE:
+     * This method trusts proxy headers which can be spoofed if not behind a trusted proxy.
+     * For production: Deploy behind nginx/HAProxy/ALB that strips client X-Forwarded-For.
+     * 
+     * Priority order:
+     * 1. X-Forwarded-For (standard, takes first IP = original client)
+     * 2. X-Real-IP (nginx standard)
+     * 3. Proxy-Client-IP / WL-Proxy-Client-IP (Apache/WebLogic)
+     * 4. HTTP_CLIENT_IP / HTTP_X_FORWARDED_FOR (legacy)
+     * 5. request.getRemoteAddr() (direct connection)
      *
      * @param request HTTP request
      * @return Client IP address, or "unknown" if not available
@@ -49,42 +76,44 @@ public final class IpUtils {
         // Check common proxy headers in order of preference
         String ip = getIpFromHeader(request, "X-Forwarded-For");
         if (isValidIp(ip)) {
-            // X-Forwarded-For can contain multiple IPs, take the first one (original client)
+            // X-Forwarded-For format: "client-ip, proxy1-ip, proxy2-ip"
+            // Take the first IP (original client)
             int commaIndex = ip.indexOf(',');
             if (commaIndex > 0) {
                 ip = ip.substring(0, commaIndex).trim();
             }
-            return ip;
+            // Additional validation to prevent injection
+            return isValidIpAddress(ip) ? ip : "unknown";
         }
 
         ip = getIpFromHeader(request, "X-Real-IP");
-        if (isValidIp(ip)) {
+        if (isValidIp(ip) && isValidIpAddress(ip)) {
             return ip;
         }
 
         ip = getIpFromHeader(request, "Proxy-Client-IP");
-        if (isValidIp(ip)) {
+        if (isValidIp(ip) && isValidIpAddress(ip)) {
             return ip;
         }
 
         ip = getIpFromHeader(request, "WL-Proxy-Client-IP");
-        if (isValidIp(ip)) {
+        if (isValidIp(ip) && isValidIpAddress(ip)) {
             return ip;
         }
 
         ip = getIpFromHeader(request, "HTTP_CLIENT_IP");
-        if (isValidIp(ip)) {
+        if (isValidIp(ip) && isValidIpAddress(ip)) {
             return ip;
         }
 
         ip = getIpFromHeader(request, "HTTP_X_FORWARDED_FOR");
-        if (isValidIp(ip)) {
+        if (isValidIp(ip) && isValidIpAddress(ip)) {
             return ip;
         }
 
-        // Fall back to remote address
+        // Fall back to remote address (direct connection)
         ip = request.getRemoteAddr();
-        return isValidIp(ip) ? ip : "unknown";
+        return isValidIp(ip) && isValidIpAddress(ip) ? ip : "unknown";
     }
 
     private static String getIpFromHeader(HttpServletRequest request, String header) {
@@ -96,5 +125,23 @@ public final class IpUtils {
         return StringUtils.hasText(ip) 
                 && !"unknown".equalsIgnoreCase(ip)
                 && !"0:0:0:0:0:0:0:1".equals(ip);  // IPv6 localhost
+    }
+    
+    /**
+     * Validate IP address format to prevent injection attacks
+     * Supports both IPv4 and IPv6 formats
+     * 
+     * @param ip IP address string to validate
+     * @return true if IP format is valid, false otherwise
+     */
+    private static boolean isValidIpAddress(String ip) {
+        if (ip == null || ip.isEmpty()) {
+            return false;
+        }
+        
+        // Basic validation - IP should only contain valid characters
+        // IPv4: digits and dots (e.g., 192.168.1.1)
+        // IPv6: hex digits, colons, and dots (e.g., 2001:0db8:85a3::8a2e:0370:7334)
+        return ip.matches("^[0-9a-fA-F:.]+$") && ip.length() <= 45;
     }
 }
