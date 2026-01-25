@@ -5,6 +5,7 @@ import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.BaseAuthResponse;
 import com.mercury.auth.dto.CaptchaChallenge;
+import com.mercury.auth.dto.PublicKeyResponse;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
@@ -13,6 +14,7 @@ import com.mercury.auth.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +32,18 @@ public class AuthController {
     private final TokenService tokenService;
     private final UserService userService;
     private final CaptchaService captchaService;
+    private final RsaKeyService rsaKeyService;
+
+    // Public key endpoint for password encryption
+    
+    @GetMapping("/public-key")
+    public ResponseEntity<PublicKeyResponse> getPublicKey(@org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId) {
+        return ResponseEntity.ok(PublicKeyResponse.builder()
+                .publicKey(rsaKeyService.getPublicKeyBase64(tenantId))
+                .encryptionEnabled(rsaKeyService.isEncryptionEnabled(tenantId))
+                .keySize(rsaKeyService.isEncryptionEnabled(tenantId) ? 2048 : 0)
+                .build());
+    }
 
     // Password-based authentication endpoints
     

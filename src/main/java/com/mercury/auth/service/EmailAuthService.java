@@ -33,6 +33,7 @@ public class EmailAuthService {
     private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
+    private final PasswordEncryptionService passwordEncryptionService;
 
     /**
      * Send verification code to email for registration or login
@@ -98,7 +99,19 @@ public class EmailAuthService {
     public User registerEmail(AuthRequests.EmailRegister req) {
         tenantService.requireEnabled(req.getTenantId());
         
-        if (!req.getPassword().equals(req.getConfirmPassword())) {
+        // Decrypt passwords if encrypted (based on tenant configuration)
+        String password;
+        String confirmPassword;
+        try {
+            password = passwordEncryptionService.processPassword(req.getTenantId(), req.getPassword());
+            confirmPassword = passwordEncryptionService.processPassword(req.getTenantId(), req.getConfirmPassword());
+        } catch (Exception e) {
+            logger.error("Failed to decrypt password tenant={} email={}", 
+                    req.getTenantId(), req.getEmail(), e);
+            throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "invalid password format");
+        }
+        
+        if (!password.equals(confirmPassword)) {
             throw new ApiException(ErrorCodes.PASSWORD_MISMATCH, "password mismatch");
         }
         
@@ -128,7 +141,7 @@ public class EmailAuthService {
         user.setTenantId(req.getTenantId());
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);
         userMapper.insert(user);
         

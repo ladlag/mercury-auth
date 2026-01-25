@@ -11,4 +11,7 @@ public class Tenant {
     private String tenantId;
     private String name;
     private Boolean enabled;
+    private Boolean passwordEncryptionEnabled;
+    private String rsaPublicKey;
+    private String rsaPrivateKey;
 }

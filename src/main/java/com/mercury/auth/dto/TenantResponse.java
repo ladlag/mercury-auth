@@ -14,4 +14,5 @@ public class TenantResponse {
     private String tenantId;
     private String name;
     private Boolean enabled;
+    private Boolean passwordEncryptionEnabled;
 }
