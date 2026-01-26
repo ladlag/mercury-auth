@@ -22,4 +22,12 @@ public final class ValidationPatterns {
      * Examples: user123, john_doe, admin_user
      */
     public static final String USERNAME = "^[a-zA-Z][a-zA-Z0-9_]{2,19}$";
+    
+    /**
+     * Password pattern
+     * Format: Must contain at least one letter, one number, and one symbol
+     * Length: 6-20 characters (enforced separately via @Size annotation)
+     * Note: Length validation is done via @Size(min=6, max=20) annotation
+     */
+    public static final String PASSWORD = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s]).+$";
 }

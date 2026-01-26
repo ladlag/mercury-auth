@@ -9,6 +9,7 @@ import com.mercury.auth.service.PasswordAuthService;
 import com.mercury.auth.service.EmailAuthService;
 import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.CaptchaService;
+import com.mercury.auth.service.PasswordEncryptionService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.TokenService;
@@ -55,8 +56,18 @@ public class VerificationFlowTests {
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
-        passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService);
-        emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService);
+        PasswordEncryptionService passwordEncryptionService = Mockito.mock(PasswordEncryptionService.class);
+        
+        // Mock password encryption service to return input as-is (no encryption)
+        try {
+            Mockito.doAnswer(invocation -> invocation.getArgument(1))
+                    .when(passwordEncryptionService).processPassword(Mockito.any(), Mockito.any());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        
+        passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService);
+        emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService);
     }
 
     @Test

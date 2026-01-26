@@ -23,10 +23,12 @@ public class AuthRequests {
         @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
         @NotBlank(message = "{validation.password.required}")
-        @Size(min = 8, message = "{validation.password.size}")
+        @Size(min = 6, max = 20, message = "{validation.password.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.password.format}")
         private String password;
         @NotBlank(message = "{validation.confirmPassword.required}")
-        @Size(min = 8, message = "{validation.confirmPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.confirmPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.confirmPassword.format}")
         private String confirmPassword;
         @Email(message = "{validation.email.invalid}")
         private String email;
@@ -67,10 +69,12 @@ public class AuthRequests {
         @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
         @NotBlank(message = "{validation.password.required}")
-        @Size(min = 8, message = "{validation.password.size}")
+        @Size(min = 6, max = 20, message = "{validation.password.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.password.format}")
         private String password;
         @NotBlank(message = "{validation.confirmPassword.required}")
-        @Size(min = 8, message = "{validation.confirmPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.confirmPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.confirmPassword.format}")
         private String confirmPassword;
     }
 
@@ -111,10 +115,12 @@ public class AuthRequests {
         @NotBlank(message = "{validation.oldPassword.required}")
         private String oldPassword;
         @NotBlank(message = "{validation.newPassword.required}")
-        @Size(min = 8, message = "{validation.newPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.newPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.newPassword.format}")
         private String newPassword;
         @NotBlank(message = "{validation.confirmPassword.required}")
-        @Size(min = 8, message = "{validation.confirmPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.confirmPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.confirmPassword.format}")
         private String confirmPassword;
     }
 
@@ -209,10 +215,12 @@ public class AuthRequests {
         @NotBlank(message = "{validation.code.required}")
         private String code;
         @NotBlank(message = "{validation.newPassword.required}")
-        @Size(min = 8, message = "{validation.newPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.newPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.newPassword.format}")
         private String newPassword;
         @NotBlank(message = "{validation.confirmPassword.required}")
-        @Size(min = 8, message = "{validation.confirmPassword.size}")
+        @Size(min = 6, max = 20, message = "{validation.confirmPassword.size}")
+        @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.confirmPassword.format}")
         private String confirmPassword;
     }
 
