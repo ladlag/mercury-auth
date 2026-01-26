@@ -46,7 +46,8 @@ public class PhoneAuthService {
         rateLimitService.checkIpRateLimit("SEND_PHONE_CODE");
         
         // Apply per-phone rate limiting
-        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_PHONE_CODE, tenantId, phone));
+        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_SEND_PHONE_CODE, tenantId, phone),
+                AuthAction.RATE_LIMIT_SEND_PHONE_CODE);
         AuthRequests.VerificationPurpose resolvedPurpose = purpose;
         if (resolvedPurpose == null) {
             resolvedPurpose = AuthRequests.VerificationPurpose.REGISTER;
@@ -127,7 +128,8 @@ public class PhoneAuthService {
         rateLimitService.checkIpRateLimit("LOGIN_PHONE");
         
         // Apply per-phone rate limiting
-        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PHONE, tenantId, phone));
+        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_LOGIN_PHONE, tenantId, phone),
+                AuthAction.RATE_LIMIT_LOGIN_PHONE);
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
             logger.warn("loginPhone invalid code tenant={} phone={}", tenantId, phone);
@@ -167,7 +169,8 @@ public class PhoneAuthService {
         rateLimitService.checkIpRateLimit("QUICK_LOGIN_PHONE");
         
         // Apply per-phone rate limiting
-        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_QUICK_LOGIN_PHONE, tenantId, phone));
+        rateLimitService.check(KeyUtils.buildRateLimitKey(AuthAction.RATE_LIMIT_QUICK_LOGIN_PHONE, tenantId, phone),
+                AuthAction.RATE_LIMIT_QUICK_LOGIN_PHONE);
         ensureCaptcha(AuthAction.CAPTCHA_QUICK_LOGIN_PHONE, tenantId, phone, captchaId, captcha);
         
         // Verify code first

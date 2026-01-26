@@ -55,7 +55,7 @@ public class CaptchaService {
     public CaptchaChallenge createChallenge(AuthAction action, String tenantId, String identifier) {
         // Apply rate limiting for captcha generation to prevent abuse
         String rateLimitKey = KeyUtils.buildRateLimitKey(action, tenantId, identifier);
-        rateLimitService.check(rateLimitKey);
+        rateLimitService.check(rateLimitKey, action);
         
         String question = generateQuestion();
         int evaluated = evaluateQuestion(question);

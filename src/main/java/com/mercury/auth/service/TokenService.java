@@ -153,7 +153,8 @@ public class TokenService {
         User user = loadActiveUser(tokenTenant, userId);
         
         // Apply per-user rate limiting
-        rateLimitService.check("rate:RATE_LIMIT_REFRESH_TOKEN:" + tokenTenant + ":" + userId);
+        rateLimitService.check("rate:RATE_LIMIT_REFRESH_TOKEN:" + tokenTenant + ":" + userId,
+                AuthAction.RATE_LIMIT_REFRESH_TOKEN);
         
         String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
