@@ -39,13 +39,13 @@ public class ChineseValidationIntegrationTest {
 
         // Test with Chinese locale in Accept-Language header
         mockMvc.perform(post("/api/auth/register-password")
+                        .header("X-Tenant-Id", "test-tenant")
                         .header("Accept-Language", "zh-CN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors", hasSize(3)))
+                .andExpect(jsonPath("$.errors", hasSize(2)))
                 .andExpect(jsonPath("$.errors[*].message", containsInAnyOrder(
-                        "租户ID必填",
                         "用户名必填",
                         "密码必填"
                 )));
@@ -60,13 +60,13 @@ public class ChineseValidationIntegrationTest {
 
         // Test with English locale in Accept-Language header
         mockMvc.perform(post("/api/auth/register-password")
+                        .header("X-Tenant-Id", "test-tenant")
                         .header("Accept-Language", "en")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors", hasSize(3)))
+                .andExpect(jsonPath("$.errors", hasSize(2)))
                 .andExpect(jsonPath("$.errors[*].message", containsInAnyOrder(
-                        "Tenant ID is required",
                         "Username is required",
                         "Password is required"
                 )));
@@ -81,12 +81,12 @@ public class ChineseValidationIntegrationTest {
 
         // Test without Accept-Language header - should default to Chinese
         mockMvc.perform(post("/api/auth/register-password")
+                        .header("X-Tenant-Id", "test-tenant")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tenantId\":\"\",\"username\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors", hasSize(3)))
+                .andExpect(jsonPath("$.errors", hasSize(2)))
                 .andExpect(jsonPath("$.errors[*].message", containsInAnyOrder(
-                        "租户ID必填",
                         "用户名必填",
                         "密码必填"
                 )));

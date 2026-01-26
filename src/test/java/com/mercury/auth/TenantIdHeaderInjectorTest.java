@@ -3,6 +3,7 @@ package com.mercury.auth;
 import com.mercury.auth.config.TenantIdHeaderInjector;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.service.TenantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TenantIdHeaderInjectorTest {
 
     private HttpServletRequest request;
+    private TenantService tenantService;
     private TenantIdHeaderInjector injector;
     private MethodParameter methodParameter;
     private HttpInputMessage inputMessage;
@@ -29,7 +31,8 @@ public class TenantIdHeaderInjectorTest {
     @BeforeEach
     void setup() {
         request = Mockito.mock(HttpServletRequest.class);
-        injector = new TenantIdHeaderInjector(request);
+        tenantService = Mockito.mock(TenantService.class);
+        injector = new TenantIdHeaderInjector(request, tenantService);
         methodParameter = Mockito.mock(MethodParameter.class);
         inputMessage = Mockito.mock(HttpInputMessage.class);
     }
