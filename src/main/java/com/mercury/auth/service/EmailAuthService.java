@@ -47,7 +47,8 @@ public class EmailAuthService {
         
         // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
-            AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()));
+            AuthAction.RATE_LIMIT_SEND_EMAIL_CODE, req.getTenantId(), req.getEmail()),
+            AuthAction.RATE_LIMIT_SEND_EMAIL_CODE);
         
         AuthRequests.VerificationPurpose purpose = req.getPurpose();
         if (purpose == null) {
@@ -160,7 +161,8 @@ public class EmailAuthService {
         
         // Apply per-email rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
-            AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()));
+            AuthAction.RATE_LIMIT_LOGIN_EMAIL, req.getTenantId(), req.getEmail()),
+            AuthAction.RATE_LIMIT_LOGIN_EMAIL);
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_EMAIL, req.getTenantId(), 
             req.getEmail(), req.getCaptchaId(), req.getCaptcha());
         

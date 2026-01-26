@@ -122,7 +122,8 @@ public class PasswordAuthService {
 
         // Apply per-username rate limiting
         rateLimitService.check(KeyUtils.buildRateLimitKey(
-                AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+                AuthAction.RATE_LIMIT_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()),
+                AuthAction.RATE_LIMIT_LOGIN_PASSWORD);
         ensureCaptcha(AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(),
                 req.getUsername(), req.getCaptchaId(), req.getCaptcha());
 
