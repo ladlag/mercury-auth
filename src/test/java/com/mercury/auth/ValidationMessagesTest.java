@@ -99,7 +99,7 @@ public class ValidationMessagesTest {
                 .as("Username validation message should be one of the two English messages")
                 .isIn("Username is required", "Username must be 3-20 characters, start with a letter, and contain only letters, numbers, and underscores");
 
-        // Password has both @NotBlank and @Size constraints
+        // Password has both @NotBlank, @Size, and @Pattern constraints
         // When empty, it may trigger either constraint first
         ApiError.FieldError passwordError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("password"))
@@ -107,8 +107,8 @@ public class ValidationMessagesTest {
                 .orElse(null);
         assertThat(passwordError).isNotNull();
         assertThat(passwordError.getMessage())
-                .as("Password validation message should be one of the two English messages")
-                .isIn("Password is required", "Password must be at least 8 characters");
+                .as("Password validation message should be one of the expected English messages")
+                .isIn("Password is required", "Password must be 6-20 characters", "Password must contain at least one letter, one number, and one symbol");
 
         ApiError.FieldError emailError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("email"))
@@ -204,7 +204,7 @@ public class ValidationMessagesTest {
                 .as("Username validation message should be one of the two Chinese messages")
                 .isIn("用户名必填", "用户名必须是3-20个字符，以字母开头，只能包含字母、数字和下划线");
 
-        // Password has both @NotBlank and @Size constraints
+        // Password has both @NotBlank, @Size, and @Pattern constraints
         // When empty, it may trigger either constraint first
         ApiError.FieldError passwordError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("password"))
@@ -212,8 +212,8 @@ public class ValidationMessagesTest {
                 .orElse(null);
         assertThat(passwordError).isNotNull();
         assertThat(passwordError.getMessage())
-                .as("Password validation message should be one of the two Chinese messages")
-                .isIn("密码必填", "密码至少需要8个字符");
+                .as("Password validation message should be one of the expected Chinese messages")
+                .isIn("密码必填", "密码长度必须是6-20个字符", "密码必须包含至少一个字母、一个数字和一个符号");
 
         ApiError.FieldError emailError = response.getErrors().stream()
                 .filter(e -> e.getField().equals("email"))

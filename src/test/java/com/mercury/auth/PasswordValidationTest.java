@@ -104,7 +104,7 @@ public class PasswordValidationTest {
 
     @Test
     void passwordRegister_missingLetter_returnsFormatError() {
-        LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
@@ -123,12 +123,12 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).containsIgnoringCase("letter");
+        assertThat(passwordError.getMessage()).contains("字母");
     }
 
     @Test
     void passwordRegister_missingNumber_returnsFormatError() {
-        LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
@@ -147,12 +147,12 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).containsIgnoringCase("number");
+        assertThat(passwordError.getMessage()).contains("数字");
     }
 
     @Test
     void passwordRegister_missingSymbol_returnsFormatError() {
-        LocalValidatorFactoryBean validator = createValidator(Locale.ENGLISH);
+        LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
@@ -171,7 +171,7 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).containsIgnoringCase("symbol");
+        assertThat(passwordError.getMessage()).contains("符号");
     }
 
     @Test
