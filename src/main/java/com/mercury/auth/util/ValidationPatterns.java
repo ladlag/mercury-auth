@@ -25,9 +25,9 @@ public final class ValidationPatterns {
     
     /**
      * Password pattern
-     * Format: Must contain at least one letter, one number, and one symbol
+     * Format: Must contain at least one letter, one number, and one symbol (no whitespace allowed)
      * Length: 6-20 characters (enforced separately via @Size annotation)
      * Note: Length validation is done via @Size(min=6, max=20) annotation
      */
-    public static final String PASSWORD = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s]).+$";
+    public static final String PASSWORD = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])[^\\s]+$";
 }
