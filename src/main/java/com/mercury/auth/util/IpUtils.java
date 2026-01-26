@@ -123,8 +123,7 @@ public final class IpUtils {
 
     private static boolean isValidIp(String ip) {
         return StringUtils.hasText(ip) 
-                && !"unknown".equalsIgnoreCase(ip)
-                && !"0:0:0:0:0:0:0:1".equals(ip);  // IPv6 localhost
+                && !"unknown".equalsIgnoreCase(ip);
     }
     
     /**
