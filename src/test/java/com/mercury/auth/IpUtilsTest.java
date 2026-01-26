@@ -7,7 +7,20 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Test for IpUtils IP extraction
+ * Comprehensive unit tests for {@link IpUtils} IP address extraction functionality.
+ * 
+ * Tests cover:
+ * - IPv4 and IPv6 address extraction
+ * - Localhost addresses (127.0.0.1, 0:0:0:0:0:0:0:1, ::1)
+ * - Proxy header handling (X-Forwarded-For, X-Real-IP, Proxy-Client-IP, etc.)
+ * - Multiple IPs in X-Forwarded-For chain (takes the first IP as the original client)
+ * - Header preference order validation
+ * - Invalid IP handling and edge cases (null, empty, malformed)
+ * - Fallback to remote address when headers are invalid
+ * 
+ * These tests ensure IP extraction works correctly for both local development
+ * (where localhost IPs are expected) and production scenarios (where proxy
+ * headers should provide real client IPs).
  */
 public class IpUtilsTest {
 
@@ -72,7 +85,7 @@ public class IpUtilsTest {
         
         String ip = IpUtils.getClientIp(request);
         
-        // Should prefer X-Forwarded-For over remote address
+        // Should prefer X-Forwarded-For over the remote address
         assertThat(ip).isEqualTo("203.0.113.1");
     }
     
