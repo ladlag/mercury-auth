@@ -19,6 +19,8 @@ import java.util.UUID;
 @Component
 public class JwtService {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JwtService.class);
+
     @Value("${security.jwt.secret:changeme}")
     private String secret;
 
@@ -33,7 +35,30 @@ public class JwtService {
         if (secretBytes.length < 32) {
             throw new IllegalStateException("JWT secret must be at least 32 bytes");
         }
+        
+        // SECURITY WARNING: Check if using default or weak secret
+        if ("changeme".equals(secret)) {
+            logger.error("========================================");
+            logger.error("CRITICAL SECURITY WARNING");
+            logger.error("Using default JWT secret 'changeme'!");
+            logger.error("This is EXTREMELY INSECURE in production!");
+            logger.error("Set JWT_SECRET environment variable with a strong random secret (min 32 bytes)");
+            logger.error("========================================");
+            // In production, this should throw an exception to prevent startup
+        } else if (secretBytes.length < 48) {
+            // Recommend 48+ bytes for defense in depth, though 32 bytes is cryptographically sufficient for HS256
+            logger.warn("========================================");
+            logger.warn("SECURITY NOTICE");
+            logger.warn("JWT secret is less than 48 bytes (current: {} bytes)", secretBytes.length);
+            logger.warn("While 32 bytes is cryptographically sufficient for HS256,");
+            logger.warn("we recommend 48+ bytes for defense in depth and future-proofing");
+            logger.warn("Generate with: openssl rand -base64 48");
+            logger.warn("========================================");
+        }
+        
         this.key = Keys.hmacShaKeyFor(secretBytes);
+        logger.info("JWT service initialized with secret length: {} bytes, TTL: {} seconds", 
+                   secretBytes.length, ttlSeconds);
     }
 
     public String generate(String tenantId, Long userId, String username) {
@@ -44,7 +69,9 @@ public class JwtService {
         claims.put("username", username);
         
         // Generate unique JTI (JWT ID) for token tracking and blacklisting
-        String jti = UUID.randomUUID().toString();
+        // Format: {tenantId}:{uuid} to prevent collisions across tenants
+        // This ensures JTI uniqueness even if multiple token stores exist
+        String jti = tenantId + ":" + UUID.randomUUID().toString();
         
         return Jwts.builder()
                 .setClaims(claims)

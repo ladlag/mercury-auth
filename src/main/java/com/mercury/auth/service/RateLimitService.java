@@ -59,31 +59,46 @@ public class RateLimitService {
     /**
      * Check IP-based rate limit for public endpoints
      * This provides an additional layer of protection against distributed attacks
+     * 
+     * SECURITY: If IP extraction fails, the request is rejected to prevent
+     * attackers from bypassing rate limits by triggering IP extraction failures.
      */
     public void checkIpRateLimit(String action) {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                String clientIp = IpUtils.getClientIp(request);
-                String ipKey = "rate:ip:" + action + ":" + clientIp;
-                
-                Long count = redisTemplate.execute(
-                    RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
-                    Collections.singletonList(ipKey),
-                    String.valueOf(ipWindowMinutes * 60) // Convert to seconds
-                );
-                if (count != null && count > ipMaxAttempts) {
-                    throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests from your IP");
-                }
+            if (attributes == null) {
+                // No request context - fail closed for security
+                throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
+            }
+            
+            HttpServletRequest request = attributes.getRequest();
+            String clientIp = IpUtils.getClientIp(request);
+            
+            // If IP extraction returns "unknown", fail closed for security
+            if ("unknown".equals(clientIp)) {
+                org.slf4j.LoggerFactory.getLogger(RateLimitService.class)
+                    .warn("IP extraction failed for rate limiting action={}, rejecting request", action);
+                throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
+            }
+            
+            String ipKey = "rate:ip:" + action + ":" + clientIp;
+            
+            Long count = redisTemplate.execute(
+                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                Collections.singletonList(ipKey),
+                String.valueOf(ipWindowMinutes * 60) // Convert to seconds
+            );
+            if (count != null && count > ipMaxAttempts) {
+                throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests from your IP");
             }
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            // Log IP extraction failure but don't fail the request to maintain service availability
-            // This ensures the service remains available even if there are issues with IP extraction
+            // Any unexpected exception during rate limiting should fail closed for security
             org.slf4j.LoggerFactory.getLogger(RateLimitService.class)
-                .debug("Failed to extract IP for rate limiting, continuing without IP-based limit: {}", e.getMessage());
+                .error("Unexpected error during IP rate limiting action={}, rejecting request: {}", 
+                       action, e.getMessage(), e);
+            throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
         }
     }
 }
