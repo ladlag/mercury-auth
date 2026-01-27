@@ -87,7 +87,7 @@ public class TokenService {
                 .userName(user.getUsername())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .expiresAt(claims.getExpiration())
+                .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
                 .build();
     }
 

@@ -125,7 +125,7 @@ public class TokenVerifyResponseTest {
         assertThat(response.getEmail()).isEqualTo(email);
         assertThat(response.getPhone()).isEqualTo(phone);
         assertThat(response.getExpiresAt()).isNotNull();
-        assertThat(response.getExpiresAt()).isEqualTo(expirationDate);
+        assertThat(response.getExpiresAt()).isEqualTo(expirationDate.getTime());
     }
 
     @Test
@@ -170,6 +170,6 @@ public class TokenVerifyResponseTest {
         assertThat(response.getEmail()).isNull();
         assertThat(response.getPhone()).isNull();
         assertThat(response.getExpiresAt()).isNotNull();
-        assertThat(response.getExpiresAt()).isEqualTo(expirationDate);
+        assertThat(response.getExpiresAt()).isEqualTo(expirationDate.getTime());
     }
 }
