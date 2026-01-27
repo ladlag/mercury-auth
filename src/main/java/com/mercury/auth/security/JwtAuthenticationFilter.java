@@ -3,6 +3,7 @@ package com.mercury.auth.security;
 import com.mercury.auth.config.SecurityConstants;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.service.TokenCacheService;
 import com.mercury.auth.service.TokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -37,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final TokenService tokenService;
+    private final TokenCacheService tokenCacheService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -61,6 +63,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = authHeader.substring(BEARER_PREFIX.length());
             
+            // Hash token for cache lookup and blacklist check
+            String tokenHash = tokenCacheService.hashToken(token);
+            
             // CRITICAL: Check if token is blacklisted (logout/refresh invalidation)
             if (tokenService.isTokenBlacklisted(token)) {
                 logger.warn("Blacklisted token attempted");
@@ -70,8 +75,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             
-            // Parse and validate token
-            Claims claims = jwtService.parse(token);
+            // Try to get claims from cache first (performance optimization)
+            Claims claims = tokenCacheService.getCachedClaims(tokenHash);
+            
+            if (claims == null) {
+                // Cache miss - parse and validate token
+                logger.debug("Token cache miss, performing full validation");
+                claims = jwtService.parse(token);
+                // Cache the claims for future requests
+                tokenCacheService.cacheClaims(tokenHash, claims);
+            } else {
+                logger.debug("Token cache hit, skipping validation");
+            }
             
             // Extract user information
             Object tenantIdObj = claims.get("tenantId");

@@ -66,6 +66,10 @@ security:
     # Use JWT_SECRET environment variable to override
     secret: ${JWT_SECRET:dev-secret-change-in-production-f136803ab9c241079ba0cc1b5d02ee77}
     ttl-seconds: 7200
+  token-cache:
+    # Token cache configuration for performance optimization
+    max-size: 10000  # Maximum number of tokens to cache
+    expire-after-write-seconds: 300  # Cache expiry time (5 minutes)
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5

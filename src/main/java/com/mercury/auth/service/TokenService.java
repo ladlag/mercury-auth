@@ -12,6 +12,7 @@ import com.mercury.auth.entity.TokenBlacklist;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.store.TokenBlacklistMapper;
 import com.mercury.auth.store.UserMapper;
+import com.mercury.auth.util.TokenHashUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +21,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +37,7 @@ public class TokenService {
     private final AuthLogService authLogService;
     private final TokenBlacklistMapper tokenBlacklistMapper;
     private final RateLimitService rateLimitService;
+    private final TokenCacheService tokenCacheService;
 
     /**
      * Verify token using request DTO
@@ -89,7 +87,7 @@ public class TokenService {
                 .userName(user.getUsername())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .expiresAt(claims.getExpiration())
+                .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
                 .build();
     }
 
@@ -106,6 +104,10 @@ public class TokenService {
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
         
+        // Evict from cache immediately
+        String tokenHash = TokenHashUtil.hashToken(token);
+        tokenCacheService.evictToken(tokenHash);
+        
         // Blacklist by token hash
         redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
         
@@ -116,7 +118,7 @@ public class TokenService {
         }
         
         TokenBlacklist entry = new TokenBlacklist();
-        entry.setTokenHash(hashToken(token));
+        entry.setTokenHash(tokenHash);
         entry.setTenantId(tokenTenant);
         entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
         entry.setCreatedAt(LocalDateTime.now());
@@ -160,6 +162,10 @@ public class TokenService {
         String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (!ttl.isNegative() && !ttl.isZero()) {
+            // Evict old token from cache immediately
+            String tokenHash = TokenHashUtil.hashToken(token);
+            tokenCacheService.evictToken(tokenHash);
+            
             // Blacklist old token by hash
             redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
             
@@ -169,7 +175,7 @@ public class TokenService {
             }
             
             TokenBlacklist entry = new TokenBlacklist();
-            entry.setTokenHash(hashToken(token));
+            entry.setTokenHash(tokenHash);
             entry.setTenantId(tokenTenant);
             entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
             entry.setCreatedAt(LocalDateTime.now());
@@ -199,21 +205,11 @@ public class TokenService {
     }
 
     private String buildBlacklistKey(String token) {
-        return "blacklist:" + hashToken(token);
+        return "blacklist:" + TokenHashUtil.hashToken(token);
     }
     
     private String buildJtiBlacklistKey(String jti) {
         return "blacklist:jti:" + jti;
-    }
-
-    private String hashToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 not available", ex);
-        }
     }
 
     private Claims parseClaims(String token) {
