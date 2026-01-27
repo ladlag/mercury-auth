@@ -40,6 +40,7 @@ public class TokenService {
     private final AuthLogService authLogService;
     private final TokenBlacklistMapper tokenBlacklistMapper;
     private final RateLimitService rateLimitService;
+    private final TokenCacheService tokenCacheService;
 
     /**
      * Verify token using request DTO
@@ -106,6 +107,10 @@ public class TokenService {
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
         
+        // Evict from cache immediately
+        String tokenHash = hashToken(token);
+        tokenCacheService.evictToken(tokenHash);
+        
         // Blacklist by token hash
         redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
         
@@ -116,7 +121,7 @@ public class TokenService {
         }
         
         TokenBlacklist entry = new TokenBlacklist();
-        entry.setTokenHash(hashToken(token));
+        entry.setTokenHash(tokenHash);
         entry.setTenantId(tokenTenant);
         entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
         entry.setCreatedAt(LocalDateTime.now());
@@ -160,6 +165,10 @@ public class TokenService {
         String newToken = jwtService.generate(tokenTenant, userId, user.getUsername());
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (!ttl.isNegative() && !ttl.isZero()) {
+            // Evict old token from cache immediately
+            String tokenHash = hashToken(token);
+            tokenCacheService.evictToken(tokenHash);
+            
             // Blacklist old token by hash
             redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
             
@@ -169,7 +178,7 @@ public class TokenService {
             }
             
             TokenBlacklist entry = new TokenBlacklist();
-            entry.setTokenHash(hashToken(token));
+            entry.setTokenHash(tokenHash);
             entry.setTenantId(tokenTenant);
             entry.setExpiresAt(LocalDateTime.now().plusSeconds(ttl.getSeconds()));
             entry.setCreatedAt(LocalDateTime.now());
