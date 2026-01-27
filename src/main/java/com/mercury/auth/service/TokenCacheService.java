@@ -61,6 +61,11 @@ public class TokenCacheService {
      */
     @CacheEvict(value = TOKEN_CACHE_NAME, key = "#tokenHash")
     public void evictToken(String tokenHash) {
+        // Manual eviction for non-Spring cache managers
+        Cache cache = cacheManager.getCache(TOKEN_CACHE_NAME);
+        if (cache != null) {
+            cache.evict(tokenHash);
+        }
         logger.debug("Token evicted from cache: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
     }
 
