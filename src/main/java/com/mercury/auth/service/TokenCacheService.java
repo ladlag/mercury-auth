@@ -1,5 +1,6 @@
 package com.mercury.auth.service;
 
+import com.mercury.auth.util.TokenHashUtil;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -8,11 +9,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 
 /**
  * Service for caching validated JWT token claims to improve performance.
@@ -58,10 +54,13 @@ public class TokenCacheService {
     /**
      * Evict token from cache when it's blacklisted.
      * This ensures blacklisted tokens are immediately invalidated.
+     * 
+     * Note: This method uses both @CacheEvict annotation (for Spring-managed caches) 
+     * and manual eviction (for test scenarios with simple cache managers).
      */
     @CacheEvict(value = TOKEN_CACHE_NAME, key = "#tokenHash")
     public void evictToken(String tokenHash) {
-        // Manual eviction for non-Spring cache managers
+        // Manual eviction ensures compatibility with non-Spring cache managers (e.g., in tests)
         Cache cache = cacheManager.getCache(TOKEN_CACHE_NAME);
         if (cache != null) {
             cache.evict(tokenHash);
@@ -71,15 +70,9 @@ public class TokenCacheService {
 
     /**
      * Hash token to create a cache key.
-     * Uses SHA-256 for consistent hashing.
+     * Delegates to TokenHashUtil for consistent hashing across the application.
      */
     public String hashToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 not available", ex);
-        }
+        return TokenHashUtil.hashToken(token);
     }
 }
