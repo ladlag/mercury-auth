@@ -32,11 +32,11 @@ public class TokenCacheService {
         if (cache != null) {
             Cache.ValueWrapper wrapper = cache.get(tokenHash);
             if (wrapper != null) {
-                logger.debug("Token cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+                logger.debug("Token cache hit for hash: {}", getSafeHashPrefix(tokenHash));
                 return (Claims) wrapper.get();
             }
         }
-        logger.debug("Token cache miss for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+        logger.debug("Token cache miss for hash: {}", getSafeHashPrefix(tokenHash));
         return null;
     }
 
@@ -47,7 +47,7 @@ public class TokenCacheService {
         Cache cache = cacheManager.getCache(TOKEN_CACHE_NAME);
         if (cache != null) {
             cache.put(tokenHash, claims);
-            logger.debug("Token claims cached for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+            logger.debug("Token claims cached for hash: {}", getSafeHashPrefix(tokenHash));
         }
     }
 
@@ -65,7 +65,7 @@ public class TokenCacheService {
         if (cache != null) {
             cache.evict(tokenHash);
         }
-        logger.debug("Token evicted from cache: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+        logger.debug("Token evicted from cache: {}", getSafeHashPrefix(tokenHash));
     }
 
     /**
@@ -74,5 +74,13 @@ public class TokenCacheService {
      */
     public String hashToken(String token) {
         return TokenHashUtil.hashToken(token);
+    }
+
+    /**
+     * Get a safe prefix of the hash for logging (first 10 characters).
+     * This avoids logging full hashes which could be a security concern.
+     */
+    private String getSafeHashPrefix(String hash) {
+        return hash.substring(0, Math.min(10, hash.length()));
     }
 }
