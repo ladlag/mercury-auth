@@ -29,6 +29,8 @@ import static org.mockito.Mockito.when;
  */
 public class TokenVerifyResponseTest {
 
+    private static final long TWO_HOURS_IN_MILLIS = 7200000L;
+
     @Mock
     private JwtService jwtService;
     
@@ -61,6 +63,14 @@ public class TokenVerifyResponseTest {
         tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, authLogService, tokenBlacklistMapper, rateLimitService);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
+    
+    /**
+     * Helper method to create a future expiration date.
+     * Truncates milliseconds to match JWT Claims behavior.
+     */
+    private java.util.Date createExpirationDate() {
+        return new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + TWO_HOURS_IN_MILLIS);
+    }
 
     @Test
     void verifyToken_returns_complete_user_information() {
@@ -72,8 +82,8 @@ public class TokenVerifyResponseTest {
         String email = "test@example.com";
         String phone = "13800138000";
         
-        // Create a future expiration date (2 hours from now) - truncate milliseconds
-        java.util.Date expirationDate = new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + 7200000);
+        // Create a future expiration date (2 hours from now)
+        java.util.Date expirationDate = createExpirationDate();
 
         // Mock JWT parsing
         Claims claims = new DefaultClaims();
@@ -120,8 +130,8 @@ public class TokenVerifyResponseTest {
         Long userId = 456L;
         String username = "userNoContact";
         
-        // Create a future expiration date (2 hours from now) - truncate milliseconds
-        java.util.Date expirationDate = new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + 7200000);
+        // Create a future expiration date (2 hours from now)
+        java.util.Date expirationDate = createExpirationDate();
 
         // Mock JWT parsing
         Claims claims = new DefaultClaims();
