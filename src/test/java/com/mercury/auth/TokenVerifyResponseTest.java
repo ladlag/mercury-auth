@@ -66,10 +66,13 @@ public class TokenVerifyResponseTest {
     
     /**
      * Helper method to create a future expiration date.
-     * Truncates milliseconds to match JWT Claims behavior.
+     * Truncates milliseconds to match JWT Claims behavior which stores time at second precision.
+     * Formula: (currentTimeMillis / 1000) * 1000 rounds down to the nearest second.
      */
     private java.util.Date createExpirationDate() {
-        return new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + TWO_HOURS_IN_MILLIS);
+        long currentTimeSeconds = System.currentTimeMillis() / 1000;
+        long truncatedTimeMillis = currentTimeSeconds * 1000;
+        return new java.util.Date(truncatedTimeMillis + TWO_HOURS_IN_MILLIS);
     }
 
     @Test
