@@ -71,11 +71,15 @@ public class TokenVerifyResponseTest {
         String username = "testuser";
         String email = "test@example.com";
         String phone = "13800138000";
+        
+        // Create a future expiration date (2 hours from now) - truncate milliseconds
+        java.util.Date expirationDate = new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + 7200000);
 
         // Mock JWT parsing
         Claims claims = new DefaultClaims();
         claims.put("tenantId", tenantId);
         claims.put("userId", userId);
+        claims.setExpiration(expirationDate);
         when(jwtService.parse(token)).thenReturn(claims);
 
         // Mock token not blacklisted
@@ -104,6 +108,8 @@ public class TokenVerifyResponseTest {
         assertThat(response.getUserName()).isEqualTo(username);
         assertThat(response.getEmail()).isEqualTo(email);
         assertThat(response.getPhone()).isEqualTo(phone);
+        assertThat(response.getExpiresAt()).isNotNull();
+        assertThat(response.getExpiresAt()).isEqualTo(expirationDate);
     }
 
     @Test
@@ -113,11 +119,15 @@ public class TokenVerifyResponseTest {
         String token = "valid.jwt.token";
         Long userId = 456L;
         String username = "userNoContact";
+        
+        // Create a future expiration date (2 hours from now) - truncate milliseconds
+        java.util.Date expirationDate = new java.util.Date((System.currentTimeMillis() / 1000) * 1000 + 7200000);
 
         // Mock JWT parsing
         Claims claims = new DefaultClaims();
         claims.put("tenantId", tenantId);
         claims.put("userId", userId);
+        claims.setExpiration(expirationDate);
         when(jwtService.parse(token)).thenReturn(claims);
 
         // Mock token not blacklisted
@@ -143,5 +153,7 @@ public class TokenVerifyResponseTest {
         assertThat(response.getUserName()).isEqualTo(username);
         assertThat(response.getEmail()).isNull();
         assertThat(response.getPhone()).isNull();
+        assertThat(response.getExpiresAt()).isNotNull();
+        assertThat(response.getExpiresAt()).isEqualTo(expirationDate);
     }
 }

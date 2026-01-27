@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Date;
+
 @Data
 @Builder
 public class TokenVerifyResponse {
@@ -12,4 +14,5 @@ public class TokenVerifyResponse {
     private String userName;
     private String email;
     private String phone;
+    private Date expiresAt;
 }
