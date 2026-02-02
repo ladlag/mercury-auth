@@ -69,9 +69,21 @@ public class GlobalExceptionHandler {
                     return new ApiError.FieldError("general", message);
                 })
                 .collect(Collectors.toList());
-        String localizedMessage = localizationService.getMessage(ErrorCodes.VALIDATION_FAILED.getMessageKey());
+        
+        // Build message from error details
+        String detailedMessage;
+        if (errors.isEmpty()) {
+            detailedMessage = localizationService.getMessage(ErrorCodes.VALIDATION_FAILED.getMessageKey());
+        } else if (errors.size() == 1) {
+            detailedMessage = errors.get(0).getMessage();
+        } else {
+            detailedMessage = errors.stream()
+                    .map(ApiError.FieldError::getMessage)
+                    .collect(Collectors.joining("; "));
+        }
+        
         return ResponseEntity.ok()
-                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), localizedMessage, errors));
+                .body(new ApiError(ErrorCodes.VALIDATION_FAILED.getCode(), detailedMessage, errors));
     }
 
     @ExceptionHandler(Exception.class)

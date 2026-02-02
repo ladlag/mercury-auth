@@ -73,7 +73,8 @@ public class ValidationMessagesTest {
         // Verify response structure
         assertThat(response).isNotNull();
         assertThat(response.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
-        assertThat(response.getMessage()).isEqualTo("Validation failed");
+        assertThat(response.getMessage()).isNotEmpty();
+        assertThat(response.getMessage()).contains(";"); // Multiple errors joined with semicolons
         assertThat(response.getErrors()).isNotEmpty();
 
         // Verify that error messages are NOT "invalid" but actual validation messages
