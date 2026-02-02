@@ -109,8 +109,8 @@ public class PasswordValidationTest {
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
         request.setUsername("testuser");
-        request.setPassword("123456!@#"); // no letters
-        request.setConfirmPassword("123456!@#");
+        request.setPassword("123456 "); // contains space - invalid
+        request.setConfirmPassword("123456 ");
         
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "passwordRegister");
         validator.validate(request, bindingResult);
@@ -123,7 +123,7 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).contains("字母");
+        assertThat(passwordError.getMessage()).contains("字符");
     }
 
     @Test
@@ -133,8 +133,8 @@ public class PasswordValidationTest {
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
         request.setUsername("testuser");
-        request.setPassword("abcdef!@#"); // no numbers
-        request.setConfirmPassword("abcdef!@#");
+        request.setPassword("abcdef 123"); // contains space - invalid
+        request.setConfirmPassword("abcdef 123");
         
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "passwordRegister");
         validator.validate(request, bindingResult);
@@ -147,7 +147,7 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).contains("数字");
+        assertThat(passwordError.getMessage()).contains("字符");
     }
 
     @Test
@@ -157,8 +157,8 @@ public class PasswordValidationTest {
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
         request.setUsername("testuser");
-        request.setPassword("abcdef123"); // no symbols
-        request.setConfirmPassword("abcdef123");
+        request.setPassword("abc def"); // contains space - invalid
+        request.setConfirmPassword("abc def");
         
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "passwordRegister");
         validator.validate(request, bindingResult);
@@ -171,7 +171,7 @@ public class PasswordValidationTest {
                 .findFirst()
                 .orElse(null);
         assertThat(passwordError).isNotNull();
-        assertThat(passwordError.getMessage()).contains("符号");
+        assertThat(passwordError.getMessage()).contains("字符");
     }
 
     @Test
@@ -180,12 +180,17 @@ public class PasswordValidationTest {
 
         // Test various valid password formats
         String[] validPasswords = {
-            "abc123!",      // minimum length (6)
-            "Test123!",     // standard
-            "P@ssw0rd",     // standard
-            "MyP@ss1",      // standard
-            "Complex1!Pass",// longer
-            "abcdefgh12345678!@" // maximum length (20)
+            "abc123",       // letters and numbers (6 chars)
+            "Test123",      // letters and numbers
+            "P@ssw0rd",     // letters, numbers and symbols
+            "MyP@ss1",      // letters, numbers and symbols
+            "Complex1!Pass",// longer with mix
+            "abcdefgh12345678!@", // maximum length (20)
+            "abcdef",       // only letters (6 chars)
+            "123456",       // only numbers (6 chars)
+            "!@#$%^",       // only symbols (6 chars)
+            "password",     // only letters
+            "12345678"      // only numbers
         };
         
         for (String password : validPasswords) {
@@ -214,12 +219,12 @@ public class PasswordValidationTest {
         String[] invalidPasswords = {
             "ab12!",        // too short (5 chars)
             "abcdefghij1234567890!", // too long (21 chars)
-            "abc123",       // no symbol
-            "abcdef!",      // no number
-            "123456!",      // no letter
-            "password",     // no number or symbol
-            "12345678",     // no letter or symbol
-            "!@#$%^&*"      // no letter or number
+            "abc 123",      // contains space
+            "test pass",    // contains space
+            "password 1",   // contains space
+            "   ",          // only spaces
+            "abc\t123",     // contains tab
+            "test\npass"    // contains newline
         };
         
         for (String password : invalidPasswords) {

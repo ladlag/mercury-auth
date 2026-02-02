@@ -18,16 +18,16 @@ public final class ValidationPatterns {
     
     /**
      * Username pattern
-     * Format: 3-20 characters, alphanumeric and underscore only, must start with letter
-     * Examples: user123, john_doe, admin_user
+     * Format: 6-20 characters, letters or letters and numbers only, must start with letter
+     * Examples: user123, johnsmith, adminuser
      */
-    public static final String USERNAME = "^[a-zA-Z][a-zA-Z0-9_]{2,19}$";
+    public static final String USERNAME = "^[a-zA-Z][a-zA-Z0-9]{5,19}$";
     
     /**
      * Password pattern
-     * Format: Must contain at least one letter, one number, and one symbol (no whitespace allowed)
+     * Format: Can contain letters, numbers, and special characters (no whitespace allowed)
      * Length: 6-20 characters (enforced separately via @Size annotation)
      * Note: Length validation is done via @Size(min=6, max=20) annotation
      */
-    public static final String PASSWORD = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s])[^\\s]+$";
+    public static final String PASSWORD = "^[a-zA-Z0-9\\p{Punct}]+$";
 }

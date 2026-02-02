@@ -145,6 +145,7 @@ public class AuthRequests {
         @NotBlank(message = "{validation.code.required}")
         private String code;
         @NotBlank(message = "{validation.username.required}")
+        @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
     }
 
