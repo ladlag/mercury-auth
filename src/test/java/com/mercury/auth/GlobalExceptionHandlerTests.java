@@ -59,7 +59,8 @@ public class GlobalExceptionHandlerTests {
         ApiError body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.getCode()).isEqualTo(ErrorCodes.VALIDATION_FAILED.getCode());
-        assertThat(body.getMessage()).isEqualTo("Validation failed");
+        assertThat(body.getMessage()).contains("Password must be at least 8 characters");
+        assertThat(body.getMessage()).contains("Confirm password is required");
         assertThat(body.getErrors())
                 .extracting("field", "message")
                 .containsExactlyInAnyOrder(
