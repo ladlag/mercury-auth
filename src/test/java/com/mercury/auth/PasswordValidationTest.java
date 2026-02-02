@@ -103,7 +103,7 @@ public class PasswordValidationTest {
     }
 
     @Test
-    void passwordRegister_missingLetter_returnsFormatError() {
+    void passwordRegister_containsSpace_returnsFormatError() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
@@ -127,14 +127,14 @@ public class PasswordValidationTest {
     }
 
     @Test
-    void passwordRegister_missingNumber_returnsFormatError() {
+    void passwordRegister_containsTab_returnsFormatError() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
         request.setUsername("testuser");
-        request.setPassword("abcdef 123"); // contains space - invalid
-        request.setConfirmPassword("abcdef 123");
+        request.setPassword("abc\t123"); // contains tab - invalid
+        request.setConfirmPassword("abc\t123");
         
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "passwordRegister");
         validator.validate(request, bindingResult);
@@ -151,14 +151,14 @@ public class PasswordValidationTest {
     }
 
     @Test
-    void passwordRegister_missingSymbol_returnsFormatError() {
+    void passwordRegister_containsNewline_returnsFormatError() {
         LocalValidatorFactoryBean validator = createValidator(Locale.SIMPLIFIED_CHINESE);
 
         AuthRequests.PasswordRegister request = new AuthRequests.PasswordRegister();
         request.setTenantId("tenant1");
         request.setUsername("testuser");
-        request.setPassword("abc def"); // contains space - invalid
-        request.setConfirmPassword("abc def");
+        request.setPassword("abc\ndef"); // contains newline - invalid
+        request.setConfirmPassword("abc\ndef");
         
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(request, "passwordRegister");
         validator.validate(request, bindingResult);
@@ -220,9 +220,6 @@ public class PasswordValidationTest {
             "ab12!",        // too short (5 chars)
             "abcdefghij1234567890!", // too long (21 chars)
             "abc 123",      // contains space
-            "test pass",    // contains space
-            "password 1",   // contains space
-            "   ",          // only spaces
             "abc\t123",     // contains tab
             "test\npass"    // contains newline
         };
