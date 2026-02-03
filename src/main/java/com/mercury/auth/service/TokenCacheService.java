@@ -1,5 +1,6 @@
 package com.mercury.auth.service;
 
+import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.util.TokenHashUtil;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,6 +22,7 @@ public class TokenCacheService {
 
     private static final Logger logger = LoggerFactory.getLogger(TokenCacheService.class);
     private static final String TOKEN_CACHE_NAME = "tokenCache";
+    private static final String TOKEN_VERIFY_CACHE_NAME = "tokenVerifyCache";
     
     private final CacheManager cacheManager;
 
@@ -52,20 +55,56 @@ public class TokenCacheService {
     }
 
     /**
+     * Get cached token verify response if available.
+     * Returns null if not in cache, requiring full verification.
+     */
+    public TokenVerifyResponse getCachedVerifyResponse(String tokenHash) {
+        Cache cache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (cache != null) {
+            Cache.ValueWrapper wrapper = cache.get(tokenHash);
+            if (wrapper != null) {
+                logger.debug("Token verify cache hit for hash: {}", getSafeHashPrefix(tokenHash));
+                return (TokenVerifyResponse) wrapper.get();
+            }
+        }
+        logger.debug("Token verify cache miss for hash: {}", getSafeHashPrefix(tokenHash));
+        return null;
+    }
+
+    /**
+     * Cache validated token verify response for future requests.
+     * This prevents duplicate VERIFY_TOKEN logs when the same token is verified multiple times.
+     */
+    public void cacheVerifyResponse(String tokenHash, TokenVerifyResponse response) {
+        Cache cache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (cache != null) {
+            cache.put(tokenHash, response);
+            logger.debug("Token verify response cached for hash: {}", getSafeHashPrefix(tokenHash));
+        }
+    }
+
+    /**
      * Evict token from cache when it's blacklisted.
      * This ensures blacklisted tokens are immediately invalidated.
      * 
      * Note: This method uses both @CacheEvict annotation (for Spring-managed caches) 
      * and manual eviction (for test scenarios with simple cache managers).
      */
-    @CacheEvict(value = TOKEN_CACHE_NAME, key = "#tokenHash")
+    @Caching(evict = {
+        @CacheEvict(value = TOKEN_CACHE_NAME, key = "#tokenHash"),
+        @CacheEvict(value = TOKEN_VERIFY_CACHE_NAME, key = "#tokenHash")
+    })
     public void evictToken(String tokenHash) {
         // Manual eviction ensures compatibility with non-Spring cache managers (e.g., in tests)
-        Cache cache = cacheManager.getCache(TOKEN_CACHE_NAME);
-        if (cache != null) {
-            cache.evict(tokenHash);
+        Cache claimsCache = cacheManager.getCache(TOKEN_CACHE_NAME);
+        if (claimsCache != null) {
+            claimsCache.evict(tokenHash);
         }
-        logger.debug("Token evicted from cache: {}", getSafeHashPrefix(tokenHash));
+        Cache verifyCache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (verifyCache != null) {
+            verifyCache.evict(tokenHash);
+        }
+        logger.debug("Token evicted from all caches: {}", getSafeHashPrefix(tokenHash));
     }
 
     /**

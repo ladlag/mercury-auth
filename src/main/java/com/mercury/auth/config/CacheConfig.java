@@ -26,7 +26,7 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("tokenCache");
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager("tokenCache", "tokenVerifyCache");
         cacheManager.setCaffeine(caffeineCacheBuilder());
         return cacheManager;
     }

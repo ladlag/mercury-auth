@@ -65,8 +65,8 @@ public class TokenCacheIntegrationTests {
         org.springframework.test.util.ReflectionTestUtils.setField(jwtService, "ttlSeconds", 7200L);
         jwtService.init();
 
-        // Create real cache manager
-        cacheManager = new org.springframework.cache.concurrent.ConcurrentMapCacheManager("tokenCache");
+        // Create real cache manager with both caches
+        cacheManager = new org.springframework.cache.concurrent.ConcurrentMapCacheManager("tokenCache", "tokenVerifyCache");
         
         // Create real TokenCacheService with cache manager
         tokenCacheService = new TokenCacheService(cacheManager);
@@ -174,5 +174,109 @@ public class TokenCacheIntegrationTests {
 
         Claims cachedNewClaims = tokenCacheService.getCachedClaims(newTokenHash);
         assertNotNull(cachedNewClaims, "New token should be cacheable");
+    }
+
+    @Test
+    public void testTokenVerifyResponseCaching() {
+        // Setup: Create a test user
+        String tenantId = "tenant3";
+        Long userId = 789L;
+        String username = "verifycacheuser";
+
+        User user = new User();
+        user.setId(userId);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setEmail("verifycache@example.com");
+        user.setPhone("1234567890");
+        user.setEnabled(true);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Generate a JWT token
+        String token = jwtService.generate(tenantId, userId, username);
+        String tokenHash = tokenCacheService.hashToken(token);
+
+        // Verify the verify response is not cached initially
+        com.mercury.auth.dto.TokenVerifyResponse cachedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(cachedResponse, "Verify response should not be cached initially");
+
+        // Call verifyToken - this should cache the response
+        com.mercury.auth.dto.AuthRequests.TokenVerify verifyRequest = new com.mercury.auth.dto.AuthRequests.TokenVerify();
+        verifyRequest.setTenantId(tenantId);
+        verifyRequest.setToken(token);
+        
+        com.mercury.auth.dto.TokenVerifyResponse firstResponse = tokenService.verifyToken(verifyRequest);
+
+        // Verify the response is correct
+        assertNotNull(firstResponse);
+        assertEquals(tenantId, firstResponse.getTenantId());
+        assertEquals(userId, firstResponse.getUserId());
+        assertEquals(username, firstResponse.getUserName());
+
+        // Verify the response is now cached
+        com.mercury.auth.dto.TokenVerifyResponse cachedAfterFirst = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(cachedAfterFirst, "Verify response should be cached after first call");
+        assertEquals(tenantId, cachedAfterFirst.getTenantId());
+        assertEquals(userId, cachedAfterFirst.getUserId());
+
+        // Call verifyToken again - this should use the cached response
+        // We can verify this by checking that the userMapper is not called again
+        reset(userMapper); // Reset mock to clear previous interactions
+        
+        com.mercury.auth.dto.TokenVerifyResponse secondResponse = tokenService.verifyToken(verifyRequest);
+        
+        // Verify the response is the same
+        assertNotNull(secondResponse);
+        assertEquals(firstResponse.getTenantId(), secondResponse.getTenantId());
+        assertEquals(firstResponse.getUserId(), secondResponse.getUserId());
+        assertEquals(firstResponse.getUserName(), secondResponse.getUserName());
+        
+        // Verify that userMapper was NOT called (because response was cached)
+        verify(userMapper, never()).selectOne(any());
+    }
+
+    @Test
+    public void testTokenVerifyResponseEvictionOnLogout() {
+        // Setup: Create a test user
+        String tenantId = "tenant4";
+        Long userId = 999L;
+        String username = "verifyevictuser";
+
+        User user = new User();
+        user.setId(userId);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setEmail("verifyevict@example.com");
+        user.setPhone("9876543210");
+        user.setEnabled(true);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Generate a JWT token
+        String token = jwtService.generate(tenantId, userId, username);
+        String tokenHash = tokenCacheService.hashToken(token);
+
+        // Call verifyToken to cache the response
+        com.mercury.auth.dto.AuthRequests.TokenVerify verifyRequest = new com.mercury.auth.dto.AuthRequests.TokenVerify();
+        verifyRequest.setTenantId(tenantId);
+        verifyRequest.setToken(token);
+        
+        com.mercury.auth.dto.TokenVerifyResponse response = tokenService.verifyToken(verifyRequest);
+        assertNotNull(response);
+
+        // Verify the response is cached
+        com.mercury.auth.dto.TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(cached, "Verify response should be cached");
+
+        // Logout (blacklist the token)
+        com.mercury.auth.dto.AuthRequests.TokenLogout logoutRequest = new com.mercury.auth.dto.AuthRequests.TokenLogout();
+        logoutRequest.setTenantId(tenantId);
+        logoutRequest.setToken(token);
+        
+        User loggedOutUser = tokenService.logout(logoutRequest);
+        assertNotNull(loggedOutUser);
+
+        // Verify the verify response was evicted
+        com.mercury.auth.dto.TokenVerifyResponse evicted = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(evicted, "Verify response should be evicted after logout");
     }
 }

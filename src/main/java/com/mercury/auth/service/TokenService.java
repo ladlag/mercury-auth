@@ -61,6 +61,22 @@ public class TokenService {
     }
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
+        // Hash token for cache lookup and blacklist check
+        String tokenHash = TokenHashUtil.hashToken(token);
+        
+        // Check if verification result is cached (performance optimization)
+        // This prevents duplicate logs when the same token is verified multiple times
+        TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        if (cached != null) {
+            // Verify tenant match even for cached responses
+            if (!tenantId.equals(cached.getTenantId())) {
+                logger.warn("verifyToken tenant mismatch cached tenant={} requested={}", cached.getTenantId(), tenantId);
+                throw new ApiException(ErrorCodes.TENANT_MISMATCH, "tenant mismatch");
+            }
+            logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+            return cached;
+        }
+        
         if (isBlacklisted(token)) {
             logger.warn("verifyToken blacklisted tenant={}", tenantId);
             recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
@@ -81,7 +97,8 @@ public class TokenService {
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
         safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
-        return TokenVerifyResponse.builder()
+        
+        TokenVerifyResponse response = TokenVerifyResponse.builder()
                 .tenantId(tokenTenant)
                 .userId(userId)
                 .userName(user.getUsername())
@@ -89,6 +106,11 @@ public class TokenService {
                 .phone(user.getPhone())
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
                 .build();
+        
+        // Cache the verification result to prevent duplicate logs
+        tokenCacheService.cacheVerifyResponse(tokenHash, response);
+        
+        return response;
     }
 
     public User blacklistToken(String tenantId, String token) {
