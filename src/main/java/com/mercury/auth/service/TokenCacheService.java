@@ -108,6 +108,54 @@ public class TokenCacheService {
     }
 
     /**
+     * Evict all cached tokens for a specific user.
+     * This should be called when a user's status changes (e.g., disabled).
+     * 
+     * Note: Since Caffeine doesn't support querying by user, we clear the entire cache.
+     * This is a tradeoff between performance and security. The cache will rebuild quickly.
+     */
+    @Caching(evict = {
+        @CacheEvict(value = TOKEN_CACHE_NAME, allEntries = true),
+        @CacheEvict(value = TOKEN_VERIFY_CACHE_NAME, allEntries = true)
+    })
+    public void evictAllForUserStatusChange(String tenantId, Long userId) {
+        // Manual eviction for non-Spring cache managers
+        Cache claimsCache = cacheManager.getCache(TOKEN_CACHE_NAME);
+        if (claimsCache != null) {
+            claimsCache.clear();
+        }
+        Cache verifyCache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (verifyCache != null) {
+            verifyCache.clear();
+        }
+        logger.warn("All token caches cleared due to user status change: tenantId={} userId={}", tenantId, userId);
+    }
+
+    /**
+     * Evict all cached tokens for a specific tenant.
+     * This should be called when a tenant's status changes (e.g., disabled).
+     * 
+     * Note: Since Caffeine doesn't support querying by tenant, we clear the entire cache.
+     * This is a tradeoff between performance and security. The cache will rebuild quickly.
+     */
+    @Caching(evict = {
+        @CacheEvict(value = TOKEN_CACHE_NAME, allEntries = true),
+        @CacheEvict(value = TOKEN_VERIFY_CACHE_NAME, allEntries = true)
+    })
+    public void evictAllForTenantStatusChange(String tenantId) {
+        // Manual eviction for non-Spring cache managers
+        Cache claimsCache = cacheManager.getCache(TOKEN_CACHE_NAME);
+        if (claimsCache != null) {
+            claimsCache.clear();
+        }
+        Cache verifyCache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (verifyCache != null) {
+            verifyCache.clear();
+        }
+        logger.warn("All token caches cleared due to tenant status change: tenantId={}", tenantId);
+    }
+
+    /**
      * Hash token to create a cache key.
      * Delegates to TokenHashUtil for consistent hashing across the application.
      */

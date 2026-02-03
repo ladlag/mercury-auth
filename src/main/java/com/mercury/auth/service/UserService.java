@@ -10,6 +10,7 @@ import com.mercury.auth.store.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 /**
@@ -24,6 +25,8 @@ public class UserService {
     private final UserMapper userMapper;
     private final TenantService tenantService;
     private final AuthLogService authLogService;
+    @Lazy
+    private final TokenCacheService tokenCacheService;
 
     /**
      * Update user's enabled/disabled status
@@ -41,6 +44,10 @@ public class UserService {
         
         user.setEnabled(req.isEnabled());
         userMapper.updateById(user);
+        
+        // SECURITY: Evict all token caches when user status changes
+        // This prevents disabled users from continuing to use cached tokens
+        tokenCacheService.evictAllForUserStatusChange(req.getTenantId(), user.getId());
         
         logger.info("User status updated tenant={} username={} enabled={}", 
             req.getTenantId(), req.getUsername(), req.isEnabled());

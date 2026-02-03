@@ -220,8 +220,9 @@ public class TokenCacheIntegrationTests {
         assertEquals(userId, cachedAfterFirst.getUserId());
 
         // Call verifyToken again - this should use the cached response
-        // We can verify this by checking that the userMapper is not called again
+        // Note: Even with cached responses, we now re-validate tenant and user status for security
         reset(userMapper); // Reset mock to clear previous interactions
+        when(userMapper.selectOne(any())).thenReturn(user); // Re-mock the user query for security validation
         
         com.mercury.auth.dto.TokenVerifyResponse secondResponse = tokenService.verifyToken(verifyRequest);
         
@@ -231,8 +232,9 @@ public class TokenCacheIntegrationTests {
         assertEquals(firstResponse.getUserId(), secondResponse.getUserId());
         assertEquals(firstResponse.getUserName(), secondResponse.getUserName());
         
-        // Verify that userMapper was NOT called (because response was cached)
-        verify(userMapper, never()).selectOne(any());
+        // Verify that userMapper WAS called once for security validation
+        // (This is intentional - we re-validate user status even for cached responses)
+        verify(userMapper, times(1)).selectOne(any());
     }
 
     @Test
@@ -278,5 +280,55 @@ public class TokenCacheIntegrationTests {
         // Verify the verify response was evicted
         com.mercury.auth.dto.TokenVerifyResponse evicted = tokenCacheService.getCachedVerifyResponse(tokenHash);
         assertNull(evicted, "Verify response should be evicted after logout");
+    }
+
+    @Test
+    public void testCachedResponseRevalidatesUserStatus() {
+        // SECURITY TEST: Verify that cached responses re-validate user enabled status
+        String tenantId = "tenant5";
+        Long userId = 888L;
+        String username = "securitytestuser";
+
+        User user = new User();
+        user.setId(userId);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setEmail("security@example.com");
+        user.setEnabled(true);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Generate a JWT token
+        String token = jwtService.generate(tenantId, userId, username);
+        String tokenHash = tokenCacheService.hashToken(token);
+
+        // First verification - caches the response
+        com.mercury.auth.dto.AuthRequests.TokenVerify verifyRequest = new com.mercury.auth.dto.AuthRequests.TokenVerify();
+        verifyRequest.setTenantId(tenantId);
+        verifyRequest.setToken(token);
+        
+        com.mercury.auth.dto.TokenVerifyResponse firstResponse = tokenService.verifyToken(verifyRequest);
+        assertNotNull(firstResponse);
+
+        // Verify the response is cached
+        com.mercury.auth.dto.TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(cached, "Response should be cached");
+
+        // Now disable the user
+        user.setEnabled(false);
+        reset(userMapper);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Second verification - should fail even though response is cached
+        // because we re-validate user status
+        try {
+            tokenService.verifyToken(verifyRequest);
+            fail("Should have thrown USER_DISABLED exception");
+        } catch (com.mercury.auth.exception.ApiException ex) {
+            assertEquals(com.mercury.auth.exception.ErrorCodes.USER_DISABLED, ex.getCode());
+        }
+
+        // Verify the cached response was evicted after detecting disabled user
+        com.mercury.auth.dto.TokenVerifyResponse evictedCache = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(evictedCache, "Cache should be evicted after detecting disabled user");
     }
 }
