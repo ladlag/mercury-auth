@@ -61,8 +61,15 @@ public class TokenService {
     }
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
-        // Hash token for cache lookup and blacklist check
+        // Hash token once for both blacklist check and cache lookup
         String tokenHash = TokenHashUtil.hashToken(token);
+        
+        // CRITICAL: Check blacklist BEFORE cache to prevent returning cached responses for blacklisted tokens
+        if (isBlacklisted(token)) {
+            logger.warn("verifyToken blacklisted tenant={}", tenantId);
+            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
+            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
+        }
         
         // Check if verification result is cached (performance optimization)
         // This prevents duplicate logs when the same token is verified multiple times
@@ -77,11 +84,6 @@ public class TokenService {
             return cached;
         }
         
-        if (isBlacklisted(token)) {
-            logger.warn("verifyToken blacklisted tenant={}", tenantId);
-            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
-            throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
-        }
         Claims claims = parseClaims(token);
         
         // Check JTI blacklist if present
