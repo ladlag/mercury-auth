@@ -1,5 +1,6 @@
 package com.mercury.auth;
 
+import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.service.TokenCacheService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.impl.DefaultClaims;
@@ -70,6 +71,38 @@ public class TokenCacheServiceTests {
     }
 
     @Test
+    public void testCacheVerifyResponse() {
+        // Create test verify response
+        TokenVerifyResponse response = TokenVerifyResponse.builder()
+                .tenantId("tenant1")
+                .userId(123L)
+                .userName("testuser")
+                .email("test@example.com")
+                .phone("1234567890")
+                .expiresAt(System.currentTimeMillis() + 3600000)
+                .build();
+        
+        String token = "test-token-for-verify-caching";
+        String tokenHash = tokenCacheService.hashToken(token);
+        
+        // Initially, cache should be empty
+        TokenVerifyResponse cachedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(cachedResponse, "Verify cache should be empty initially");
+        
+        // Cache the verify response
+        tokenCacheService.cacheVerifyResponse(tokenHash, response);
+        
+        // Now the response should be cached
+        TokenVerifyResponse retrievedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(retrievedResponse, "Verify response should be cached");
+        assertEquals("tenant1", retrievedResponse.getTenantId());
+        assertEquals(123L, retrievedResponse.getUserId());
+        assertEquals("testuser", retrievedResponse.getUserName());
+        assertEquals("test@example.com", retrievedResponse.getEmail());
+        assertEquals("1234567890", retrievedResponse.getPhone());
+    }
+
+    @Test
     public void testEvictToken() {
         // Create and cache test claims
         Map<String, Object> claimsMap = new HashMap<>();
@@ -97,9 +130,51 @@ public class TokenCacheServiceTests {
     }
 
     @Test
+    public void testEvictTokenWithVerifyResponse() {
+        // Create and cache both claims and verify response
+        Map<String, Object> claimsMap = new HashMap<>();
+        claimsMap.put("tenantId", "tenant3");
+        claimsMap.put("userId", 789L);
+        claimsMap.put("username", "evictboth");
+        Claims claims = new DefaultClaims(claimsMap);
+        
+        TokenVerifyResponse response = TokenVerifyResponse.builder()
+                .tenantId("tenant3")
+                .userId(789L)
+                .userName("evictboth")
+                .email("evict@example.com")
+                .phone("9876543210")
+                .expiresAt(System.currentTimeMillis() + 3600000)
+                .build();
+        
+        String token = "test-token-for-both-eviction";
+        String tokenHash = tokenCacheService.hashToken(token);
+        
+        // Cache both
+        tokenCacheService.cacheClaims(tokenHash, claims);
+        tokenCacheService.cacheVerifyResponse(tokenHash, response);
+        
+        // Verify both are cached
+        Claims cachedClaims = tokenCacheService.getCachedClaims(tokenHash);
+        assertNotNull(cachedClaims, "Claims should be cached");
+        TokenVerifyResponse cachedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(cachedResponse, "Verify response should be cached");
+        
+        // Evict the token
+        tokenCacheService.evictToken(tokenHash);
+        
+        // Verify both are evicted
+        Claims evictedClaims = tokenCacheService.getCachedClaims(tokenHash);
+        assertNull(evictedClaims, "Claims should be evicted from cache");
+        TokenVerifyResponse evictedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(evictedResponse, "Verify response should be evicted from cache");
+    }
+
+    @Test
     public void testCacheManager() {
         // Verify that cache manager is configured correctly
         assertNotNull(cacheManager, "Cache manager should be configured");
         assertNotNull(cacheManager.getCache("tokenCache"), "tokenCache should exist");
+        assertNotNull(cacheManager.getCache("tokenVerifyCache"), "tokenVerifyCache should exist");
     }
 }

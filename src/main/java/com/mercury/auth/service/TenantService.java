@@ -7,6 +7,7 @@ import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.store.TenantMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +17,8 @@ import java.util.List;
 public class TenantService {
 
     private final TenantMapper tenantMapper;
+    @Lazy
+    private final TokenCacheService tokenCacheService;
 
     public Tenant create(TenantRequests.Create req) {
         if (tenantMapper.selectById(req.getTenantId()) != null) {
@@ -40,6 +43,11 @@ public class TenantService {
         }
         tenant.setEnabled(req.isEnabled());
         tenantMapper.updateById(tenant);
+        
+        // SECURITY: Evict all token caches when tenant status changes
+        // This prevents disabled tenants from continuing to use cached tokens
+        tokenCacheService.evictAllForTenantStatusChange(req.getTenantId());
+        
         return tenant;
     }
 

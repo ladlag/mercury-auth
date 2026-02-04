@@ -61,11 +61,53 @@ public class TokenService {
     }
 
     public TokenVerifyResponse verifyToken(String tenantId, String token) {
+        // Hash token once for both blacklist check and cache lookup
+        String tokenHash = TokenHashUtil.hashToken(token);
+        
+        // CRITICAL: Check blacklist BEFORE cache to prevent returning cached responses for blacklisted tokens
         if (isBlacklisted(token)) {
             logger.warn("verifyToken blacklisted tenant={}", tenantId);
             recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
+        
+        // Check if verification result is cached (performance optimization)
+        // This prevents duplicate logs when the same token is verified multiple times
+        TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        if (cached != null) {
+            // Verify tenant match even for cached responses
+            if (!tenantId.equals(cached.getTenantId())) {
+                logger.warn("verifyToken tenant mismatch cached tenant={} requested={}", cached.getTenantId(), tenantId);
+                throw new ApiException(ErrorCodes.TENANT_MISMATCH, "tenant mismatch");
+            }
+            
+            // SECURITY: Re-validate tenant and user status even for cached responses
+            // This prevents disabled tenants/users from using cached tokens
+            try {
+                tenantService.requireEnabled(cached.getTenantId());
+                User user = loadActiveUser(cached.getTenantId(), cached.getUserId());
+                // If tenant or user is disabled, loadActiveUser throws exception, cache is not used
+            } catch (ApiException ex) {
+                // Tenant or user is disabled, evict from cache and re-throw
+                logger.warn("verifyToken cached response invalid, evicting: tenant={} userId={} error={}", 
+                    cached.getTenantId(), cached.getUserId(), ex.getCode());
+                tokenCacheService.evictToken(tokenHash);
+                throw ex;
+            }
+            
+            // SECURITY: Check token expiration time even for cached responses
+            long now = System.currentTimeMillis();
+            if (cached.getExpiresAt() != null && cached.getExpiresAt() <= now) {
+                logger.warn("verifyToken cached token expired tenant={} userId={}", cached.getTenantId(), cached.getUserId());
+                tokenCacheService.evictToken(tokenHash);
+                recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN);
+                throw new ApiException(ErrorCodes.INVALID_TOKEN, "token expired");
+            }
+            
+            logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+            return cached;
+        }
+        
         Claims claims = parseClaims(token);
         
         // Check JTI blacklist if present
@@ -81,7 +123,8 @@ public class TokenService {
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
         safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
-        return TokenVerifyResponse.builder()
+        
+        TokenVerifyResponse response = TokenVerifyResponse.builder()
                 .tenantId(tokenTenant)
                 .userId(userId)
                 .userName(user.getUsername())
@@ -89,6 +132,11 @@ public class TokenService {
                 .phone(user.getPhone())
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
                 .build();
+        
+        // Cache the verification result to prevent duplicate logs
+        tokenCacheService.cacheVerifyResponse(tokenHash, response);
+        
+        return response;
     }
 
     public User blacklistToken(String tenantId, String token) {
