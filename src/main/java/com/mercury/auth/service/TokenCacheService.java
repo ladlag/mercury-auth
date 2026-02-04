@@ -73,7 +73,8 @@ public class TokenCacheService {
 
     /**
      * Cache validated token verify response for future requests.
-     * This prevents duplicate VERIFY_TOKEN logs when the same token is verified multiple times.
+     * Improves performance by avoiding repeated JWT parsing and validation.
+     * Note: Logs are still recorded for each verification request for audit purposes.
      */
     public void cacheVerifyResponse(String tokenHash, TokenVerifyResponse response) {
         Cache cache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);

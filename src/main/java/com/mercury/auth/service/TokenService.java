@@ -72,7 +72,6 @@ public class TokenService {
         }
         
         // Check if verification result is cached (performance optimization)
-        // This prevents duplicate logs when the same token is verified multiple times
         TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash);
         if (cached != null) {
             // Verify tenant match even for cached responses
@@ -104,7 +103,9 @@ public class TokenService {
                 throw new ApiException(ErrorCodes.INVALID_TOKEN, "token expired");
             }
             
+            // Log successful token verification (cache hit) for audit trail
             logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+            safeRecord(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN, true);
             return cached;
         }
         
@@ -133,7 +134,7 @@ public class TokenService {
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
                 .build();
         
-        // Cache the verification result to prevent duplicate logs
+        // Cache the verification result to improve performance on subsequent requests
         tokenCacheService.cacheVerifyResponse(tokenHash, response);
         
         return response;
