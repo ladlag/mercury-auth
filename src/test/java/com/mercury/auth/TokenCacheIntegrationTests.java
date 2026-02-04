@@ -331,4 +331,68 @@ public class TokenCacheIntegrationTests {
         com.mercury.auth.dto.TokenVerifyResponse evictedCache = tokenCacheService.getCachedVerifyResponse(tokenHash);
         assertNull(evictedCache, "Cache should be evicted after detecting disabled user");
     }
+
+    @Test
+    public void testVerifyTokenLogsForBothCacheHitAndMiss() {
+        // Setup: Create a test user
+        String tenantId = "tenant-log-test";
+        Long userId = 777L;
+        String username = "loguser";
+
+        User user = new User();
+        user.setId(userId);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setEmail("loguser@example.com");
+        user.setPhone("1234567890");
+        user.setEnabled(true);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Generate a JWT token
+        String token = jwtService.generate(tenantId, userId, username);
+        String tokenHash = tokenCacheService.hashToken(token);
+
+        // Verify the verify response is not cached initially
+        com.mercury.auth.dto.TokenVerifyResponse cachedResponse = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNull(cachedResponse, "Verify response should not be cached initially");
+
+        // First call - cache miss, should log
+        com.mercury.auth.dto.AuthRequests.TokenVerify verifyRequest = new com.mercury.auth.dto.AuthRequests.TokenVerify();
+        verifyRequest.setTenantId(tenantId);
+        verifyRequest.setToken(token);
+        
+        com.mercury.auth.dto.TokenVerifyResponse firstResponse = tokenService.verifyToken(verifyRequest);
+        assertNotNull(firstResponse);
+
+        // Verify logging was called for cache miss (first verification)
+        verify(authLogService, times(1)).record(
+                eq(tenantId),
+                eq(userId),
+                eq(com.mercury.auth.dto.AuthAction.VERIFY_TOKEN),
+                eq(true));
+
+        // Verify the response is now cached
+        com.mercury.auth.dto.TokenVerifyResponse cachedAfterFirst = tokenCacheService.getCachedVerifyResponse(tokenHash);
+        assertNotNull(cachedAfterFirst, "Verify response should be cached after first call");
+
+        // Reset mock to verify second call
+        reset(authLogService);
+        reset(userMapper);
+        when(userMapper.selectOne(any())).thenReturn(user); // Re-mock for security validation
+        
+        // Second call - cache hit, should still log
+        com.mercury.auth.dto.TokenVerifyResponse secondResponse = tokenService.verifyToken(verifyRequest);
+        assertNotNull(secondResponse);
+
+        // Verify logging was called for cache hit (second verification)
+        verify(authLogService, times(1)).record(
+                eq(tenantId),
+                eq(userId),
+                eq(com.mercury.auth.dto.AuthAction.VERIFY_TOKEN),
+                eq(true));
+
+        // Verify the response is the same
+        assertEquals(firstResponse.getTenantId(), secondResponse.getTenantId());
+        assertEquals(firstResponse.getUserId(), secondResponse.getUserId());
+    }
 }
