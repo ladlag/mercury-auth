@@ -1,0 +1,106 @@
+# Mercury Auth 自动黑名单配置示例
+# Auto-Blacklist Configuration Example
+
+spring:
+  application:
+    name: mercury-auth
+    
+security:
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET:your-secret-key-change-in-production}
+    ttl-minutes: 1440  # 24 hours
+  
+  # Rate Limiting Configuration
+  rate-limit:
+    # Default rate limits (backward compatibility)
+    max-attempts: 10
+    window-minutes: 1
+    
+    # IP-based rate limiting
+    ip:
+      max-attempts: 50
+      window-minutes: 1
+    
+    # Auto-Blacklist Configuration (NEW!)
+    # 自动黑名单配置（新功能！）
+    auto-blacklist:
+      # Enable/disable auto-blacklist feature
+      # 启用/禁用自动黑名单功能
+      enabled: true
+      
+      # Normal violation threshold
+      # 普通违规阈值
+      failure-threshold: 20              # Number of failures to trigger blacklist
+      failure-window-minutes: 5          # Time window to count failures (minutes)
+      blacklist-duration-minutes: 30     # Blacklist duration (minutes)
+      
+      # Severe violation threshold (longer blacklist)
+      # 严重违规阈值（更长的封禁时间）
+      severe-failure-threshold: 50       # Number of failures for severe blacklist
+      severe-failure-window-minutes: 10  # Time window for severe violations (minutes)
+      severe-blacklist-duration-minutes: 120  # Severe blacklist duration (minutes, 2 hours)
+    
+    # Operation-specific rate limits
+    send-code:
+      max-attempts: 5
+      window-minutes: 1
+    
+    login:
+      max-attempts: 10
+      window-minutes: 1
+    
+    captcha:
+      max-attempts: 20
+      window-minutes: 1
+    
+    refresh-token:
+      max-attempts: 10
+      window-minutes: 1
+  
+  # Captcha Configuration
+  captcha:
+    threshold: 3           # Show captcha after 3 failed attempts
+    ttl-minutes: 5        # Captcha validity period
+    length: 4             # Captcha question complexity
+
+# Redis Configuration
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  password: ${REDIS_PASSWORD:}
+  database: 0
+  
+# Database Configuration
+datasource:
+  url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mercury_auth}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+  username: ${DB_USERNAME:root}
+  password: ${DB_PASSWORD:}
+
+# Example: Adjust thresholds for different security levels
+# 示例：根据不同安全级别调整阈值
+
+# Strict Mode (High Security)
+# 严格模式（高安全性）
+# security.rate-limit.auto-blacklist:
+#   failure-threshold: 10
+#   failure-window-minutes: 5
+#   blacklist-duration-minutes: 60
+#   severe-failure-threshold: 20
+#   severe-failure-window-minutes: 10
+#   severe-blacklist-duration-minutes: 240
+
+# Lenient Mode (Development/Testing)
+# 宽松模式（开发/测试）
+# security.rate-limit.auto-blacklist:
+#   failure-threshold: 50
+#   failure-window-minutes: 10
+#   blacklist-duration-minutes: 15
+#   severe-failure-threshold: 100
+#   severe-failure-window-minutes: 15
+#   severe-blacklist-duration-minutes: 60
+
+# Disable Auto-Blacklist (Not Recommended)
+# 禁用自动黑名单（不推荐）
+# security.rate-limit.auto-blacklist:
+#   enabled: false

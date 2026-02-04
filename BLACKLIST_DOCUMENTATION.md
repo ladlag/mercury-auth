@@ -70,23 +70,29 @@ Mercury Auth authentication system supports multi-dimensional blacklist mechanis
 
 **触发条件 (Trigger Conditions)**:
 
-1. **重复登录失败 (Repeated Login Failures)**
+1. **重复登录失败 (Repeated Login Failures)** - ✅ 已实现自动触发
    - 短时间内多次登录失败（密码错误、用户不存在等）
    - Multiple login failures in a short time (wrong password, user not found, etc.)
-   - 自动黑名单时长：15-60 分钟（可配置）
-   - Auto-blacklist duration: 15-60 minutes (configurable)
-   - 示例：5 分钟内失败 10 次 → 自动封禁 30 分钟
-   - Example: 10 failures in 5 minutes → auto-ban for 30 minutes
+   - **实现状态：已自动集成到 `PasswordAuthService`**
+   - **Implementation: Automatically integrated in `PasswordAuthService`**
+   - 默认配置：20 次失败/5 分钟 → 封禁 30 分钟
+   - Default: 20 failures in 5 minutes → 30-minute blacklist
+   - 严重违规：50 次失败/10 分钟 → 封禁 2 小时
+   - Severe: 50 failures in 10 minutes → 2-hour blacklist
+   - **配置项：`security.rate-limit.auto-blacklist`**
+   - **Configuration: `security.rate-limit.auto-blacklist`**
 
-2. **速率限制违规 (Rate Limit Violations)**
+2. **速率限制违规 (Rate Limit Violations)** - 可扩展
    - 超过接口调用频率限制
    - Exceeds API call rate limits
    - 针对恶意刷接口、暴力破解等行为
    - Targets malicious API abuse, brute force attacks, etc.
    - 自动黑名单时长：根据违规严重程度动态调整
    - Auto-blacklist duration: Dynamically adjusted based on violation severity
+   - **扩展方式：调用 `BlacklistService.autoBlacklistIp()`**
+   - **Extension: Call `BlacklistService.autoBlacklistIp()`**
 
-3. **安全威胁检测 (Security Threat Detection)**
+3. **安全威胁检测 (Security Threat Detection)** - 可扩展
    - SQL 注入尝试
    - SQL injection attempts
    - XSS 攻击尝试
@@ -95,6 +101,8 @@ Mercury Auth authentication system supports multi-dimensional blacklist mechanis
    - Known malicious IP database matches
    - DDoS 攻击特征
    - DDoS attack patterns
+   - **扩展方式：调用 `BlacklistService.autoBlacklistIp()`**
+   - **Extension: Call `BlacklistService.autoBlacklistIp()`**
 
 4. **管理员手动添加 (Manual Admin Addition)**
    - 管理员通过 API 手动添加 IP 黑名单
@@ -201,18 +209,66 @@ DELETE /api/v1/admin/blacklist/ip/cleanup
 
 ### 自动黑名单策略 (Auto-Blacklist Policy)
 
-```yaml
-# 登录失败触发条件
-login-failure-threshold:
-  attempts: 10           # 失败次数
-  window-minutes: 5      # 时间窗口（分钟）
-  blacklist-duration: 30 # 黑名单时长（分钟）
+**✅ 已实现的配置 (Implemented Configuration):**
 
-# 速率限制违规
-rate-limit-violation:
-  blacklist-duration: 15 # 首次违规黑名单时长（分钟）
-  escalation-factor: 2   # 重复违规时长倍增因子
+```yaml
+security:
+  rate-limit:
+    auto-blacklist:
+      # 启用自动黑名单功能
+      enabled: true
+      
+      # 普通违规阈值
+      failure-threshold: 20              # 失败次数
+      failure-window-minutes: 5          # 时间窗口（分钟）
+      blacklist-duration-minutes: 30     # 黑名单时长（分钟）
+      
+      # 严重违规阈值
+      severe-failure-threshold: 50       # 严重违规失败次数
+      severe-failure-window-minutes: 10  # 严重违规时间窗口（分钟）
+      severe-blacklist-duration-minutes: 120  # 严重违规黑名单时长（分钟）
 ```
+
+**工作原理 (How It Works):**
+
+1. **失败计数**: 每次登录失败时，系统在 Redis 中记录：
+   - `login:failures:<ip>` - 普通失败计数（5分钟窗口）
+   - `login:failures:severe:<ip>` - 严重违规计数（10分钟窗口）
+
+2. **触发检查**: 每次失败后立即检查两个阈值：
+   - 如果 `severe` 计数 >= 50: 封禁 2 小时
+   - 否则如果 `normal` 计数 >= 20: 封禁 30 分钟
+
+3. **自动清理**: 封禁后清除失败计数器，避免重复触发
+
+**调优建议 (Tuning Recommendations):**
+
+| 场景 | failure-threshold | failure-window-minutes | blacklist-duration-minutes |
+|------|-------------------|------------------------|----------------------------|
+| **严格模式** | 10 | 5 | 60 |
+| **默认模式** | 20 | 5 | 30 |
+| **宽松模式** | 50 | 10 | 15 |
+
+**与速率限制的协调 (Coordination with Rate Limiting):**
+
+```
+时间线 (Timeline):
+0s ──→ 60s ──→ 5min ──→ 10min
+
+速率限制 (Rate Limit):
+├─ 10次/分钟 → 临时阻止
+└─ 1分钟后重置
+
+自动黑名单 (Auto-Blacklist):
+├─ 20次/5分钟 → 封禁30分钟
+└─ 50次/10分钟 → 封禁2小时
+```
+
+**优势 (Advantages):**
+- ✅ 速率限制处理正常用户的偶尔失败
+- ✅ 自动黑名单阻止持续的恶意攻击
+- ✅ 分级响应：轻微违规 vs 严重违规
+- ✅ 不同时间窗口避免误报
 
 ### Redis 配置优化 (Redis Configuration Optimization)
 
