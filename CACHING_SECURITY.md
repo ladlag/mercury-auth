@@ -136,7 +136,6 @@ The caching implementation uses Caffeine, which is a high-performance cache but 
 
 ### What Cache Provides
 - ✅ Reduces JWT parsing overhead
-- ✅ Prevents duplicate audit logs (N logs → 1 log per 5 minutes)
 - ✅ Reduces database load for repeat verifications
 
 ### What Cache Does NOT Skip
@@ -144,6 +143,7 @@ The caching implementation uses Caffeine, which is a high-performance cache but 
 - ❌ Tenant status validation (re-checked for cached responses)
 - ❌ User status validation (re-checked for cached responses)
 - ❌ Token expiration checks (re-checked for cached responses)
+- ❌ Audit log recording (always recorded, even for cached responses)
 
 ### Performance Impact of Security Validations
 
@@ -152,8 +152,9 @@ For cached responses, we perform:
 2. Tenant status check (DB query, indexed) - ~2-5ms
 3. User status check (DB query, indexed) - ~2-5ms
 4. Expiration check (memory comparison) - ~0.001ms
+5. Audit log insertion (DB insert) - ~5-10ms
 
-**Total overhead**: ~5-11ms per cached verification
+**Total overhead**: ~10-21ms per cached verification
 
 **Compared to full verification**:
 - JWT parsing: ~5-10ms
@@ -161,7 +162,7 @@ For cached responses, we perform:
 - Audit log insertion: ~5-10ms
 - **Total**: ~15-31ms
 
-**Cache benefit**: Still 30-50% faster than full verification
+**Cache benefit**: Saves ~5-10ms (JWT parsing overhead) per cached verification
 
 ## Configuration
 
