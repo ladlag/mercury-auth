@@ -39,3 +39,15 @@ CREATE TABLE IF NOT EXISTS token_blacklist (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_token_hash (token_hash)
 );
+
+CREATE TABLE IF NOT EXISTS ip_blacklist (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  ip_address VARCHAR(64) NOT NULL,
+  tenant_id VARCHAR(64) COMMENT 'NULL for global blacklist, specific tenant_id for tenant-specific blacklist',
+  reason VARCHAR(500),
+  expires_at TIMESTAMP NULL COMMENT 'NULL for permanent blacklist',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by VARCHAR(100) COMMENT 'Admin username or system',
+  INDEX idx_ip_tenant (ip_address, tenant_id),
+  INDEX idx_expires (expires_at)
+);

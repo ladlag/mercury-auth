@@ -3,6 +3,7 @@ package com.mercury.auth.security;
 import com.mercury.auth.config.SecurityConstants;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.service.BlacklistService;
 import com.mercury.auth.service.TokenCacheService;
 import com.mercury.auth.service.TokenService;
 import io.jsonwebtoken.Claims;
@@ -39,6 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final TokenService tokenService;
     private final TokenCacheService tokenCacheService;
+    private final BlacklistService blacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -62,6 +64,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String token = authHeader.substring(BEARER_PREFIX.length());
+            
+            // Get tenant ID early for IP blacklist check
+            String headerTenantId = request.getHeader(TENANT_ID_HEADER);
+            
+            // CRITICAL: Check IP blacklist before processing token
+            try {
+                blacklistService.checkIpBlacklist(headerTenantId);
+            } catch (ApiException e) {
+                logger.warn("IP blacklist check failed: {}", e.getMessage());
+                response.setStatus(e.getErrorCode().getHttpStatus().value());
+                response.setContentType("application/json");
+                response.getWriter().write(String.format("{\"code\":\"%s\",\"message\":\"%s\"}", 
+                    e.getCode(), e.getMessage()));
+                return;
+            }
             
             // Hash token for cache lookup and blacklist check
             String tokenHash = tokenCacheService.hashToken(token);
