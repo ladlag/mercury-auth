@@ -141,8 +141,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Use try-catch to prevent logging failures from breaking authentication flow
             try {
                 authLogService.record(tokenTenantId, userId, AuthAction.VERIFY_TOKEN, true);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
                 // Logging failure should not break authentication
+                logger.warn("Failed to record auth log for tenant={} userId={}: {}", tokenTenantId, userId, e.getMessage());
             }
             
             logger.debug("JWT authentication successful for user={} tenant={}", username, tokenTenantId);
