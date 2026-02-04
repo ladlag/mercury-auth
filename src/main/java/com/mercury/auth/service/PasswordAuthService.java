@@ -137,6 +137,8 @@ public class PasswordAuthService {
             recordFailure(req.getTenantId(), null, AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
                     AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+            // Track failed attempt for auto-blacklist
+            rateLimitService.recordFailedLoginAttempt(req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
 
@@ -146,6 +148,8 @@ public class PasswordAuthService {
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
                     AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+            // Track failed attempt for auto-blacklist
+            rateLimitService.recordFailedLoginAttempt(req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
 
@@ -159,6 +163,8 @@ public class PasswordAuthService {
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
                     AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+            // Track failed attempt for auto-blacklist
+            rateLimitService.recordFailedLoginAttempt(req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
 
@@ -168,6 +174,8 @@ public class PasswordAuthService {
             recordFailure(req.getTenantId(), user.getId(), AuthAction.LOGIN_PASSWORD);
             captchaService.recordFailure(KeyUtils.buildCaptchaKey(
                     AuthAction.CAPTCHA_LOGIN_PASSWORD, req.getTenantId(), req.getUsername()));
+            // Track failed attempt for auto-blacklist
+            rateLimitService.recordFailedLoginAttempt(req.getTenantId(), req.getUsername());
             throw new ApiException(ErrorCodes.BAD_CREDENTIALS, "bad credentials");
         }
 

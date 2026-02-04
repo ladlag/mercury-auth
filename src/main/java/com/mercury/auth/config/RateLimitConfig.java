@@ -25,6 +25,11 @@ public class RateLimitConfig {
     private IpRateLimit ip = new IpRateLimit();
     
     /**
+     * Auto-blacklist settings for failed login attempts
+     */
+    private AutoBlacklist autoBlacklist = new AutoBlacklist();
+    
+    /**
      * Verification code sending rate limits (more restrictive)
      */
     private OperationRateLimit sendCode = new OperationRateLimit(5, 1);
@@ -48,6 +53,50 @@ public class RateLimitConfig {
     public static class IpRateLimit {
         private long maxAttempts = 50;
         private long windowMinutes = 1;
+    }
+    
+    /**
+     * Configuration for automatic IP blacklisting based on failed attempts.
+     * This provides a coordinated approach with rate limiting:
+     * - Rate limit: Short-term protection (temporary blocking)
+     * - Auto-blacklist: Longer-term protection after repeated violations
+     */
+    @Data
+    public static class AutoBlacklist {
+        /**
+         * Enable auto-blacklist feature
+         */
+        private boolean enabled = true;
+        
+        /**
+         * Number of failed attempts within window to trigger auto-blacklist
+         */
+        private long failureThreshold = 20;
+        
+        /**
+         * Time window in minutes to count failures
+         */
+        private long failureWindowMinutes = 5;
+        
+        /**
+         * Duration in minutes to blacklist the IP
+         */
+        private long blacklistDurationMinutes = 30;
+        
+        /**
+         * Severe violation threshold (triggers longer blacklist)
+         */
+        private long severeFailureThreshold = 50;
+        
+        /**
+         * Time window in minutes for severe violation detection
+         */
+        private long severeFailureWindowMinutes = 10;
+        
+        /**
+         * Duration in minutes for severe violation blacklist
+         */
+        private long severeBlacklistDurationMinutes = 120;
     }
     
     @Data

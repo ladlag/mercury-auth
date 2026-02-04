@@ -6,6 +6,8 @@ import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.util.IpUtils;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -19,8 +21,11 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class RateLimitService {
 
+    private static final Logger logger = LoggerFactory.getLogger(RateLimitService.class);
+    
     private final StringRedisTemplate redisTemplate;
     private final RateLimitConfig rateLimitConfig;
+    private final BlacklistService blacklistService;
     
     // Lua script for atomic increment with expiration
     private static final String RATE_LIMIT_SCRIPT = 
@@ -62,6 +67,86 @@ public class RateLimitService {
         );
         if (count != null && count > rateLimitConfig.getMaxAttempts()) {
             throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests");
+        }
+    }
+    
+    /**
+     * Record a failed login attempt and check if auto-blacklist should be triggered.
+     * This provides coordinated protection:
+     * 1. Rate limiting: Short-term protection (temporary blocking within time window)
+     * 2. Failure tracking: Counts failures over longer window
+     * 3. Auto-blacklist: Triggered when failure threshold exceeded
+     * 
+     * @param tenantId Tenant ID for tenant-specific blacklist
+     * @param identifier User identifier (username, email, etc.)
+     */
+    public void recordFailedLoginAttempt(String tenantId, String identifier) {
+        if (!rateLimitConfig.getAutoBlacklist().isEnabled()) {
+            return;
+        }
+        
+        try {
+            String clientIp = getCurrentRequestIp();
+            if (clientIp == null) {
+                return; // Cannot track without IP
+            }
+            
+            // Track failures in two time windows for different thresholds
+            String failureKey = "login:failures:" + clientIp;
+            String severeFailureKey = "login:failures:severe:" + clientIp;
+            
+            // Increment both counters
+            Long failureCount = redisTemplate.execute(
+                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                Collections.singletonList(failureKey),
+                String.valueOf(rateLimitConfig.getAutoBlacklist().getFailureWindowMinutes() * 60)
+            );
+            
+            Long severeCount = redisTemplate.execute(
+                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                Collections.singletonList(severeFailureKey),
+                String.valueOf(rateLimitConfig.getAutoBlacklist().getSevereFailureWindowMinutes() * 60)
+            );
+            
+            // Check severe threshold first (longer blacklist)
+            if (severeCount != null && severeCount >= rateLimitConfig.getAutoBlacklist().getSevereFailureThreshold()) {
+                int duration = (int) rateLimitConfig.getAutoBlacklist().getSevereBlacklistDurationMinutes();
+                blacklistService.autoBlacklistIp(
+                    clientIp,
+                    tenantId,
+                    String.format("%d failed login attempts in %d minutes", 
+                        severeCount, 
+                        rateLimitConfig.getAutoBlacklist().getSevereFailureWindowMinutes()),
+                    duration
+                );
+                logger.warn("Severe violation detected - IP auto-blacklisted: ip={} tenant={} failures={} duration={}min",
+                    clientIp, tenantId, severeCount, duration);
+                
+                // Clear counters after blacklisting
+                redisTemplate.delete(failureKey);
+                redisTemplate.delete(severeFailureKey);
+            }
+            // Check normal threshold (shorter blacklist)
+            else if (failureCount != null && failureCount >= rateLimitConfig.getAutoBlacklist().getFailureThreshold()) {
+                int duration = (int) rateLimitConfig.getAutoBlacklist().getBlacklistDurationMinutes();
+                blacklistService.autoBlacklistIp(
+                    clientIp,
+                    tenantId,
+                    String.format("%d failed login attempts in %d minutes", 
+                        failureCount, 
+                        rateLimitConfig.getAutoBlacklist().getFailureWindowMinutes()),
+                    duration
+                );
+                logger.warn("Auto-blacklist triggered: ip={} tenant={} failures={} duration={}min",
+                    clientIp, tenantId, failureCount, duration);
+                
+                // Clear counter after blacklisting
+                redisTemplate.delete(failureKey);
+            }
+            
+        } catch (Exception e) {
+            // Don't fail the request if auto-blacklist tracking fails
+            logger.error("Failed to record login failure for auto-blacklist: {}", e.getMessage(), e);
         }
     }
     
@@ -122,8 +207,7 @@ public class RateLimitService {
             
             // If IP extraction returns "unknown", fail closed for security
             if ("unknown".equals(clientIp)) {
-                org.slf4j.LoggerFactory.getLogger(RateLimitService.class)
-                    .warn("IP extraction failed for rate limiting action={}, rejecting request", action);
+                logger.warn("IP extraction failed for rate limiting action={}, rejecting request", action);
                 throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
             }
             
@@ -141,10 +225,33 @@ public class RateLimitService {
             throw e;
         } catch (Exception e) {
             // Any unexpected exception during rate limiting should fail closed for security
-            org.slf4j.LoggerFactory.getLogger(RateLimitService.class)
-                .error("Unexpected error during IP rate limiting action={}, rejecting request: {}", 
+            logger.error("Unexpected error during IP rate limiting action={}, rejecting request: {}", 
                        action, e.getMessage(), e);
             throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
+        }
+    }
+    
+    /**
+     * Get current request IP address
+     */
+    private String getCurrentRequestIp() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) {
+                return null;
+            }
+            
+            HttpServletRequest request = attributes.getRequest();
+            String clientIp = IpUtils.getClientIp(request);
+            
+            if ("unknown".equals(clientIp)) {
+                return null;
+            }
+            
+            return clientIp;
+        } catch (Exception e) {
+            logger.warn("Failed to get client IP: {}", e.getMessage());
+            return null;
         }
     }
 }
