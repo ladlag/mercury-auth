@@ -38,6 +38,10 @@ security:
   jwt:
     secret: ${JWT_SECRET}
     ttl-seconds: 7200
+  token-cache:
+    # Token cache configuration for performance optimization
+    max-size: ${TOKEN_CACHE_MAX_SIZE:10000}  # Maximum number of tokens to cache
+    expire-after-write-seconds: ${TOKEN_CACHE_EXPIRE_SECONDS:600}  # Cache expiry time (10 minutes)
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5
@@ -55,6 +59,17 @@ security:
     ip:
       max-attempts: ${RATE_LIMIT_IP_MAX_ATTEMPTS:50}  # Higher limit for IP-based rate limiting
       window-minutes: ${RATE_LIMIT_IP_WINDOW_MINUTES:1}
+    
+    # Auto-blacklist settings for failed login attempts
+    # This is INDEPENDENT from rate limiting and provides longer-term protection
+    auto-blacklist:
+      enabled: ${AUTO_BLACKLIST_ENABLED:true}  # Enable/disable auto-blacklist feature
+      failure-threshold: ${AUTO_BLACKLIST_FAILURE_THRESHOLD:20}  # Number of failures to trigger blacklist
+      failure-window-minutes: ${AUTO_BLACKLIST_FAILURE_WINDOW_MINUTES:5}  # Time window to count failures
+      blacklist-duration-minutes: ${AUTO_BLACKLIST_DURATION_MINUTES:30}  # Duration of blacklist
+      severe-failure-threshold: ${AUTO_BLACKLIST_SEVERE_FAILURE_THRESHOLD:50}  # Severe violation threshold
+      severe-failure-window-minutes: ${AUTO_BLACKLIST_SEVERE_FAILURE_WINDOW_MINUTES:10}  # Severe violation time window
+      severe-blacklist-duration-minutes: ${AUTO_BLACKLIST_SEVERE_DURATION_MINUTES:120}  # Severe violation blacklist duration
     
     # Verification code sending - more restrictive to prevent abuse
     # Applies to: RATE_LIMIT_SEND_EMAIL_CODE, RATE_LIMIT_SEND_PHONE_CODE
@@ -79,6 +94,12 @@ security:
     refresh-token:
       max-attempts: ${RATE_LIMIT_REFRESH_TOKEN_MAX_ATTEMPTS:10}
       window-minutes: ${RATE_LIMIT_REFRESH_TOKEN_WINDOW_MINUTES:1}
+  blacklist:
+    # Blacklist configuration - INDEPENDENT from rate limiting
+    # Blacklist provides persistent blocking while rate limiting provides temporary throttling
+    ip-enabled: ${BLACKLIST_IP_ENABLED:true}  # Enable/disable IP blacklist checking
+    token-enabled: ${BLACKLIST_TOKEN_ENABLED:true}  # Enable/disable token blacklist checking
+    permanent-blacklist-cache-days: ${BLACKLIST_PERMANENT_CACHE_DAYS:365}  # Cache duration for permanent blacklists
   captcha:
     threshold: 3
     ttl-minutes: 5

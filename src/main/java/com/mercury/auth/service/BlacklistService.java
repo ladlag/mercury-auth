@@ -36,14 +36,12 @@ public class BlacklistService {
     private static final Logger logger = LoggerFactory.getLogger(BlacklistService.class);
     private final IpBlacklistMapper ipBlacklistMapper;
     private final StringRedisTemplate redisTemplate;
+    private final com.mercury.auth.config.BlacklistConfig blacklistConfig;
     
     // Redis key prefixes
     private static final String IP_BLACKLIST_PREFIX = "blacklist:ip:";
     private static final String IP_BLACKLIST_GLOBAL_PREFIX = "blacklist:ip:global:";
     private static final String IP_BLACKLIST_TENANT_PREFIX = "blacklist:ip:tenant:";
-    
-    // Cache duration for permanent blacklists (1 year)
-    private static final int PERMANENT_BLACKLIST_CACHE_DAYS = 365;
     
     /**
      * Check if current request IP is blacklisted
@@ -53,6 +51,12 @@ public class BlacklistService {
      * @throws ApiException if IP is blacklisted
      */
     public void checkIpBlacklist(String tenantId) {
+        // Skip IP blacklist check if disabled
+        if (!blacklistConfig.isIpEnabled()) {
+            logger.debug("IP blacklist checking is disabled");
+            return;
+        }
+        
         String clientIp = getCurrentRequestIp();
         if (clientIp == null) {
             return; // Unable to determine IP, skip check
@@ -246,7 +250,8 @@ public class BlacklistService {
         
         if (expiresAt == null) {
             // Permanent blacklist - cache for configured duration
-            redisTemplate.opsForValue().set(redisKey, "1", Duration.ofDays(PERMANENT_BLACKLIST_CACHE_DAYS));
+            redisTemplate.opsForValue().set(redisKey, "1", 
+                Duration.ofDays(blacklistConfig.getPermanentBlacklistCacheDays()));
         } else {
             Duration ttl = Duration.between(LocalDateTime.now(), expiresAt);
             if (!ttl.isNegative() && !ttl.isZero()) {

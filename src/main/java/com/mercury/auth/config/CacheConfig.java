@@ -21,7 +21,7 @@ public class CacheConfig {
     @Value("${security.token-cache.max-size:10000}")
     private long maxCacheSize;
 
-    @Value("${security.token-cache.expire-after-write-seconds:300}")
+    @Value("${security.token-cache.expire-after-write-seconds:600}")
     private long expireAfterWriteSeconds;
 
     @Bean

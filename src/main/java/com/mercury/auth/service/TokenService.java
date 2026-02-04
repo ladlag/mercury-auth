@@ -38,6 +38,7 @@ public class TokenService {
     private final TokenBlacklistMapper tokenBlacklistMapper;
     private final RateLimitService rateLimitService;
     private final TokenCacheService tokenCacheService;
+    private final com.mercury.auth.config.BlacklistConfig blacklistConfig;
 
     /**
      * Verify token using request DTO
@@ -239,6 +240,11 @@ public class TokenService {
     }
 
     private boolean isBlacklisted(String token) {
+        // Skip token blacklist check if disabled
+        if (!blacklistConfig.isTokenEnabled()) {
+            logger.debug("Token blacklist checking is disabled");
+            return false;
+        }
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
     }
     
