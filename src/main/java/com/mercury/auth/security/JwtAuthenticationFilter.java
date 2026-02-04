@@ -1,8 +1,10 @@
 package com.mercury.auth.security;
 
 import com.mercury.auth.config.SecurityConstants;
+import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.service.TokenCacheService;
 import com.mercury.auth.service.TokenService;
 import io.jsonwebtoken.Claims;
@@ -39,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final TokenService tokenService;
     private final TokenCacheService tokenCacheService;
+    private final AuthLogService authLogService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -133,6 +136,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             // Set authentication in security context
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // Record successful authentication in audit log
+            // Use try-catch to prevent logging failures from breaking authentication flow
+            try {
+                authLogService.record(tokenTenantId, userId, AuthAction.VERIFY_TOKEN, true);
+            } catch (Exception ignored) {
+                // Logging failure should not break authentication
+            }
             
             logger.debug("JWT authentication successful for user={} tenant={}", username, tokenTenantId);
             
