@@ -110,7 +110,10 @@ public class RateLimitService {
             
             // Check severe threshold first (longer blacklist)
             if (severeCount != null && severeCount >= rateLimitConfig.getAutoBlacklist().getSevereFailureThreshold()) {
-                int duration = (int) rateLimitConfig.getAutoBlacklist().getSevereBlacklistDurationMinutes();
+                long durationMinutes = rateLimitConfig.getAutoBlacklist().getSevereBlacklistDurationMinutes();
+                // Validate duration fits in int range (blacklist method expects int)
+                int duration = durationMinutes > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) durationMinutes;
+                
                 blacklistService.autoBlacklistIp(
                     clientIp,
                     tenantId,
@@ -128,7 +131,10 @@ public class RateLimitService {
             }
             // Check normal threshold (shorter blacklist)
             else if (failureCount != null && failureCount >= rateLimitConfig.getAutoBlacklist().getFailureThreshold()) {
-                int duration = (int) rateLimitConfig.getAutoBlacklist().getBlacklistDurationMinutes();
+                long durationMinutes = rateLimitConfig.getAutoBlacklist().getBlacklistDurationMinutes();
+                // Validate duration fits in int range (blacklist method expects int)
+                int duration = durationMinutes > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) durationMinutes;
+                
                 blacklistService.autoBlacklistIp(
                     clientIp,
                     tenantId,

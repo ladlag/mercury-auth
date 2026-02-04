@@ -7,8 +7,10 @@ spring:
     
 security:
   # JWT Configuration
+  # IMPORTANT: Change the secret key in production!
+  # 重要：生产环境必须修改密钥！
   jwt:
-    secret: ${JWT_SECRET:your-secret-key-change-in-production}
+    secret: ${JWT_SECRET}  # Must be set via environment variable
     ttl-minutes: 1440  # 24 hours
   
   # Rate Limiting Configuration
