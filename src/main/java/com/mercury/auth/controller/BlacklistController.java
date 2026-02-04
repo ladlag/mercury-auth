@@ -108,14 +108,29 @@ public class BlacklistController {
     
     /**
      * Get the current authenticated username from security context
+     * Supports multiple authentication types for flexibility
      */
     private Optional<String> getCurrentUsername() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.getPrincipal() instanceof JwtAuthenticationFilter.JwtUserDetails) {
-                JwtAuthenticationFilter.JwtUserDetails userDetails = 
-                    (JwtAuthenticationFilter.JwtUserDetails) authentication.getPrincipal();
-                return Optional.of(userDetails.getUsername());
+            if (authentication != null && authentication.getPrincipal() != null) {
+                Object principal = authentication.getPrincipal();
+                
+                // Handle JwtUserDetails from JWT authentication
+                if (principal instanceof JwtAuthenticationFilter.JwtUserDetails) {
+                    return Optional.of(((JwtAuthenticationFilter.JwtUserDetails) principal).getUsername());
+                }
+                
+                // Handle Spring Security UserDetails
+                if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                    return Optional.of(((org.springframework.security.core.userdetails.UserDetails) principal).getUsername());
+                }
+                
+                // Fallback to principal's toString() for other authentication types
+                String principalString = principal.toString();
+                if (principalString != null && !principalString.isEmpty() && !"anonymousUser".equals(principalString)) {
+                    return Optional.of(principalString);
+                }
             }
         } catch (Exception e) {
             // Failed to get username, will use default
