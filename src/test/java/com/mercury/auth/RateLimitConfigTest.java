@@ -2,6 +2,7 @@ package com.mercury.auth;
 
 import com.mercury.auth.config.RateLimitConfig;
 import com.mercury.auth.dto.AuthAction;
+import com.mercury.auth.service.BlacklistService;
 import com.mercury.auth.service.RateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ public class RateLimitConfigTest {
     private RateLimitService rateLimitService;
     private StringRedisTemplate redisTemplate;
     private ValueOperations<String, String> valueOps;
+    private BlacklistService blacklistService;
 
     @BeforeEach
     void setup() {
@@ -61,7 +63,10 @@ public class RateLimitConfigTest {
         valueOps = Mockito.mock(ValueOperations.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
         
-        rateLimitService = new RateLimitService(redisTemplate, rateLimitConfig);
+        // Mock BlacklistService
+        blacklistService = Mockito.mock(BlacklistService.class);
+        
+        rateLimitService = new RateLimitService(redisTemplate, rateLimitConfig, blacklistService);
     }
 
     @Test

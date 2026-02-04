@@ -33,6 +33,7 @@ public enum ErrorCodes {
 
     // ========== 40 07 限流/风控 ==========
     RATE_LIMITED         ("400701", "error.400701", HttpStatus.TOO_MANY_REQUESTS),
+    IP_BLACKLISTED       ("400702", "error.400702", HttpStatus.FORBIDDEN),
 
     // ========== 40 08 参数校验 ==========
     VALIDATION_FAILED    ("400801", "error.400801", HttpStatus.BAD_REQUEST),
