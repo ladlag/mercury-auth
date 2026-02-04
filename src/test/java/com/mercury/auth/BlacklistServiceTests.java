@@ -1,6 +1,7 @@
 package com.mercury.auth;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.entity.IpBlacklist;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
@@ -28,6 +29,7 @@ public class BlacklistServiceTests {
     private IpBlacklistMapper ipBlacklistMapper;
     private StringRedisTemplate redisTemplate;
     private ValueOperations<String, String> valueOperations;
+    private BlacklistConfig blacklistConfig;
     private BlacklistService blacklistService;
 
     @BeforeEach
@@ -35,10 +37,14 @@ public class BlacklistServiceTests {
         ipBlacklistMapper = Mockito.mock(IpBlacklistMapper.class);
         redisTemplate = Mockito.mock(StringRedisTemplate.class);
         valueOperations = Mockito.mock(ValueOperations.class);
+        blacklistConfig = new BlacklistConfig();
+        blacklistConfig.setIpEnabled(true);
+        blacklistConfig.setTokenEnabled(true);
+        blacklistConfig.setPermanentBlacklistCacheDays(365);
         
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         
-        blacklistService = new BlacklistService(ipBlacklistMapper, redisTemplate);
+        blacklistService = new BlacklistService(ipBlacklistMapper, redisTemplate, blacklistConfig);
     }
 
     @Test

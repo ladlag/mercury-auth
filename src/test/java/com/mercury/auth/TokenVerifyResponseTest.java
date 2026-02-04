@@ -1,5 +1,6 @@
 package com.mercury.auth;
 
+import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
@@ -58,12 +59,17 @@ public class TokenVerifyResponseTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
+    private BlacklistConfig blacklistConfig;
     private TokenService tokenService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, authLogService, tokenBlacklistMapper, rateLimitService, tokenCacheService);
+        blacklistConfig = new BlacklistConfig();
+        blacklistConfig.setIpEnabled(true);
+        blacklistConfig.setTokenEnabled(true);
+        blacklistConfig.setPermanentBlacklistCacheDays(365);
+        tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, authLogService, tokenBlacklistMapper, rateLimitService, tokenCacheService, blacklistConfig);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
     

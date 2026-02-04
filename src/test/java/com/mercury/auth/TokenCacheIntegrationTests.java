@@ -1,5 +1,6 @@
 package com.mercury.auth;
 
+import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
@@ -31,6 +32,7 @@ public class TokenCacheIntegrationTests {
     private TokenService tokenService;
     private TokenCacheService tokenCacheService;
     private JwtService jwtService;
+    private BlacklistConfig blacklistConfig;
 
     @Mock
     private StringRedisTemplate redisTemplate;
@@ -71,9 +73,15 @@ public class TokenCacheIntegrationTests {
         // Create real TokenCacheService with cache manager
         tokenCacheService = new TokenCacheService(cacheManager);
 
+        // Create BlacklistConfig
+        blacklistConfig = new BlacklistConfig();
+        blacklistConfig.setIpEnabled(true);
+        blacklistConfig.setTokenEnabled(true);
+        blacklistConfig.setPermanentBlacklistCacheDays(365);
+
         // Create TokenService with real and mock dependencies
         tokenService = new TokenService(jwtService, redisTemplate, userMapper, tenantService, 
-                                       authLogService, tokenBlacklistMapper, rateLimitService, tokenCacheService);
+                                       authLogService, tokenBlacklistMapper, rateLimitService, tokenCacheService, blacklistConfig);
 
         // Mock Redis operations
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
