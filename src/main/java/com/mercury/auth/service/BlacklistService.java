@@ -42,6 +42,9 @@ public class BlacklistService {
     private static final String IP_BLACKLIST_GLOBAL_PREFIX = "blacklist:ip:global:";
     private static final String IP_BLACKLIST_TENANT_PREFIX = "blacklist:ip:tenant:";
     
+    // Cache duration for permanent blacklists (1 year)
+    private static final int PERMANENT_BLACKLIST_CACHE_DAYS = 365;
+    
     /**
      * Check if current request IP is blacklisted
      * Checks both global and tenant-specific blacklists
@@ -242,8 +245,8 @@ public class BlacklistService {
         String redisKey = buildIpBlacklistKey(ipAddress, tenantId);
         
         if (expiresAt == null) {
-            // Permanent blacklist - cache for 1 year
-            redisTemplate.opsForValue().set(redisKey, "1", Duration.ofDays(365));
+            // Permanent blacklist - cache for configured duration
+            redisTemplate.opsForValue().set(redisKey, "1", Duration.ofDays(PERMANENT_BLACKLIST_CACHE_DAYS));
         } else {
             Duration ttl = Duration.between(LocalDateTime.now(), expiresAt);
             if (!ttl.isNegative() && !ttl.isZero()) {

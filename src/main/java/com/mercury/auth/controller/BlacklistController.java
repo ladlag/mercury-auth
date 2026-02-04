@@ -1,6 +1,7 @@
 package com.mercury.auth.controller;
 
 import com.mercury.auth.entity.IpBlacklist;
+import com.mercury.auth.security.JwtAuthenticationFilter;
 import com.mercury.auth.service.BlacklistService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -8,12 +9,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Admin endpoints for managing multi-dimensional blacklists
@@ -43,12 +47,15 @@ public class BlacklistController {
                description = "Add an IP address to blacklist (global or tenant-specific). " +
                            "Use null tenantId for global blacklist.")
     public ApiResponse<String> addIpBlacklist(@Valid @RequestBody AddIpBlacklistRequest request) {
+        // Get authenticated user from security context (or use "SYSTEM" for unauthenticated)
+        String createdBy = getCurrentUsername().orElse("SYSTEM");
+        
         blacklistService.addIpBlacklist(
             request.getIpAddress(),
             request.getTenantId(),
             request.getReason(),
             request.getExpiresAt(),
-            "ADMIN" // In production, get from authentication context
+            createdBy
         );
         return ApiResponse.success("IP blacklist added successfully");
     }
@@ -97,6 +104,23 @@ public class BlacklistController {
     public ApiResponse<String> cleanupExpiredIpBlacklist() {
         int count = blacklistService.cleanupExpiredIpBlacklist();
         return ApiResponse.success(String.format("Cleaned up %d expired entries", count));
+    }
+    
+    /**
+     * Get the current authenticated username from security context
+     */
+    private Optional<String> getCurrentUsername() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() instanceof JwtAuthenticationFilter.JwtUserDetails) {
+                JwtAuthenticationFilter.JwtUserDetails userDetails = 
+                    (JwtAuthenticationFilter.JwtUserDetails) authentication.getPrincipal();
+                return Optional.of(userDetails.getUsername());
+            }
+        } catch (Exception e) {
+            // Failed to get username, will use default
+        }
+        return Optional.empty();
     }
     
     // DTOs
