@@ -31,7 +31,7 @@ public class ApiResponse<T> {
     /**
      * Create a success response with only message (no data)
      */
-    public static <T> ApiResponse<T> success(String message) {
+    public static <T> ApiResponse<T> successWithMessage(String message) {
         return new ApiResponse<>("200000", message, null);
     }
 }

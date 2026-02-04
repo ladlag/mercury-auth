@@ -59,7 +59,7 @@ public class BlacklistController {
             request.getExpiresAt(),
             createdBy
         );
-        return ResponseEntity.ok(ApiResponse.success("IP blacklist added successfully"));
+        return ResponseEntity.ok(ApiResponse.successWithMessage("IP blacklist added successfully"));
     }
     
     @DeleteMapping("/ip")
@@ -69,7 +69,7 @@ public class BlacklistController {
             @Parameter(description = "IP address to remove") @RequestParam String ipAddress,
             @Parameter(description = "Tenant ID (null for global)") @RequestParam(required = false) String tenantId) {
         blacklistService.removeIpBlacklist(ipAddress, tenantId);
-        return ResponseEntity.ok(ApiResponse.success("IP blacklist removed successfully"));
+        return ResponseEntity.ok(ApiResponse.successWithMessage("IP blacklist removed successfully"));
     }
     
     @GetMapping("/ip")
@@ -105,7 +105,7 @@ public class BlacklistController {
                description = "Remove expired IP blacklist entries from database")
     public ResponseEntity<ApiResponse<String>> cleanupExpiredIpBlacklist() {
         int count = blacklistService.cleanupExpiredIpBlacklist();
-        return ResponseEntity.ok(ApiResponse.success(String.format("Cleaned up %d expired entries", count)));
+        return ResponseEntity.ok(ApiResponse.successWithMessage(String.format("Cleaned up %d expired entries", count)));
     }
     
     /**

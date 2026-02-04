@@ -154,19 +154,22 @@ public class AuthController {
 
     @PostMapping("/login-phone")
     public ResponseEntity<ApiResponse<AuthResponse>> loginPhone(@Validated @RequestBody AuthRequests.PhoneLogin req) {
-        return ResponseEntity.ok(ApiResponse.success(phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha())));
+        AuthResponse authResponse = phoneAuthService.loginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha());
+        return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
     @PostMapping("/quick-login-phone")
     public ResponseEntity<ApiResponse<AuthResponse>> quickLoginPhone(@Validated @RequestBody AuthRequests.PhoneQuickLogin req) {
-        return ResponseEntity.ok(ApiResponse.success(phoneAuthService.quickLoginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha())));
+        AuthResponse authResponse = phoneAuthService.quickLoginPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getCaptchaId(), req.getCaptcha());
+        return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
     // WeChat authentication endpoints
     
     @PostMapping("/wechat-login")
     public ResponseEntity<ApiResponse<AuthResponse>> wechatLogin(@Validated @RequestBody AuthRequests.WeChatLogin req) {
-        return ResponseEntity.ok(ApiResponse.success(weChatAuthService.loginOrRegister(req.getTenantId(), req.getOpenId(), req.getUsername())));
+        AuthResponse authResponse = weChatAuthService.loginOrRegister(req.getTenantId(), req.getOpenId(), req.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
     // Token management endpoints
@@ -223,7 +226,8 @@ public class AuthController {
             throw new ApiException(ErrorCodes.VALIDATION_FAILED,
                     "invalid captcha action. valid actions: " + validActions);
         }
-        return ResponseEntity.ok(ApiResponse.success(captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier())));
+        CaptchaChallenge challenge = captchaService.createChallenge(action, req.getTenantId(), req.getIdentifier());
+        return ResponseEntity.ok(ApiResponse.success(challenge));
     }
 
     // Helper methods
