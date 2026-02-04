@@ -73,10 +73,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 blacklistService.checkIpBlacklist(headerTenantId);
             } catch (ApiException e) {
                 logger.warn("IP blacklist check failed: {}", e.getMessage());
-                response.setStatus(e.getErrorCode().getHttpStatus().value());
+                response.setStatus(e.getCode().getHttpStatus().value());
                 response.setContentType("application/json");
                 response.getWriter().write(String.format("{\"code\":\"%s\",\"message\":\"%s\"}", 
-                    e.getCode(), e.getMessage()));
+                    e.getCodeValue(), e.getMessage()));
                 return;
             }
             
@@ -122,7 +122,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             // CRITICAL: Validate tenant match with X-Tenant-Id header
             // The header is mandatory for multi-tenant isolation
-            String headerTenantId = request.getHeader(TENANT_ID_HEADER);
             if (headerTenantId == null) {
                 logger.warn("Missing X-Tenant-Id header for authenticated request from user={}", usernameObj);
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
