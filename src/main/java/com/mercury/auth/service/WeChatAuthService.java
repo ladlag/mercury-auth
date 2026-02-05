@@ -59,8 +59,9 @@ public class WeChatAuthService {
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
             authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
+        } catch (Exception ex) {
+            logger.error("Failed to record audit log for tenant={} userId={} action={} success={}", 
+                tenantId, userId, action, success, ex);
         }
     }
 }

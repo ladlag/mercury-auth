@@ -175,7 +175,8 @@ public class TokenService {
         try {
             tokenBlacklistMapper.insert(entry);
         } catch (Exception ex) {
-            logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+            logger.error("Failed to insert token blacklist entry tenant={} tokenHash={}", 
+                tokenTenant, entry.getTokenHash(), ex);
         }
         safeRecord(tenantId, userId, AuthAction.LOGOUT, true);
         return user;
@@ -232,7 +233,8 @@ public class TokenService {
             try {
                 tokenBlacklistMapper.insert(entry);
             } catch (Exception ex) {
-                logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+                logger.error("Failed to insert token blacklist entry tenant={} tokenHash={}", 
+                    tokenTenant, entry.getTokenHash(), ex);
             }
         }
         safeRecord(tenantId, userId, AuthAction.REFRESH_TOKEN, true);
@@ -315,8 +317,9 @@ public class TokenService {
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
             authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
+        } catch (Exception ex) {
+            logger.error("Failed to record audit log for tenant={} userId={} action={} success={}", 
+                tenantId, userId, action, success, ex);
         }
     }
 }
