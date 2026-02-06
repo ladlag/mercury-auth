@@ -4,6 +4,11 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: ${DB_INIT_MODE:never}
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
   redis:
     # Standalone mode configuration
     host: ${REDIS_HOST:localhost}
