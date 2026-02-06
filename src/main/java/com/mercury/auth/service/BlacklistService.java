@@ -9,6 +9,7 @@ import com.mercury.auth.util.IpUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -37,6 +38,9 @@ public class BlacklistService {
     private final IpBlacklistMapper ipBlacklistMapper;
     private final StringRedisTemplate redisTemplate;
     private final com.mercury.auth.config.BlacklistConfig blacklistConfig;
+    
+    @Value("${security.blacklist.query-limit:1000}")
+    private int queryLimit;
     
     // Redis key prefixes
     private static final String IP_BLACKLIST_PREFIX = "blacklist:ip:";
@@ -196,7 +200,7 @@ public class BlacklistService {
         wrapper.orderByDesc("created_at");
         // Limit results to prevent OOM when blacklist table is large
         // For large datasets, use pagination in controller layer
-        wrapper.last("LIMIT 1000");
+        wrapper.last("LIMIT " + queryLimit);
         
         return ipBlacklistMapper.selectList(wrapper);
     }

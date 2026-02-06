@@ -75,8 +75,8 @@ security:
     retention-days: 7  # Keep auth logs for 7 days (prevents unbounded DB growth)
   cleanup:
     enabled: true  # Enable scheduled cleanup tasks
-    auth-logs-cron: "0 0 2 * * ?"  # Run daily at 2 AM
-    ip-blacklist-cron: "0 0 3 * * ?"  # Run daily at 3 AM
+    auth-logs-cron: 0 0 2 * * ?  # Run daily at 2 AM
+    ip-blacklist-cron: 0 0 3 * * ?  # Run daily at 3 AM
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5
@@ -135,6 +135,9 @@ security:
     ip-enabled: true  # Enable/disable IP blacklist checking
     token-enabled: true  # Enable/disable token blacklist checking
     permanent-blacklist-cache-days: 365  # Cache duration for permanent blacklists
+    query-limit: 1000  # Max blacklist entries to return (prevents OOM)
+  tenant:
+    query-limit: 1000  # Max tenants to return (prevents OOM)
   captcha:
     threshold: 3
     ttl-minutes: 5

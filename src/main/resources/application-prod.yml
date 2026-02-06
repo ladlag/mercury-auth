@@ -108,6 +108,9 @@ security:
     ip-enabled: ${BLACKLIST_IP_ENABLED:true}  # Enable/disable IP blacklist checking
     token-enabled: ${BLACKLIST_TOKEN_ENABLED:true}  # Enable/disable token blacklist checking
     permanent-blacklist-cache-days: ${BLACKLIST_PERMANENT_CACHE_DAYS:365}  # Cache duration for permanent blacklists
+    query-limit: ${BLACKLIST_QUERY_LIMIT:1000}  # Max blacklist entries to return (prevents OOM)
+  tenant:
+    query-limit: ${TENANT_QUERY_LIMIT:1000}  # Max tenants to return (prevents OOM)
   captcha:
     threshold: 3
     ttl-minutes: 5

@@ -7,6 +7,7 @@ import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.store.TenantMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,9 @@ public class TenantService {
     private final TenantMapper tenantMapper;
     @Lazy
     private final TokenCacheService tokenCacheService;
+    
+    @Value("${security.tenant.query-limit:1000}")
+    private int queryLimit;
 
     public Tenant create(TenantRequests.Create req) {
         if (tenantMapper.selectById(req.getTenantId()) != null) {
@@ -36,7 +40,7 @@ public class TenantService {
         QueryWrapper<Tenant> wrapper = new QueryWrapper<>();
         // Limit results to prevent OOM when tenant table is large
         // For production with many tenants, implement pagination in controller
-        wrapper.last("LIMIT 1000");
+        wrapper.last("LIMIT " + queryLimit);
         return tenantMapper.selectList(wrapper);
     }
 
