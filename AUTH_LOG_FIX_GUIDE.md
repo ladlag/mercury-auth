@@ -39,8 +39,12 @@ spring:
 ```
 
 This ensures that:
-- In **development** and **test** environments, the schema is always initialized
-- In **production**, you can control this via the `DB_INIT_MODE` environment variable (set to `always` for first deployment, then `never` to avoid re-running on every restart)
+- In **development** and **test** environments, the schema is always initialized on startup
+  - **Note**: The schema is idempotent (uses `CREATE TABLE IF NOT EXISTS`), so it's safe to run on every restart
+- In **production**, you can control this via the `DB_INIT_MODE` environment variable
+  - Set to `always` for automatic schema initialization (recommended for new deployments)
+  - Set to `never` if you prefer manual schema management
+  - **Default is `never`** to prevent accidental schema changes in production
 
 ### 2. Improved Error Logging (Secondary Fix)
 
@@ -83,31 +87,25 @@ This helps diagnose issues if schema initialization fails or if there are other 
 
 ### For New Deployments
 
-The schema will be automatically created when you start the application. No manual intervention needed in dev/test environments.
+The schema will be automatically created when you start the application in dev/test environments.
 
 ### For Production Deployments
 
-**First Time:**
+**IMPORTANT**: Production defaults to `mode: never` for safety. You must explicitly enable schema initialization.
+
+**Option 1: Automatic Schema Initialization (Recommended)**
 Set the environment variable to initialize the schema:
 ```bash
 export DB_INIT_MODE=always
 java -jar mercury-auth.jar
 ```
 
-**Subsequent Deployments:**
-To avoid re-running schema initialization on every restart:
-```bash
-export DB_INIT_MODE=never
-java -jar mercury-auth.jar
-```
+Since the schema is idempotent (uses `CREATE TABLE IF NOT EXISTS`), you can safely keep this setting for all deployments.
 
-Or don't set the variable at all (defaults to `never`).
-
-### Manual Schema Initialization (Alternative)
-
-If you prefer to manage schema manually in production:
-1. Keep `DB_INIT_MODE=never` (the default)
-2. Run the schema manually:
+**Option 2: Manual Schema Management**
+If you prefer manual control:
+1. Keep `DB_INIT_MODE` unset or set to `never` (the default)
+2. Run the schema manually before first deployment:
 ```sql
 SOURCE /path/to/schema.sql;
 ```
@@ -158,17 +156,24 @@ Records should now appear in both tables.
 
 ## Troubleshooting
 
+### If you see "Table doesn't exist" errors in production:
+
+This means schema initialization is disabled (the default). You have two options:
+
+1. **Enable automatic initialization**: Set `DB_INIT_MODE=always` and restart
+2. **Run schema manually**: Execute `schema.sql` using MySQL client
+
 ### If schema initialization fails:
 
 1. **Check database connectivity**: Ensure the database server is accessible
 2. **Check permissions**: Database user needs CREATE TABLE permissions
-3. **Check existing tables**: If tables already exist, set `continue-on-error: true` or use `mode: never`
+3. **Check database exists**: Ensure the database specified in the URL exists
 
 ### If you see "Table already exists" errors:
 
-This means the schema was already initialized. You can:
-- Set `spring.sql.init.mode: never` to disable schema initialization
-- Or set `continue-on-error: true` to ignore the error
+This shouldn't happen because the schema uses `CREATE TABLE IF NOT EXISTS`. If you still see this:
+- The schema.sql file may have been modified
+- Verify the file uses `IF NOT EXISTS` clause
 
 ## Security Note
 
