@@ -79,7 +79,7 @@ if (cached != null) {
 **Mitigation**:
 - Token expiration timestamp is checked for EVERY cached response
 - If token is expired, cache is evicted and exception is thrown
-- Cache TTL (default 5 min) is separate from token expiration check
+- Cache TTL (default 10 min) is separate from token expiration check
 
 **Code**:
 ```java
@@ -119,7 +119,7 @@ if (cached != null) {
 2. **Token Refresh**: Old token is immediately evicted from all caches
 3. **User Disabled**: Token caches are cleared and user status cache entry is evicted
 4. **Tenant Disabled**: Token caches are cleared and tenant status cache entry is evicted
-5. **Cache TTL**: Entries automatically expire after 5 minutes (configurable)
+5. **Cache TTL**: Entries automatically expire after 10 minutes (configurable)
 
 ### Why Clear Token Caches?
 
@@ -140,7 +140,7 @@ Status caches for tenant/user lookups are evicted by key to avoid stale status w
 
 ### What Cache Provides
 - ✅ Reduces JWT parsing overhead
-- ✅ Prevents duplicate audit logs (N logs → 1 log per 5 minutes)
+- ✅ Prevents duplicate audit logs (N logs → 1 log per 10 minutes)
 - ✅ Reduces database load for repeat verifications
 
 ### What Cache Does NOT Skip
@@ -175,7 +175,7 @@ For cached responses, we perform:
 security:
   token-cache:
     max-size: 10000                    # Maximum cache entries (shared across token/user/tenant caches)
-    expire-after-write-seconds: 300    # 5 minutes TTL
+    expire-after-write-seconds: 600    # 10 minutes TTL
 ```
 
 ### Recommendations
@@ -189,7 +189,7 @@ security:
 2. **expire-after-write-seconds**: Security vs Performance tradeoff
     - Lower = More secure (status changes take effect faster)
     - Higher = Better performance (fewer DB queries)
-    - Recommended: 300 seconds (5 minutes) balances both
+    - Recommended: 600 seconds (10 minutes) balances both
     - Do not exceed token TTL (default 2 hours)
     - Entries also expire automatically after this TTL even if max-size isn't reached
 

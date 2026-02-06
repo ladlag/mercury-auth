@@ -63,6 +63,7 @@ The following endpoints don't require authentication but are rate limited:
 - [Identifier Field Guide](IDENTIFIER_GUIDE.md) - Explanation of the identifier field usage in authentication (中英文)
 - [Redis Sentinel Configuration](REDIS_SENTINEL.md) - Guide for configuring Redis Sentinel mode for high availability (哨兵模式配置)
 - [Requirements](REQUIREMENTS.md) - Full system requirements (中文)
+- [Token Cache & Logs](TOKEN_CACHE_AND_LOGS.md) - Token verification cache + auth log/blacklist write flow (中文)
 
 ## Configuration
 Key properties (see `application.yml`, with overrides in `application-dev.yml`, `application-test.yml`, `application-prod.yml`):
