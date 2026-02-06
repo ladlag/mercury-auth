@@ -70,6 +70,13 @@ security:
     # Token cache configuration for performance optimization
     max-size: 10000  # Maximum number of tokens to cache
     expire-after-write-seconds: 600  # Cache expiry time (10 minutes)
+  # Audit log and cleanup configuration to prevent OOM issues
+  audit:
+    retention-days: 7  # Keep auth logs for 7 days (prevents unbounded DB growth)
+  cleanup:
+    enabled: true  # Enable scheduled cleanup tasks
+    auth-logs-cron: "0 0 2 * * ?"  # Run daily at 2 AM
+    ip-blacklist-cron: "0 0 3 * * ?"  # Run daily at 3 AM
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5

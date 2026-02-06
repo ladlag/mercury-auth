@@ -181,10 +181,10 @@ public class BlacklistService {
     }
     
     /**
-     * List all IP blacklist entries for a tenant
+     * List IP blacklist entries for a tenant with pagination to prevent OOM.
      * 
      * @param tenantId tenant ID (null for global blacklist)
-     * @return list of IP blacklist entries
+     * @return list of IP blacklist entries (limited to prevent memory issues)
      */
     public List<IpBlacklist> listIpBlacklist(String tenantId) {
         QueryWrapper<IpBlacklist> wrapper = new QueryWrapper<>();
@@ -194,6 +194,9 @@ public class BlacklistService {
             wrapper.eq("tenant_id", tenantId);
         }
         wrapper.orderByDesc("created_at");
+        // Limit results to prevent OOM when blacklist table is large
+        // For large datasets, use pagination in controller layer
+        wrapper.last("LIMIT 1000");
         
         return ipBlacklistMapper.selectList(wrapper);
     }

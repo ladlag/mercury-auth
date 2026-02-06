@@ -33,7 +33,11 @@ public class TenantService {
     }
 
     public List<Tenant> list() {
-        return tenantMapper.selectList(new QueryWrapper<>());
+        QueryWrapper<Tenant> wrapper = new QueryWrapper<>();
+        // Limit results to prevent OOM when tenant table is large
+        // For production with many tenants, implement pagination in controller
+        wrapper.last("LIMIT 1000");
+        return tenantMapper.selectList(wrapper);
     }
 
     public Tenant updateStatus(TenantRequests.UpdateStatus req) {

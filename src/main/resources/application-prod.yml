@@ -40,8 +40,16 @@ security:
     ttl-seconds: 7200
   token-cache:
     # Token cache configuration for performance optimization
-    max-size: ${TOKEN_CACHE_MAX_SIZE:10000}  # Maximum number of tokens to cache
+    # Reduced from 10000 to 5000 to conserve memory in 2C4G pods
+    max-size: ${TOKEN_CACHE_MAX_SIZE:5000}  # Maximum number of tokens to cache
     expire-after-write-seconds: ${TOKEN_CACHE_EXPIRE_SECONDS:600}  # Cache expiry time (10 minutes)
+  # Audit log and cleanup configuration to prevent OOM issues
+  audit:
+    retention-days: ${AUDIT_RETENTION_DAYS:7}  # Keep auth logs for 7 days (prevents unbounded DB growth)
+  cleanup:
+    enabled: ${CLEANUP_ENABLED:true}  # Enable scheduled cleanup tasks
+    auth-logs-cron: ${CLEANUP_AUTH_LOGS_CRON:0 0 2 * * ?}  # Run daily at 2 AM
+    ip-blacklist-cron: ${CLEANUP_IP_BLACKLIST_CRON:0 0 3 * * ?}  # Run daily at 3 AM
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5

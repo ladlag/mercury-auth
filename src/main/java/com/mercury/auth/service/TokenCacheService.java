@@ -114,6 +114,9 @@ public class TokenCacheService {
      * 
      * Note: Since Caffeine doesn't support querying by user, we clear the entire cache.
      * This is a tradeoff between performance and security. The cache will rebuild quickly.
+     * 
+     * WARNING: In high-traffic systems, frequent user status changes can cause memory spikes.
+     * Consider rate-limiting user status updates or implementing user-specific eviction.
      */
     @Caching(evict = {
         @CacheEvict(value = TOKEN_CACHE_NAME, allEntries = true),
@@ -129,7 +132,8 @@ public class TokenCacheService {
         if (verifyCache != null) {
             verifyCache.clear();
         }
-        logger.warn("All token caches cleared due to user status change: tenantId={} userId={}", tenantId, userId);
+        logger.warn("All token caches cleared due to user status change: tenantId={} userId={} - " +
+                   "This may cause temporary performance impact in high-traffic systems", tenantId, userId);
     }
 
     /**
@@ -138,6 +142,9 @@ public class TokenCacheService {
      * 
      * Note: Since Caffeine doesn't support querying by tenant, we clear the entire cache.
      * This is a tradeoff between performance and security. The cache will rebuild quickly.
+     * 
+     * WARNING: In high-traffic systems, frequent tenant status changes can cause memory spikes.
+     * Consider rate-limiting tenant status updates or implementing tenant-specific eviction.
      */
     @Caching(evict = {
         @CacheEvict(value = TOKEN_CACHE_NAME, allEntries = true),
@@ -153,7 +160,8 @@ public class TokenCacheService {
         if (verifyCache != null) {
             verifyCache.clear();
         }
-        logger.warn("All token caches cleared due to tenant status change: tenantId={}", tenantId);
+        logger.warn("All token caches cleared due to tenant status change: tenantId={} - " +
+                   "This may cause temporary performance impact in high-traffic systems", tenantId);
     }
 
     /**
