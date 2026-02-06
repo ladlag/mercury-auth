@@ -23,9 +23,10 @@
   - `UserService` 用户状态修改等管理操作
 - **容错**：`TokenService.safeRecord(...)` 会捕获写入异常，避免影响主流程。
 
-## 3. token_blacklist（black_token）表写入逻辑
+## 3. token_blacklist 表写入逻辑
 
 - **表名**：`token_blacklist`（见 `schema.sql`）。
+- **说明**：问题中提到的 `black_token` 对应该表。
 - **写入入口**：
   - `TokenService.blacklistToken(...)`（用户登出）
   - `TokenService.refreshToken(...)`（刷新时旧 token 失效）
