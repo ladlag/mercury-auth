@@ -14,6 +14,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 /**
  * Service for caching validated JWT token claims to improve performance.
  * Reduces the need to parse and validate the same token multiple times.
@@ -81,7 +83,7 @@ public class TokenCacheService {
     public Tenant getCachedTenant(String tenantId) {
         Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
         if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(tenantId);
+            Cache.ValueWrapper wrapper = cache.get(buildTenantStatusKey(tenantId));
             if (wrapper != null) {
                 logger.debug("Tenant status cache hit for tenantId={}", tenantId);
                 return (Tenant) wrapper.get();
@@ -96,7 +98,7 @@ public class TokenCacheService {
     public void cacheTenant(String tenantId, Tenant tenant) {
         Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
         if (cache != null) {
-            cache.put(tenantId, tenant);
+            cache.put(buildTenantStatusKey(tenantId), tenant);
             logger.debug("Tenant status cached for tenantId={}", tenantId);
         }
     }
@@ -216,7 +218,7 @@ public class TokenCacheService {
         }
         Cache tenantStatusCache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
         if (tenantStatusCache != null) {
-            tenantStatusCache.evict(tenantId);
+            tenantStatusCache.evict(buildTenantStatusKey(tenantId));
         }
         logger.warn("All token caches cleared due to tenant status change: tenantId={}", tenantId);
     }
@@ -227,7 +229,7 @@ public class TokenCacheService {
     public void evictTenantStatus(String tenantId) {
         Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
         if (cache != null) {
-            cache.evict(tenantId);
+            cache.evict(buildTenantStatusKey(tenantId));
         }
     }
 
@@ -250,14 +252,27 @@ public class TokenCacheService {
     }
 
     /**
-     * Get a safe prefix of the hash for logging (first 10 characters).
-     * This avoids logging full hashes which could be a security concern.
+     * Returns a safe hash prefix for logging (up to the first 10 characters).
+     * Intended for components (e.g., JwtAuthenticationFilter) that need a short identifier without logging full hashes.
      */
-    private String getSafeHashPrefix(String hash) {
+    public String getSafeHashPrefix(String hash) {
+        if (hash == null || hash.isEmpty()) {
+            return "(empty)";
+        }
         return hash.substring(0, Math.min(10, hash.length()));
     }
 
     private String buildUserStatusKey(String tenantId, Long userId) {
-        return tenantId + ":" + userId;
+        return encodeTenantId(tenantId) + ":" + userId;
+    }
+
+    private String buildTenantStatusKey(String tenantId) {
+        return encodeTenantId(tenantId);
+    }
+
+    private String encodeTenantId(String tenantId) {
+        // Base64 encoding avoids delimiter collisions in cache keys if tenant IDs contain separator characters.
+        return tenantId == null ? "(unknown)" :
+            Base64.getUrlEncoder().withoutPadding().encodeToString(tenantId.getBytes(StandardCharsets.UTF_8));
     }
 }

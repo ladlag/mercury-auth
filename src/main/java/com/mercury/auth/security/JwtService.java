@@ -90,6 +90,13 @@ public class JwtService {
                 .getBody();
     }
 
+    public boolean isExpired(Claims claims) {
+        if (claims == null || claims.getExpiration() == null) {
+            return true;
+        }
+        return claims.getExpiration().toInstant().isBefore(Instant.now());
+    }
+
     public long getTtlSeconds() {
         return ttlSeconds;
     }

@@ -99,16 +99,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Cache miss - parse and validate token
                 logger.debug("Token cache miss, performing full validation");
                 claims = jwtService.parse(token);
+                if (jwtService.isExpired(claims)) {
+                    logger.warn("Parsed token expired, rejecting tokenHash={}", tokenCacheService.getSafeHashPrefix(tokenHash));
+                    writeTokenExpiredResponse(response);
+                    return;
+                }
                 // Cache the claims for future requests
                 tokenCacheService.cacheClaims(tokenHash, claims);
             } else {
                 logger.debug("Token cache hit, skipping validation");
-                if (claims.getExpiration() == null || claims.getExpiration().before(new java.util.Date())) {
-                    logger.warn("Cached token expired, evicting tokenHash={}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+                if (jwtService.isExpired(claims)) {
+                    logger.warn("Cached token expired, evicting tokenHash={}", tokenCacheService.getSafeHashPrefix(tokenHash));
                     tokenCacheService.evictToken(tokenHash);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"code\":\"INVALID_TOKEN\",\"message\":\"token expired\"}");
+                    writeTokenExpiredResponse(response);
                     return;
                 }
             }
@@ -202,5 +205,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         public String getUsername() {
             return username;
         }
+    }
+
+    private void writeTokenExpiredResponse(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"code\":\"INVALID_TOKEN\",\"message\":\"token expired\"}");
     }
 }

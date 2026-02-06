@@ -27,6 +27,8 @@ import static org.mockito.Mockito.when;
 
 public class JwtAuthenticationFilterTests {
 
+    private static final long EXPIRATION_OFFSET_SECONDS = 30;
+
     @Test
     public void testCachedExpiredTokenIsRejected() throws Exception {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager(
@@ -44,13 +46,14 @@ public class JwtAuthenticationFilterTests {
         claims.put("tenantId", "tenant1");
         claims.put("userId", 1L);
         claims.put("username", "user1");
-        claims.setExpiration(Date.from(Instant.now().minusSeconds(30)));
+        claims.setExpiration(Date.from(Instant.now().minusSeconds(EXPIRATION_OFFSET_SECONDS)));
         tokenCacheService.cacheClaims(tokenHash, claims);
 
         JwtService jwtService = mock(JwtService.class);
         TokenService tokenService = mock(TokenService.class);
         BlacklistService blacklistService = mock(BlacklistService.class);
         when(tokenService.isTokenHashBlacklisted(tokenHash)).thenReturn(false);
+        when(jwtService.isExpired(any())).thenReturn(true);
 
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, tokenService, tokenCacheService, blacklistService);
 

@@ -157,7 +157,6 @@ public class TokenService {
         // Evict from cache immediately
         String tokenHash = TokenHashUtil.hashToken(token);
         tokenCacheService.evictToken(tokenHash);
-         
         // Blacklist by token hash
         redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
         
@@ -215,7 +214,6 @@ public class TokenService {
             // Evict old token from cache immediately
             String tokenHash = TokenHashUtil.hashToken(token);
             tokenCacheService.evictToken(tokenHash);
-             
             // Blacklist old token by hash
             redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
             
@@ -248,6 +246,9 @@ public class TokenService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
     }
 
+    /**
+     * Check blacklist status using a precomputed token hash.
+     */
     private boolean isBlacklistedByHash(String tokenHash) {
         if (!blacklistConfig.isTokenEnabled()) {
             logger.debug("Token blacklist checking is disabled");
@@ -263,6 +264,9 @@ public class TokenService {
         return isBlacklisted(token);
     }
 
+    /**
+     * Public method to check if a token hash is blacklisted (for JWT filter).
+     */
     public boolean isTokenHashBlacklisted(String tokenHash) {
         return isBlacklistedByHash(tokenHash);
     }
@@ -275,6 +279,9 @@ public class TokenService {
         return "blacklist:" + TokenHashUtil.hashToken(token);
     }
 
+    /**
+     * Build blacklist key from a precomputed token hash.
+     */
     private String buildBlacklistKeyFromHash(String tokenHash) {
         return "blacklist:" + tokenHash;
     }
