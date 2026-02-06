@@ -181,14 +181,17 @@ security:
 ### Recommendations
 
 1. **max-size**: Set based on expected concurrent users
-   - 10,000 = supports ~10K active users with cached tokens
-   - Increase if you have more concurrent users
+    - 10,000 = supports ~10K active users with cached tokens
+    - Increase if you have more concurrent users
+    - When the cache exceeds max-size, Caffeine evicts entries using its default
+      size-based policy (Window TinyLFU, similar to LRU for hot entries) to free space
 
 2. **expire-after-write-seconds**: Security vs Performance tradeoff
-   - Lower = More secure (status changes take effect faster)
-   - Higher = Better performance (fewer DB queries)
-   - Recommended: 300 seconds (5 minutes) balances both
-   - Do not exceed token TTL (default 2 hours)
+    - Lower = More secure (status changes take effect faster)
+    - Higher = Better performance (fewer DB queries)
+    - Recommended: 300 seconds (5 minutes) balances both
+    - Do not exceed token TTL (default 2 hours)
+    - Entries also expire automatically after this TTL even if max-size isn't reached
 
 ## Monitoring
 
