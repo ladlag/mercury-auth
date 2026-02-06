@@ -52,6 +52,14 @@ public class TenantService {
     }
 
     public Tenant requireEnabled(String tenantId) {
+        Tenant cached = tokenCacheService.getCachedTenant(tenantId);
+        if (cached != null) {
+            if (Boolean.FALSE.equals(cached.getEnabled())) {
+                tokenCacheService.evictTenantStatus(tenantId);
+                throw new ApiException(ErrorCodes.TENANT_DISABLED, "tenant disabled");
+            }
+            return cached;
+        }
         Tenant tenant = tenantMapper.selectById(tenantId);
         if (tenant == null) {
             throw new ApiException(ErrorCodes.TENANT_NOT_FOUND, "tenant not found");
@@ -59,6 +67,7 @@ public class TenantService {
         if (Boolean.FALSE.equals(tenant.getEnabled())) {
             throw new ApiException(ErrorCodes.TENANT_DISABLED, "tenant disabled");
         }
+        tokenCacheService.cacheTenant(tenantId, tenant);
         return tenant;
     }
 

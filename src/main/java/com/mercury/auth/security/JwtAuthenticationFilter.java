@@ -84,7 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String tokenHash = tokenCacheService.hashToken(token);
             
             // CRITICAL: Check if token is blacklisted (logout/refresh invalidation)
-            if (tokenService.isTokenBlacklisted(token)) {
+            if (tokenService.isTokenHashBlacklisted(tokenHash)) {
                 logger.warn("Blacklisted token attempted");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
@@ -103,6 +103,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 tokenCacheService.cacheClaims(tokenHash, claims);
             } else {
                 logger.debug("Token cache hit, skipping validation");
+                if (claims.getExpiration() == null || claims.getExpiration().before(new java.util.Date())) {
+                    logger.warn("Cached token expired, evicting tokenHash={}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
+                    tokenCacheService.evictToken(tokenHash);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"code\":\"INVALID_TOKEN\",\"message\":\"token expired\"}");
+                    return;
+                }
             }
             
             // Extract user information

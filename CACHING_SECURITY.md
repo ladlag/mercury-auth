@@ -38,13 +38,14 @@ TokenVerifyResponse cached = tokenCacheService.getCachedVerifyResponse(tokenHash
 
 **Mitigation**:
 - User enabled status is re-validated for EVERY cached response
+- User status lookups are cached in-memory to reduce DB load
 - If user is disabled, cache is evicted and exception is thrown
-- When user status changes, all caches are cleared
+- When user status changes, caches are evicted immediately
 
 **Code**:
 ```java
 if (cached != null) {
-    // Re-validate user status
+    // Re-validate user status (cached lookup, DB on miss)
     User user = loadActiveUser(cached.getTenantId(), cached.getUserId());
     // If user.enabled == false, throws USER_DISABLED exception
     // Cache is then evicted
@@ -57,13 +58,14 @@ if (cached != null) {
 
 **Mitigation**:
 - Tenant enabled status is re-validated for EVERY cached response
+- Tenant status lookups are cached in-memory to reduce DB load
 - If tenant is disabled, cache is evicted and exception is thrown
-- When tenant status changes, all caches are cleared
+- When tenant status changes, caches are evicted immediately
 
 **Code**:
 ```java
 if (cached != null) {
-    // Re-validate tenant status
+    // Re-validate tenant status (cached lookup, DB on miss)
     tenantService.requireEnabled(cached.getTenantId());
     // If tenant.enabled == false, throws TENANT_DISABLED exception
     // Cache is then evicted
@@ -115,22 +117,24 @@ if (cached != null) {
 
 1. **Logout**: Token is immediately evicted from all caches
 2. **Token Refresh**: Old token is immediately evicted from all caches
-3. **User Disabled**: All caches are cleared (cannot selectively evict by user)
-4. **Tenant Disabled**: All caches are cleared (cannot selectively evict by tenant)
+3. **User Disabled**: Token caches are cleared and user status cache entry is evicted
+4. **Tenant Disabled**: Token caches are cleared and tenant status cache entry is evicted
 5. **Cache TTL**: Entries automatically expire after 5 minutes (configurable)
 
-### Why Clear All Caches?
+### Why Clear Token Caches?
 
-The caching implementation uses Caffeine, which is a high-performance cache but does not support querying entries by user/tenant. When a user or tenant is disabled:
+The caching implementation uses Caffeine, which is a high-performance cache but does not support querying token entries by user/tenant. When a user or tenant is disabled:
 
 1. **Option 1** (NOT chosen): Keep cache and rely on re-validation
    - Pro: Better performance
    - Con: Every cached token for that user/tenant would require DB lookup on next access
    
-2. **Option 2** (CHOSEN): Clear entire cache
+2. **Option 2** (CHOSEN): Clear entire token cache
    - Pro: Simpler, more secure, immediate effect
    - Con: Temporary performance hit (cache rebuilds quickly)
    - Rationale: User/tenant status changes are infrequent operations
+
+Status caches for tenant/user lookups are evicted by key to avoid stale status without clearing unrelated entries.
 
 ## Performance vs Security Tradeoff
 
@@ -141,16 +145,16 @@ The caching implementation uses Caffeine, which is a high-performance cache but 
 
 ### What Cache Does NOT Skip
 - ❌ Blacklist checks (always checked first)
-- ❌ Tenant status validation (re-checked for cached responses)
-- ❌ User status validation (re-checked for cached responses)
+- ❌ Tenant status validation (re-checked for cached responses via cache lookup)
+- ❌ User status validation (re-checked for cached responses via cache lookup)
 - ❌ Token expiration checks (re-checked for cached responses)
 
 ### Performance Impact of Security Validations
 
 For cached responses, we perform:
 1. Blacklist check (Redis lookup) - ~1ms
-2. Tenant status check (DB query, indexed) - ~2-5ms
-3. User status check (DB query, indexed) - ~2-5ms
+2. Tenant status check (cache lookup, DB on miss) - ~0.1-5ms
+3. User status check (cache lookup, DB on miss) - ~0.1-5ms
 4. Expiration check (memory comparison) - ~0.001ms
 
 **Total overhead**: ~5-11ms per cached verification
@@ -170,7 +174,7 @@ For cached responses, we perform:
 ```yaml
 security:
   token-cache:
-    max-size: 10000                    # Maximum cache entries
+    max-size: 10000                    # Maximum cache entries (shared across token/user/tenant caches)
     expire-after-write-seconds: 300    # 5 minutes TTL
 ```
 
