@@ -66,7 +66,7 @@ public class TokenService {
         String tokenHash = TokenHashUtil.hashToken(token);
         
         // CRITICAL: Check blacklist BEFORE cache to prevent returning cached responses for blacklisted tokens
-        if (isBlacklisted(token)) {
+        if (isBlacklistedByHash(tokenHash)) {
             logger.warn("verifyToken blacklisted tenant={}", tenantId);
             recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
@@ -157,9 +157,8 @@ public class TokenService {
         // Evict from cache immediately
         String tokenHash = TokenHashUtil.hashToken(token);
         tokenCacheService.evictToken(tokenHash);
-        
         // Blacklist by token hash
-        redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+        redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
         
         // Also blacklist by JTI if present for distributed tracking
         String jti = claims.getId();
@@ -215,9 +214,8 @@ public class TokenService {
             // Evict old token from cache immediately
             String tokenHash = TokenHashUtil.hashToken(token);
             tokenCacheService.evictToken(tokenHash);
-            
             // Blacklist old token by hash
-            redisTemplate.opsForValue().set(buildBlacklistKey(token), tokenTenant, ttl);
+            redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
             
             // Also blacklist by JTI if present
             if (jti != null) {
@@ -247,12 +245,30 @@ public class TokenService {
         }
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
     }
+
+    /**
+     * Check blacklist status using a precomputed token hash.
+     */
+    private boolean isBlacklistedByHash(String tokenHash) {
+        if (!blacklistConfig.isTokenEnabled()) {
+            logger.debug("Token blacklist checking is disabled");
+            return false;
+        }
+        return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKeyFromHash(tokenHash)));
+    }
     
     /**
      * Public method to check if a token is blacklisted (for JWT filter)
      */
     public boolean isTokenBlacklisted(String token) {
         return isBlacklisted(token);
+    }
+
+    /**
+     * Public method to check if a token hash is blacklisted (for JWT filter).
+     */
+    public boolean isTokenHashBlacklisted(String tokenHash) {
+        return isBlacklistedByHash(tokenHash);
     }
     
     private boolean isJtiBlacklisted(String jti) {
@@ -261,6 +277,13 @@ public class TokenService {
 
     private String buildBlacklistKey(String token) {
         return "blacklist:" + TokenHashUtil.hashToken(token);
+    }
+
+    /**
+     * Build blacklist key from a precomputed token hash.
+     */
+    private String buildBlacklistKeyFromHash(String tokenHash) {
+        return "blacklist:" + tokenHash;
     }
     
     private String buildJtiBlacklistKey(String jti) {
@@ -292,6 +315,16 @@ public class TokenService {
     }
 
     private User loadActiveUser(String tenantId, Long userId) {
+        User cached = tokenCacheService.getCachedUser(tenantId, userId);
+        if (cached != null) {
+            if (Boolean.FALSE.equals(cached.getEnabled())) {
+                tokenCacheService.evictUserStatus(tenantId, userId);
+                logger.warn("token user disabled tenant={} userId={}", tenantId, userId);
+                recordFailure(tenantId, userId, AuthAction.TOKEN_USER_DISABLED);
+                throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
+            }
+            return cached;
+        }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", tenantId).eq("id", userId);
         User user = userMapper.selectOne(wrapper);
@@ -305,6 +338,7 @@ public class TokenService {
             recordFailure(tenantId, userId, AuthAction.TOKEN_USER_DISABLED);
             throw new ApiException(ErrorCodes.USER_DISABLED, "user disabled");
         }
+        tokenCacheService.cacheUser(tenantId, userId, user);
         return user;
     }
 

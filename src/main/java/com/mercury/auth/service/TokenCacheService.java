@@ -1,6 +1,8 @@
 package com.mercury.auth.service;
 
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.entity.Tenant;
+import com.mercury.auth.entity.User;
 import com.mercury.auth.util.TokenHashUtil;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 /**
  * Service for caching validated JWT token claims to improve performance.
  * Reduces the need to parse and validate the same token multiple times.
@@ -23,6 +27,8 @@ public class TokenCacheService {
     private static final Logger logger = LoggerFactory.getLogger(TokenCacheService.class);
     private static final String TOKEN_CACHE_NAME = "tokenCache";
     private static final String TOKEN_VERIFY_CACHE_NAME = "tokenVerifyCache";
+    private static final String TENANT_STATUS_CACHE_NAME = "tenantStatusCache";
+    private static final String USER_STATUS_CACHE_NAME = "userStatusCache";
     
     private final CacheManager cacheManager;
 
@@ -69,6 +75,59 @@ public class TokenCacheService {
         }
         logger.debug("Token verify cache miss for hash: {}", getSafeHashPrefix(tokenHash));
         return null;
+    }
+
+    /**
+     * Get cached tenant status if available.
+     */
+    public Tenant getCachedTenant(String tenantId) {
+        Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
+        if (cache != null) {
+            Cache.ValueWrapper wrapper = cache.get(buildTenantStatusKey(tenantId));
+            if (wrapper != null) {
+                logger.debug("Tenant status cache hit for tenantId={}", tenantId);
+                return (Tenant) wrapper.get();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Cache enabled tenant status for future requests.
+     */
+    public void cacheTenant(String tenantId, Tenant tenant) {
+        Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
+        if (cache != null) {
+            cache.put(buildTenantStatusKey(tenantId), tenant);
+            logger.debug("Tenant status cached for tenantId={}", tenantId);
+        }
+    }
+
+    /**
+     * Get cached user status if available.
+     */
+    public User getCachedUser(String tenantId, Long userId) {
+        Cache cache = cacheManager.getCache(USER_STATUS_CACHE_NAME);
+        if (cache != null) {
+            String key = buildUserStatusKey(tenantId, userId);
+            Cache.ValueWrapper wrapper = cache.get(key);
+            if (wrapper != null) {
+                logger.debug("User status cache hit for tenantId={} userId={}", tenantId, userId);
+                return (User) wrapper.get();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Cache enabled user status for future requests.
+     */
+    public void cacheUser(String tenantId, Long userId, User user) {
+        Cache cache = cacheManager.getCache(USER_STATUS_CACHE_NAME);
+        if (cache != null) {
+            cache.put(buildUserStatusKey(tenantId, userId), user);
+            logger.debug("User status cached for tenantId={} userId={}", tenantId, userId);
+        }
     }
 
     /**
@@ -129,6 +188,10 @@ public class TokenCacheService {
         if (verifyCache != null) {
             verifyCache.clear();
         }
+        Cache userStatusCache = cacheManager.getCache(USER_STATUS_CACHE_NAME);
+        if (userStatusCache != null) {
+            userStatusCache.evict(buildUserStatusKey(tenantId, userId));
+        }
         logger.warn("All token caches cleared due to user status change: tenantId={} userId={}", tenantId, userId);
     }
 
@@ -153,7 +216,31 @@ public class TokenCacheService {
         if (verifyCache != null) {
             verifyCache.clear();
         }
+        Cache tenantStatusCache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
+        if (tenantStatusCache != null) {
+            tenantStatusCache.evict(buildTenantStatusKey(tenantId));
+        }
         logger.warn("All token caches cleared due to tenant status change: tenantId={}", tenantId);
+    }
+
+    /**
+     * Evict cached tenant status entry.
+     */
+    public void evictTenantStatus(String tenantId) {
+        Cache cache = cacheManager.getCache(TENANT_STATUS_CACHE_NAME);
+        if (cache != null) {
+            cache.evict(buildTenantStatusKey(tenantId));
+        }
+    }
+
+    /**
+     * Evict cached user status entry.
+     */
+    public void evictUserStatus(String tenantId, Long userId) {
+        Cache cache = cacheManager.getCache(USER_STATUS_CACHE_NAME);
+        if (cache != null) {
+            cache.evict(buildUserStatusKey(tenantId, userId));
+        }
     }
 
     /**
@@ -165,10 +252,27 @@ public class TokenCacheService {
     }
 
     /**
-     * Get a safe prefix of the hash for logging (first 10 characters).
-     * This avoids logging full hashes which could be a security concern.
+     * Returns a safe hash prefix for logging (up to the first 10 characters).
+     * Intended for components (e.g., JwtAuthenticationFilter) that need a short identifier without logging full hashes.
      */
-    private String getSafeHashPrefix(String hash) {
+    public String getSafeHashPrefix(String hash) {
+        if (hash == null || hash.isEmpty()) {
+            return "(empty)";
+        }
         return hash.substring(0, Math.min(10, hash.length()));
+    }
+
+    private String buildUserStatusKey(String tenantId, Long userId) {
+        return encodeTenantId(tenantId) + ":" + userId;
+    }
+
+    private String buildTenantStatusKey(String tenantId) {
+        return encodeTenantId(tenantId);
+    }
+
+    private String encodeTenantId(String tenantId) {
+        // Base64 encoding avoids delimiter collisions in cache keys if tenant IDs contain separator characters.
+        return tenantId == null ? "(unknown)" :
+            Base64.getUrlEncoder().withoutPadding().encodeToString(tenantId.getBytes(StandardCharsets.UTF_8));
     }
 }

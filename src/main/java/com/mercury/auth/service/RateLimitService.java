@@ -34,6 +34,8 @@ public class RateLimitService {
         "    redis.call('expire', KEYS[1], ARGV[1]) " +
         "end " +
         "return current";
+    private static final RedisScript<Long> RATE_LIMIT_REDIS_SCRIPT =
+        RedisScript.of(RATE_LIMIT_SCRIPT, Long.class);
 
     /**
      * Check rate limit for a specific key (tenant + identifier based)
@@ -46,7 +48,7 @@ public class RateLimitService {
         RateLimitConfig.OperationRateLimit limit = getRateLimitForAction(action);
         
         Long count = redisTemplate.execute(
-            RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+            RATE_LIMIT_REDIS_SCRIPT,
             Collections.singletonList(key),
             String.valueOf(limit.getWindowMinutes() * 60) // Convert to seconds
         );
@@ -61,7 +63,7 @@ public class RateLimitService {
      */
     public void check(String key) {
         Long count = redisTemplate.execute(
-            RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+            RATE_LIMIT_REDIS_SCRIPT,
             Collections.singletonList(key),
             String.valueOf(rateLimitConfig.getWindowMinutes() * 60) // Convert to seconds
         );
@@ -97,13 +99,13 @@ public class RateLimitService {
             
             // Increment both counters
             Long failureCount = redisTemplate.execute(
-                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                RATE_LIMIT_REDIS_SCRIPT,
                 Collections.singletonList(failureKey),
                 String.valueOf(rateLimitConfig.getAutoBlacklist().getFailureWindowMinutes() * 60)
             );
             
             Long severeCount = redisTemplate.execute(
-                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                RATE_LIMIT_REDIS_SCRIPT,
                 Collections.singletonList(severeFailureKey),
                 String.valueOf(rateLimitConfig.getAutoBlacklist().getSevereFailureWindowMinutes() * 60)
             );
@@ -220,7 +222,7 @@ public class RateLimitService {
             String ipKey = "rate:ip:" + action + ":" + clientIp;
             
             Long count = redisTemplate.execute(
-                RedisScript.of(RATE_LIMIT_SCRIPT, Long.class),
+                RATE_LIMIT_REDIS_SCRIPT,
                 Collections.singletonList(ipKey),
                 String.valueOf(rateLimitConfig.getIp().getWindowMinutes() * 60) // Convert to seconds
             );

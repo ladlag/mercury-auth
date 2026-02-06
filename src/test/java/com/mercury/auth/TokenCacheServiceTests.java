@@ -1,6 +1,8 @@
 package com.mercury.auth;
 
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.entity.Tenant;
+import com.mercury.auth.entity.User;
 import com.mercury.auth.service.TokenCacheService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.impl.DefaultClaims;
@@ -103,6 +105,43 @@ public class TokenCacheServiceTests {
     }
 
     @Test
+    public void testCacheTenantStatus() {
+        Tenant tenant = new Tenant();
+        tenant.setTenantId("tenant-cache");
+        tenant.setName("Cached Tenant");
+        tenant.setEnabled(true);
+
+        Tenant cached = tokenCacheService.getCachedTenant(tenant.getTenantId());
+        assertNull(cached, "Tenant cache should be empty initially");
+
+        tokenCacheService.cacheTenant(tenant.getTenantId(), tenant);
+
+        Tenant retrieved = tokenCacheService.getCachedTenant(tenant.getTenantId());
+        assertNotNull(retrieved, "Tenant should be cached");
+        assertEquals(tenant.getTenantId(), retrieved.getTenantId());
+        assertTrue(retrieved.getEnabled());
+    }
+
+    @Test
+    public void testCacheUserStatus() {
+        User user = new User();
+        user.setTenantId("tenant-cache");
+        user.setId(321L);
+        user.setUsername("cache-user");
+        user.setEnabled(true);
+
+        User cached = tokenCacheService.getCachedUser(user.getTenantId(), user.getId());
+        assertNull(cached, "User cache should be empty initially");
+
+        tokenCacheService.cacheUser(user.getTenantId(), user.getId(), user);
+
+        User retrieved = tokenCacheService.getCachedUser(user.getTenantId(), user.getId());
+        assertNotNull(retrieved, "User should be cached");
+        assertEquals(user.getUsername(), retrieved.getUsername());
+        assertTrue(retrieved.getEnabled());
+    }
+
+    @Test
     public void testEvictToken() {
         // Create and cache test claims
         Map<String, Object> claimsMap = new HashMap<>();
@@ -176,5 +215,7 @@ public class TokenCacheServiceTests {
         assertNotNull(cacheManager, "Cache manager should be configured");
         assertNotNull(cacheManager.getCache("tokenCache"), "tokenCache should exist");
         assertNotNull(cacheManager.getCache("tokenVerifyCache"), "tokenVerifyCache should exist");
+        assertNotNull(cacheManager.getCache("tenantStatusCache"), "tenantStatusCache should exist");
+        assertNotNull(cacheManager.getCache("userStatusCache"), "userStatusCache should exist");
     }
 }

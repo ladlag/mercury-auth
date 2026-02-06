@@ -68,7 +68,12 @@ public class TokenCacheIntegrationTests {
         jwtService.init();
 
         // Create real cache manager with both caches
-        cacheManager = new org.springframework.cache.concurrent.ConcurrentMapCacheManager("tokenCache", "tokenVerifyCache");
+        cacheManager = new org.springframework.cache.concurrent.ConcurrentMapCacheManager(
+                "tokenCache",
+                "tokenVerifyCache",
+                "tenantStatusCache",
+                "userStatusCache"
+        );
         
         // Create real TokenCacheService with cache manager
         tokenCacheService = new TokenCacheService(cacheManager);
@@ -228,9 +233,9 @@ public class TokenCacheIntegrationTests {
         assertEquals(userId, cachedAfterFirst.getUserId());
 
         // Call verifyToken again - this should use the cached response
-        // Note: Even with cached responses, we now re-validate tenant and user status for security
+        // Note: user status lookups are cached to reduce DB load
         reset(userMapper); // Reset mock to clear previous interactions
-        when(userMapper.selectOne(any())).thenReturn(user); // Re-mock the user query for security validation
+        when(userMapper.selectOne(any())).thenReturn(user); // Re-mock in case cache is bypassed
         
         com.mercury.auth.dto.TokenVerifyResponse secondResponse = tokenService.verifyToken(verifyRequest);
         
@@ -240,9 +245,8 @@ public class TokenCacheIntegrationTests {
         assertEquals(firstResponse.getUserId(), secondResponse.getUserId());
         assertEquals(firstResponse.getUserName(), secondResponse.getUserName());
         
-        // Verify that userMapper WAS called once for security validation
-        // (This is intentional - we re-validate user status even for cached responses)
-        verify(userMapper, times(1)).selectOne(any());
+        // Verify that userMapper was not called again due to user status caching
+        verify(userMapper, never()).selectOne(any());
     }
 
     @Test
@@ -325,6 +329,8 @@ public class TokenCacheIntegrationTests {
         user.setEnabled(false);
         reset(userMapper);
         when(userMapper.selectOne(any())).thenReturn(user);
+        // Simulate user status change by evicting caches
+        tokenCacheService.evictAllForUserStatusChange(tenantId, userId);
 
         // Second verification - should fail even though response is cached
         // because we re-validate user status
@@ -335,7 +341,7 @@ public class TokenCacheIntegrationTests {
             assertEquals(com.mercury.auth.exception.ErrorCodes.USER_DISABLED, ex.getCode());
         }
 
-        // Verify the cached response was evicted after detecting disabled user
+        // Verify the cached response remains evicted after detecting disabled user
         com.mercury.auth.dto.TokenVerifyResponse evictedCache = tokenCacheService.getCachedVerifyResponse(tokenHash);
         assertNull(evictedCache, "Cache should be evicted after detecting disabled user");
     }
