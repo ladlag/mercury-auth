@@ -121,6 +121,13 @@ security:
     refresh-token:
       max-attempts: 10
       window-minutes: 1
+    
+    # Daily registration limits per tenant/IP
+    # Limits the number of new user registrations from the same IP per tenant per day
+    # This prevents abuse and mass account creation
+    daily-registration:
+      enabled: true  # Enable/disable daily registration limit
+      max-registrations-per-day: 10  # Maximum registrations per IP per tenant per day
   blacklist:
     # Blacklist configuration - INDEPENDENT from rate limiting
     # Blacklist provides persistent blocking while rate limiting provides temporary throttling
