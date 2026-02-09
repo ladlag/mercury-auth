@@ -12,6 +12,7 @@ public enum ErrorCodes {
     // ========== 40 02 Token ==========
     INVALID_TOKEN        ("400201", "error.400201", HttpStatus.UNAUTHORIZED),
     TOKEN_BLACKLISTED    ("400202", "error.400202", HttpStatus.UNAUTHORIZED),
+    TOKEN_REVOKED        ("400203", "error.400203", HttpStatus.UNAUTHORIZED),
 
     // ========== 40 03 用户 ==========
     USER_NOT_FOUND       ("400301", "error.400301", HttpStatus.NOT_FOUND),

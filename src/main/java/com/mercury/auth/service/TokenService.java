@@ -123,6 +123,16 @@ public class TokenService {
         String tokenTenant = requireTenantMatch(tenantId, claims);
         tenantService.requireEnabled(tokenTenant);
         Long userId = requireUserId(claims);
+        
+        // Check if all user tokens have been revoked (e.g., after password change)
+        long tokenIssuedAt = claims.getIssuedAt().getTime();
+        if (isTokenRevokedForUser(tokenTenant, userId, tokenIssuedAt)) {
+            logger.warn("verifyToken token revoked for user tenant={} userId={} issuedAt={}", 
+                    tokenTenant, userId, tokenIssuedAt);
+            recordFailure(tenantId, userId, AuthAction.VERIFY_TOKEN);
+            throw new ApiException(ErrorCodes.TOKEN_REVOKED, "token revoked");
+        }
+        
         User user = loadActiveUser(tokenTenant, userId);
         safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
         
@@ -340,6 +350,62 @@ public class TokenService {
         }
         tokenCacheService.cacheUser(tenantId, userId, user);
         return user;
+    }
+
+    /**
+     * Revoke all tokens for a specific user by invalidating the user status cache.
+     * This forces all subsequent token verifications to check the database,
+     * where the user's lastPasswordChangeAt timestamp can be checked (if implemented).
+     * 
+     * Note: This is a lightweight approach that doesn't require tracking all issued tokens.
+     * For immediate revocation, consider maintaining a user-specific token generation timestamp.
+     * 
+     * @param tenantId Tenant ID
+     * @param userId User ID whose tokens should be revoked
+     */
+    public void revokeAllUserTokens(String tenantId, Long userId) {
+        logger.info("Revoking all tokens for tenant={} userId={}", tenantId, userId);
+        
+        // Evict user from cache to force fresh database checks on next token verification
+        tokenCacheService.evictUser(tenantId, userId);
+        
+        // Evict tenant status cache to ensure fresh validation
+        tokenCacheService.evictTenant(tenantId);
+        
+        // Optional: Store a revocation timestamp in Redis for additional checking
+        // This can be checked during token verification for immediate revocation
+        String revocationKey = "token:revocation:" + tenantId + ":" + userId;
+        redisTemplate.opsForValue().set(revocationKey, 
+                String.valueOf(System.currentTimeMillis()), 
+                Duration.ofHours(24));  // Keep for 24 hours (longer than max token TTL)
+        
+        logger.info("All tokens revoked for tenant={} userId={}", tenantId, userId);
+    }
+
+    /**
+     * Check if all user tokens have been revoked (for example, after password change).
+     * This should be called during token verification.
+     * 
+     * @param tenantId Tenant ID
+     * @param userId User ID
+     * @param tokenIssuedAt Token issued timestamp in milliseconds
+     * @return true if the token was issued before the last revocation
+     */
+    public boolean isTokenRevokedForUser(String tenantId, Long userId, long tokenIssuedAt) {
+        String revocationKey = "token:revocation:" + tenantId + ":" + userId;
+        String revocationTime = redisTemplate.opsForValue().get(revocationKey);
+        
+        if (revocationTime != null) {
+            try {
+                long revokedAt = Long.parseLong(revocationTime);
+                // Token is revoked if it was issued before the revocation timestamp
+                return tokenIssuedAt < revokedAt;
+            } catch (NumberFormatException e) {
+                logger.warn("Invalid revocation timestamp for tenant={} userId={}", tenantId, userId);
+            }
+        }
+        
+        return false;  // No revocation found, token is valid
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {
