@@ -34,7 +34,7 @@ public final class ValidationPatterns {
     /**
      * Tenant name pattern
      * Format: 1-50 characters, Unicode letters/numbers/spaces/underscore/hyphen only
-     * Must start and end with a letter/number to avoid leading/trailing spaces (internal spaces allowed)
+     * Must start and end with a letter/number to avoid leading/trailing spaces (single-char names match the first class)
      * Length calculation: 1 start char + (0-48 middle chars) + optional end char = 1-50 chars
      * Examples: Mercury Auth, tenant_001, 租户一号
      */
