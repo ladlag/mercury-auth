@@ -51,7 +51,7 @@ class TenantRequestsValidationTest {
     @Test
     void createTenant_accepts_valid_tenantNames() {
         String exactLengthName = new String(new char[50]).replace('\0', 'a');
-        String[] validNames = {"A", "Mercury Auth", "tenant_001", "tenant-001", "租户一号", exactLengthName};
+        String[] validNames = {"A", "1", "中", "Mercury Auth", "tenant_001", "tenant-001", "租户一号", exactLengthName};
 
         for (String name : validNames) {
             TenantRequests.Create request = new TenantRequests.Create();
