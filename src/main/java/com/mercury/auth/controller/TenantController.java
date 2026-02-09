@@ -6,6 +6,7 @@ import com.mercury.auth.dto.TenantResponse;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.service.RsaKeyService;
 import com.mercury.auth.service.TenantService;
+import com.mercury.auth.util.SanitizationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -28,12 +29,7 @@ public class TenantController {
     @PostMapping
     public ResponseEntity<ApiResponse<TenantResponse>> createTenant(@Validated @RequestBody TenantRequests.Create req) {
         Tenant tenant = tenantService.create(req);
-        TenantResponse data = TenantResponse.builder()
-                .tenantId(tenant.getTenantId())
-                .name(tenant.getName())
-                .enabled(tenant.getEnabled())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildTenantResponse(tenant, false)));
     }
 
     @GetMapping
@@ -44,35 +40,29 @@ public class TenantController {
     @PostMapping("/status")
     public ResponseEntity<ApiResponse<TenantResponse>> updateStatus(@Validated @RequestBody TenantRequests.UpdateStatus req) {
         Tenant tenant = tenantService.updateStatus(req);
-        TenantResponse data = TenantResponse.builder()
-                .tenantId(tenant.getTenantId())
-                .name(tenant.getName())
-                .enabled(tenant.getEnabled())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildTenantResponse(tenant, false)));
     }
 
     @PostMapping("/password-encryption/enable")
     public ResponseEntity<ApiResponse<TenantResponse>> enablePasswordEncryption(@Validated @RequestBody TenantRequests.UpdateStatus req) {
         Tenant tenant = rsaKeyService.enableEncryption(req.getTenantId());
-        TenantResponse data = TenantResponse.builder()
-                .tenantId(tenant.getTenantId())
-                .name(tenant.getName())
-                .enabled(tenant.getEnabled())
-                .passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildTenantResponse(tenant, true)));
     }
 
     @PostMapping("/password-encryption/disable")
     public ResponseEntity<ApiResponse<TenantResponse>> disablePasswordEncryption(@Validated @RequestBody TenantRequests.UpdateStatus req) {
         Tenant tenant = rsaKeyService.disableEncryption(req.getTenantId());
-        TenantResponse data = TenantResponse.builder()
-                .tenantId(tenant.getTenantId())
-                .name(tenant.getName())
-                .enabled(tenant.getEnabled())
-                .passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildTenantResponse(tenant, true)));
+    }
+
+    private TenantResponse buildTenantResponse(Tenant tenant, boolean includeEncryptionStatus) {
+        TenantResponse.TenantResponseBuilder builder = TenantResponse.builder()
+                .tenantId(SanitizationUtils.sanitize(tenant.getTenantId()))
+                .name(SanitizationUtils.sanitize(tenant.getName()))
+                .enabled(tenant.getEnabled());
+        if (includeEncryptionStatus) {
+            builder.passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled());
+        }
+        return builder.build();
     }
 }

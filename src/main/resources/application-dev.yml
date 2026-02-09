@@ -4,27 +4,25 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC
     username: root
-    password: root
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
     # Standalone mode configuration
     host: localhost
     port: 6379
     database: 0
-    # password: your-redis-password  # Password for Redis master/slaves (uncomment if required)
     
     # Sentinel mode configuration (uncomment to enable)
     # When sentinel configuration is provided, standalone mode is ignored
     # sentinel:
     #   master: mymaster  # The master name configured in sentinel
     #   nodes: sentinel1:26379,sentinel2:26379,sentinel3:26379  # Comma-separated list of sentinel nodes
-    #   password: your-sentinel-password  # Password for Sentinel nodes (uncomment if authentication enabled)
   mail:
     from: "no-reply@example.com"
     host: smtp.example.com
     port: 25
     username: user
-    password: pass
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -62,9 +60,8 @@ mybatis-plus:
 
 security:
   jwt:
-    # Development secret - replace with strong secret in production
     # Use JWT_SECRET environment variable to override
-    secret: ${JWT_SECRET:dev-secret-change-in-production-f136803ab9c241079ba0cc1b5d02ee77}
+    secret: ${JWT_SECRET:${random.uuid}${random.uuid}}
     ttl-seconds: 7200
   token-cache:
     # Token cache configuration for performance optimization
@@ -147,4 +144,3 @@ logging:
 
 # NOTE: This is development configuration
 # For production, use environment variables and secrets management
-

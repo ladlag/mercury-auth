@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
     # Standalone mode configuration
@@ -22,7 +22,7 @@ spring:
     host: smtp.example.com
     port: 25
     username: user
-    password: pass
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -36,7 +36,7 @@ mybatis-plus:
 
 security:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:}
     ttl-seconds: 7200
   token-cache:
     # Token cache configuration for performance optimization
@@ -120,4 +120,3 @@ logging:
 # SECURITY NOTE: Never commit secrets to version control
 # Set JWT_SECRET, DB_PASSWORD, MAIL_PASSWORD, etc. via environment variables
 # For production deployment, use secrets management (e.g., Kubernetes Secrets, AWS Secrets Manager)
-

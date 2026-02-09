@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
@@ -21,7 +22,7 @@ public class JwtService {
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JwtService.class);
 
-    @Value("${security.jwt.secret:changeme}")
+    @Value("${security.jwt.secret:}")
     private String secret;
 
     @Value("${security.jwt.ttl-seconds:7200}")
@@ -31,6 +32,9 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
+        if (!StringUtils.hasText(secret)) {
+            throw new IllegalStateException("JWT secret is not configured");
+        }
         byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (secretBytes.length < 32) {
             throw new IllegalStateException("JWT secret must be at least 32 bytes");
