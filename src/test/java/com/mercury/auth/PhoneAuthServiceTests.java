@@ -10,6 +10,7 @@ import com.mercury.auth.service.PhoneAuthService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.SmsService;
 import com.mercury.auth.service.TenantService;
+import com.mercury.auth.service.UserService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ public class PhoneAuthServiceTests {
     private TenantService tenantService;
     private AuthLogService authLogService;
     private CaptchaService captchaService;
+    private UserService userService;
     private PhoneAuthService phoneAuthService;
 
     @BeforeEach
@@ -41,7 +43,8 @@ public class PhoneAuthServiceTests {
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
-        phoneAuthService = new PhoneAuthService(verificationService, smsService, userMapper, jwtService, rateLimitService, tenantService, authLogService, captchaService);
+        userService = Mockito.mock(UserService.class);
+        phoneAuthService = new PhoneAuthService(verificationService, smsService, userMapper, jwtService, rateLimitService, tenantService, authLogService, captchaService, userService);
     }
 
     @Test

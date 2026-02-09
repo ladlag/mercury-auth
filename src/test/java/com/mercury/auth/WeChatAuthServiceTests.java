@@ -5,7 +5,9 @@ import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.AuthLogService;
+import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
+import com.mercury.auth.service.UserService;
 import com.mercury.auth.service.WeChatAuthService;
 import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,8 @@ public class WeChatAuthServiceTests {
     private JwtService jwtService;
     private TenantService tenantService;
     private AuthLogService authLogService;
+    private UserService userService;
+    private RateLimitService rateLimitService;
     private WeChatAuthService weChatAuthService;
 
     @BeforeEach
@@ -28,7 +32,9 @@ public class WeChatAuthServiceTests {
         jwtService = Mockito.mock(JwtService.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
-        weChatAuthService = new WeChatAuthService(userMapper, jwtService, tenantService, authLogService);
+        userService = Mockito.mock(UserService.class);
+        rateLimitService = Mockito.mock(RateLimitService.class);
+        weChatAuthService = new WeChatAuthService(userMapper, jwtService, tenantService, authLogService, userService, rateLimitService);
     }
 
     @Test
