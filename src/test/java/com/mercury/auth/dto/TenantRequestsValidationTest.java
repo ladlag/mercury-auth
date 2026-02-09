@@ -38,4 +38,19 @@ class TenantRequestsValidationTest {
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .contains("name");
     }
+
+    @Test
+    void createTenant_accepts_valid_tenantNames() {
+        String[] validNames = {"Mercury Auth", "tenant_001", "tenant-001", "租户一号"};
+
+        for (String name : validNames) {
+            TenantRequests.Create request = new TenantRequests.Create();
+            request.setTenantId("tenant-1");
+            request.setName(name);
+
+            Set<ConstraintViolation<TenantRequests.Create>> violations = validator.validate(request);
+
+            assertThat(violations).isEmpty();
+        }
+    }
 }
