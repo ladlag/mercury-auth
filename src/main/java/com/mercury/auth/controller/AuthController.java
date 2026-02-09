@@ -52,12 +52,7 @@ public class AuthController {
     @PostMapping("/register-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> registerPassword(@Validated @RequestBody AuthRequests.PasswordRegister req) {
         User user = passwordAuthService.registerPassword(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     @PostMapping("/login-password")
@@ -68,34 +63,19 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
         User user = passwordAuthService.changePassword(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> forgotPassword(@Validated @RequestBody AuthRequests.ForgotPassword req) {
         User user = passwordAuthService.forgotPassword(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
         User user = passwordAuthService.resetPassword(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     // Email-based authentication endpoints
@@ -109,12 +89,7 @@ public class AuthController {
     @PostMapping("/register-email")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> registerEmail(@Validated @RequestBody AuthRequests.EmailRegister req) {
         User user = emailAuthService.registerEmail(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     @PostMapping("/login-email")
@@ -125,12 +100,7 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> verifyEmail(@Validated @RequestBody AuthRequests.VerifyEmailAfterRegister req) {
         User user = emailAuthService.verifyEmailAfterRegister(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     // Phone-based authentication endpoints
@@ -144,12 +114,7 @@ public class AuthController {
     @PostMapping("/register-phone")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> registerPhone(@Validated @RequestBody AuthRequests.PhoneRegister req) {
         User user = phoneAuthService.registerPhone(req.getTenantId(), req.getPhone(), req.getCode(), req.getUsername());
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     @PostMapping("/login-phone")
@@ -187,12 +152,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> logout(@Validated @RequestBody AuthRequests.TokenLogout req) {
         User user = tokenService.logout(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     // User management endpoints
@@ -200,12 +160,7 @@ public class AuthController {
     @PostMapping("/user-status")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
         User user = userService.updateUserStatus(req);
-        BaseAuthResponse data = BaseAuthResponse.builder()
-                .tenantId(user.getTenantId())
-                .userId(user.getId())
-                .username(user.getUsername())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(data));
+        return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
     // Captcha endpoints

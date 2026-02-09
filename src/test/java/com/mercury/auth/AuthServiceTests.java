@@ -4,6 +4,8 @@ import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.entity.Tenant;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.*;
 import com.mercury.auth.store.UserMapper;
@@ -160,5 +162,29 @@ public class AuthServiceTests {
         
         // Verify email remains null
         assertThat(req.getEmail()).isNull();
+    }
+
+    @Test
+    void changePassword_rejects_incorrect_old_password() {
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled("t1");
+        User user = new User();
+        user.setId(1L);
+        user.setTenantId("t1");
+        user.setUsername("u1");
+        user.setPasswordHash("hash");
+        Mockito.when(userMapper.selectOne(Mockito.any())).thenReturn(user);
+        Mockito.when(passwordEncoder.matches("oldPass", "hash")).thenReturn(false);
+
+        AuthRequests.ChangePassword req = new AuthRequests.ChangePassword();
+        req.setTenantId("t1");
+        req.setUsername("u1");
+        req.setOldPassword("oldPass");
+        req.setNewPassword("NewPass1!");
+        req.setConfirmPassword("NewPass1!");
+
+        assertThatThrownBy(() -> passwordAuthService.changePassword(req))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getCode())
+                .isEqualTo(ErrorCodes.PASSWORD_MISMATCH);
     }
 }
