@@ -33,7 +33,7 @@ public class JwtService {
     @PostConstruct
     public void init() {
         if (!StringUtils.hasText(secret)) {
-            throw new IllegalStateException("JWT secret is not configured");
+            throw new IllegalStateException("JWT secret is not configured. Set JWT_SECRET environment variable or security.jwt.secret property (required in production).");
         }
         byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (secretBytes.length < 32) {

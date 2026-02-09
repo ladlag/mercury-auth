@@ -2,6 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/mercury_auth_new?useSSL=false&serverTimezone=UTC
     username: root
+    # Set DB_PASSWORD if your test database requires authentication
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
@@ -20,6 +21,7 @@ spring:
     host: smtp.example.com
     port: 25
     username: user
+    # Set MAIL_PASSWORD if mail sending is enabled during tests
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
@@ -35,6 +37,7 @@ mybatis-plus:
 
 security:
   jwt:
+    # Two UUIDs (~72 chars with hyphens) exceed the 32-byte minimum for HS256
     secret: ${JWT_SECRET:${random.uuid}${random.uuid}}
     ttl-seconds: 7200
   token-cache:

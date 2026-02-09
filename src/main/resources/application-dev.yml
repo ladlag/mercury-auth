@@ -61,6 +61,8 @@ mybatis-plus:
 security:
   jwt:
     # Use JWT_SECRET environment variable to override
+    # If not set, a random secret is generated at startup (tokens reset on restart)
+    # Two UUIDs (~72 chars with hyphens) exceed the 32-byte minimum for HS256
     secret: ${JWT_SECRET:${random.uuid}${random.uuid}}
     ttl-seconds: 7200
   token-cache:

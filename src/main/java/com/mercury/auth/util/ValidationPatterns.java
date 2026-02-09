@@ -22,6 +22,14 @@ public final class ValidationPatterns {
      * Examples: user123, johnsmith, adminuser
      */
     public static final String USERNAME = "^[a-zA-Z][a-zA-Z0-9]{5,19}$";
+
+    /**
+     * Tenant ID pattern
+     * Format: 1-50 characters, letters, numbers, underscores, or hyphens
+     * Matches X-Tenant-Id header validation (TenantIdHeaderInjector) to keep identifiers URL-safe and consistent
+     * Examples: tenant1, tenant-001, tenant_abc
+     */
+    public static final String TENANT_ID = "^[a-zA-Z0-9_-]{1,50}$";
     
     /**
      * Password pattern

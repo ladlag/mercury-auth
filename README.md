@@ -150,6 +150,10 @@ Initialize tables from `src/main/resources/schema.sql` (includes `users`, `tenan
 mvn spring-boot:run
 ```
 
+### Docker Compose
+When using `docker-compose.yml`, set `MYSQL_ROOT_PASSWORD` in your environment or `.env` file. This value is reused for
+`SPRING_DATASOURCE_PASSWORD`.
+
 ## API Usage
 
 ### Authentication Flow
