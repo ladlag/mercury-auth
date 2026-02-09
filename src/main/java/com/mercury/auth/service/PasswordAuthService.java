@@ -40,12 +40,19 @@ public class PasswordAuthService {
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
     private final PasswordEncryptionService passwordEncryptionService;
+    private final UserService userService;
 
     /**
      * Register a new user with username and password
      */
     public User registerPassword(AuthRequests.PasswordRegister req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Check tenant max users limit
+        userService.checkMaxUsersLimit(req.getTenantId());
+        
+        // Check daily registration limit per tenant/IP
+        rateLimitService.checkDailyRegistrationLimit(req.getTenantId());
 
         // Decrypt passwords if encrypted (based on tenant configuration)
         String password;

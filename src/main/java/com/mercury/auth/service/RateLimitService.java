@@ -262,4 +262,63 @@ public class RateLimitService {
             return null;
         }
     }
+    
+    /**
+     * Check daily registration limit per tenant per IP
+     * This prevents abuse by limiting how many accounts can be registered from the same IP per tenant per day
+     * 
+     * @param tenantId The tenant ID
+     * @throws ApiException if daily registration limit is reached
+     */
+    public void checkDailyRegistrationLimit(String tenantId) {
+        if (!rateLimitConfig.getDailyRegistration().isEnabled()) {
+            return;
+        }
+        
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) {
+                // No request context - fail closed for security
+                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
+                    "unable to verify request source");
+            }
+            
+            HttpServletRequest request = attributes.getRequest();
+            String clientIp = IpUtils.getClientIp(request);
+            
+            // If IP extraction returns "unknown", fail closed for security
+            if ("unknown".equals(clientIp)) {
+                logger.warn("IP extraction failed for daily registration limit check tenantId={}, rejecting request", 
+                    tenantId);
+                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
+                    "unable to verify request source");
+            }
+            
+            // Key format: registration:daily:<tenantId>:<ip>
+            String dailyRegKey = "registration:daily:" + tenantId + ":" + clientIp;
+            
+            // Use 24 hours (86400 seconds) as the window
+            Long count = redisTemplate.execute(
+                RATE_LIMIT_REDIS_SCRIPT,
+                Collections.singletonList(dailyRegKey),
+                String.valueOf(86400) // 24 hours in seconds
+            );
+            
+            if (count != null && count > rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay()) {
+                logger.warn("Daily registration limit exceeded: tenant={} ip={} count={} max={}", 
+                    tenantId, clientIp, count, rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay());
+                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
+                    "daily registration limit reached");
+            }
+            
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            // Any unexpected exception during rate limiting should fail closed for security
+            logger.error("Unexpected error during daily registration limit check tenantId={}, rejecting request: {}", 
+                       tenantId, e.getMessage(), e);
+            throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
+                "unable to verify request source");
+        }
+    }
 }

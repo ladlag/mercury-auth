@@ -34,6 +34,7 @@ public class EmailAuthService {
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
     private final PasswordEncryptionService passwordEncryptionService;
+    private final UserService userService;
 
     /**
      * Send verification code to email for registration or login
@@ -99,6 +100,12 @@ public class EmailAuthService {
      */
     public User registerEmail(AuthRequests.EmailRegister req) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Check tenant max users limit
+        userService.checkMaxUsersLimit(req.getTenantId());
+        
+        // Check daily registration limit per tenant/IP
+        rateLimitService.checkDailyRegistrationLimit(req.getTenantId());
         
         // Decrypt passwords if encrypted (based on tenant configuration)
         String password;

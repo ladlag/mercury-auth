@@ -14,4 +14,5 @@ public class Tenant {
     private Boolean passwordEncryptionEnabled;
     private String rsaPublicKey;
     private String rsaPrivateKey;
+    private Integer maxUsers;
 }

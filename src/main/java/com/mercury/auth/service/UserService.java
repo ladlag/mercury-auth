@@ -108,6 +108,41 @@ public class UserService {
         qw.eq("tenant_id", tenantId).eq("phone", phone);
         return userMapper.selectCount(qw) > 0;
     }
+    
+    /**
+     * Count total users for a tenant
+     */
+    public long countUsersByTenant(String tenantId) {
+        QueryWrapper<User> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId);
+        return userMapper.selectCount(qw);
+    }
+    
+    /**
+     * Check if tenant has reached maximum users limit
+     * @param tenantId The tenant ID to check
+     * @throws ApiException if max users limit is reached
+     */
+    public void checkMaxUsersLimit(String tenantId) {
+        // Get tenant configuration
+        com.mercury.auth.entity.Tenant tenant = tenantService.getById(tenantId);
+        
+        // If max_users is null, unlimited users are allowed
+        if (tenant.getMaxUsers() == null) {
+            return;
+        }
+        
+        // Count current users
+        long currentUserCount = countUsersByTenant(tenantId);
+        
+        // Check if limit is reached
+        if (currentUserCount >= tenant.getMaxUsers()) {
+            logger.warn("Max users limit reached for tenant={} current={} max={}", 
+                tenantId, currentUserCount, tenant.getMaxUsers());
+            throw new ApiException(ErrorCodes.TENANT_MAX_USERS_REACHED, 
+                "tenant has reached maximum users limit");
+        }
+    }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         try {
