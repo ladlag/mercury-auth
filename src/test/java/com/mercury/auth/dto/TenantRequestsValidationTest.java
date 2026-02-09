@@ -28,20 +28,25 @@ class TenantRequestsValidationTest {
 
     @Test
     void createTenant_rejects_invalid_tenantName() {
-        TenantRequests.Create request = new TenantRequests.Create();
-        request.setTenantId("tenant-1");
-        request.setName("<script>");
+        String longName = new String(new char[51]).replace('\0', 'a');
+        String[] invalidNames = {"<script>", " tenant", "tenant ", "!!!", longName};
 
-        Set<ConstraintViolation<TenantRequests.Create>> violations = validator.validate(request);
+        for (String name : invalidNames) {
+            TenantRequests.Create request = new TenantRequests.Create();
+            request.setTenantId("tenant-1");
+            request.setName(name);
 
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .contains("name");
+            Set<ConstraintViolation<TenantRequests.Create>> violations = validator.validate(request);
+
+            assertThat(violations)
+                    .extracting(violation -> violation.getPropertyPath().toString())
+                    .contains("name");
+        }
     }
 
     @Test
     void createTenant_accepts_valid_tenantNames() {
-        String[] validNames = {"Mercury Auth", "tenant_001", "tenant-001", "租户一号"};
+        String[] validNames = {"A", "Mercury Auth", "tenant_001", "tenant-001", "租户一号"};
 
         for (String name : validNames) {
             TenantRequests.Create request = new TenantRequests.Create();
