@@ -30,6 +30,7 @@ class TenantRequestsValidationTest {
     void createTenant_rejects_invalid_tenantName() {
         String longName = new String(new char[51]).replace('\0', 'a');
         String[] invalidNames = {"<script>", " tenant", "tenant ", "!!!", longName};
+        String expectedMessage = "Tenant name must be 1-50 characters and contain only letters, numbers, spaces, hyphens, or underscores";
 
         for (String name : invalidNames) {
             TenantRequests.Create request = new TenantRequests.Create();
@@ -41,6 +42,9 @@ class TenantRequestsValidationTest {
             assertThat(violations)
                     .extracting(violation -> violation.getPropertyPath().toString())
                     .contains("name");
+            assertThat(violations)
+                    .anyMatch(violation -> "name".equals(violation.getPropertyPath().toString())
+                            && expectedMessage.equals(violation.getMessage()));
         }
     }
 
