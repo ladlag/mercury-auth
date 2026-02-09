@@ -25,4 +25,17 @@ class TenantRequestsValidationTest {
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .contains("tenantId");
     }
+
+    @Test
+    void createTenant_rejects_invalid_tenantName() {
+        TenantRequests.Create request = new TenantRequests.Create();
+        request.setTenantId("tenant-1");
+        request.setName("<script>");
+
+        Set<ConstraintViolation<TenantRequests.Create>> violations = validator.validate(request);
+
+        assertThat(violations)
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("name");
+    }
 }

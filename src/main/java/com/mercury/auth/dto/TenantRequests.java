@@ -15,6 +15,7 @@ public class TenantRequests {
         @Pattern(regexp = ValidationPatterns.TENANT_ID, message = "{validation.tenantId.invalid}")
         private String tenantId;
         @NotBlank(message = "{validation.tenantName.required}")
+        @Pattern(regexp = ValidationPatterns.TENANT_NAME, message = "{validation.tenantName.invalid}")
         private String name;
     }
 

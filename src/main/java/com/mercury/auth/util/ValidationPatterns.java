@@ -30,6 +30,13 @@ public final class ValidationPatterns {
      * Examples: tenant1, tenant-001, tenant_abc
      */
     public static final String TENANT_ID = "^[a-zA-Z0-9_-]{1,50}$";
+
+    /**
+     * Tenant name pattern
+     * Format: 1-50 characters, letters/numbers/spaces/underscore/hyphen only
+     * Examples: Mercury Auth, tenant_001, 租户一号
+     */
+    public static final String TENANT_NAME = "^[\\p{L}\\p{N} _-]{1,50}$";
     
     /**
      * Password pattern

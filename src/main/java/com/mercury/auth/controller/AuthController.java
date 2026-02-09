@@ -12,7 +12,6 @@ import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.service.*;
-import com.mercury.auth.util.SanitizationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -194,15 +193,15 @@ public class AuthController {
     private BaseAuthResponse buildBaseAuthResponse(User user, String tenantId) {
         if (user == null) {
             return BaseAuthResponse.builder()
-                    .tenantId(SanitizationUtils.sanitize(tenantId))
+                    .tenantId(tenantId)
                     .userId(null)
                     .username(null)
                     .build();
         }
         return BaseAuthResponse.builder()
-                .tenantId(SanitizationUtils.sanitize(user.getTenantId()))
+                .tenantId(user.getTenantId())
                 .userId(user.getId())
-                .username(SanitizationUtils.sanitize(user.getUsername()))
+                .username(user.getUsername())
                 .build();
     }
 }
