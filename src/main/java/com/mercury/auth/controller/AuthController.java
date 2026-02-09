@@ -63,6 +63,11 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
         User user = passwordAuthService.changePassword(req);
+        
+        // Revoke all existing tokens for this user after password change (security enhancement)
+        // This forces the user to re-login on all devices
+        tokenService.revokeAllUserTokens(req.getTenantId(), user.getId());
+        
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 

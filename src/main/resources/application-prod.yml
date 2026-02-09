@@ -42,6 +42,11 @@ security:
     # Token cache configuration for performance optimization
     max-size: ${TOKEN_CACHE_MAX_SIZE:10000}  # Maximum number of tokens to cache
     expire-after-write-seconds: ${TOKEN_CACHE_EXPIRE_SECONDS:600}  # Cache expiry time (10 minutes)
+  tenant-cache:
+    # Tenant cache configuration with independent TTL for ultra-high traffic scenarios
+    # Longer TTL reduces database queries for tenant validation
+    max-size: ${TENANT_CACHE_MAX_SIZE:1000}  # Maximum number of tenants to cache
+    expire-after-write-seconds: ${TENANT_CACHE_EXPIRE_SECONDS:1800}  # Cache expiry time (30 minutes)
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5

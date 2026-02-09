@@ -244,6 +244,22 @@ public class TokenCacheService {
     }
 
     /**
+     * Evict user from cache (alias for evictUserStatus for clarity in token revocation context).
+     */
+    public void evictUser(String tenantId, Long userId) {
+        evictUserStatus(tenantId, userId);
+        logger.debug("User evicted from cache: tenantId={} userId={}", tenantId, userId);
+    }
+
+    /**
+     * Evict tenant from cache (alias for evictTenantStatus for clarity in token revocation context).
+     */
+    public void evictTenant(String tenantId) {
+        evictTenantStatus(tenantId);
+        logger.debug("Tenant evicted from cache: tenantId={}", tenantId);
+    }
+
+    /**
      * Hash token to create a cache key.
      * Delegates to TokenHashUtil for consistent hashing across the application.
      */
