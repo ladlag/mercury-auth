@@ -30,6 +30,30 @@ spring:
           starttls:
             enable: false
 
+# SMS Configuration (optional)
+# Configure either Aliyun or Tencent Cloud SMS provider
+# Only one provider needs to be configured
+# IMPORTANT: Use environment variables for sensitive credentials in production
+sms:
+  # Alibaba Cloud (Aliyun) SMS Configuration
+  aliyun:
+    enabled: ${SMS_ALIYUN_ENABLED:false}  # Set to true to enable Aliyun SMS
+    access-key-id: ${SMS_ALIYUN_ACCESS_KEY_ID:}
+    access-key-secret: ${SMS_ALIYUN_ACCESS_KEY_SECRET:}
+    sign-name: ${SMS_ALIYUN_SIGN_NAME:}  # SMS signature
+    template-code: ${SMS_ALIYUN_TEMPLATE_CODE:}  # SMS template code
+    region-id: ${SMS_ALIYUN_REGION_ID:cn-hangzhou}  # Region ID (default: cn-hangzhou)
+  
+  # Tencent Cloud SMS Configuration
+  tencent:
+    enabled: ${SMS_TENCENT_ENABLED:false}  # Set to true to enable Tencent SMS
+    secret-id: ${SMS_TENCENT_SECRET_ID:}
+    secret-key: ${SMS_TENCENT_SECRET_KEY:}
+    sdk-app-id: ${SMS_TENCENT_SDK_APP_ID:}  # SMS SDK App ID
+    sign-name: ${SMS_TENCENT_SIGN_NAME:}  # SMS signature
+    template-id: ${SMS_TENCENT_TEMPLATE_ID:}  # SMS template ID
+    region: ${SMS_TENCENT_REGION:ap-guangzhou}  # Region (default: ap-guangzhou)
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -99,6 +123,21 @@ security:
     refresh-token:
       max-attempts: ${RATE_LIMIT_REFRESH_TOKEN_MAX_ATTEMPTS:10}
       window-minutes: ${RATE_LIMIT_REFRESH_TOKEN_WINDOW_MINUTES:1}
+    
+    # Daily registration limits per tenant/IP
+    # Limits the number of new user registrations from the same IP per tenant per day
+    # This prevents abuse and mass account creation
+    daily-registration:
+      enabled: ${DAILY_REGISTRATION_ENABLED:true}  # Enable/disable daily registration limit
+      max-registrations-per-day: ${DAILY_REGISTRATION_MAX_PER_DAY:10}  # Maximum registrations per IP per tenant per day
+  
+  # User count cache configuration
+  # Redis-based caching for tenant user counts with auto-recovery
+  user-count-cache:
+    enabled: ${USER_COUNT_CACHE_ENABLED:true}  # Enable/disable Redis caching for user counts
+    ttl-hours: ${USER_COUNT_CACHE_TTL_HOURS:24}  # Cache TTL (time to live) in hours
+    validation-threshold-minutes: ${USER_COUNT_CACHE_VALIDATION_THRESHOLD_MINUTES:60}  # Re-sync from DB if counter older than this
+  
   blacklist:
     # Blacklist configuration - INDEPENDENT from rate limiting
     # Blacklist provides persistent blocking while rate limiting provides temporary throttling

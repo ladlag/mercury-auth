@@ -30,6 +30,28 @@ spring:
           starttls:
             enable: false
 
+# SMS Configuration (optional)
+# Configure either Aliyun or Tencent Cloud SMS provider
+# Only one provider needs to be configured
+sms:
+  # Alibaba Cloud (Aliyun) SMS Configuration
+  aliyun:
+    enabled: false  # Set to true to enable Aliyun SMS
+    access-key-id: your-aliyun-access-key-id
+    access-key-secret: your-aliyun-access-key-secret
+    sign-name: your-sign-name  # SMS signature
+    template-code: SMS_123456789  # SMS template code
+    region-id: cn-hangzhou  # Region ID (default: cn-hangzhou)
+  
+  # Tencent Cloud SMS Configuration
+  tencent:
+    enabled: false  # Set to true to enable Tencent SMS
+    secret-id: your-tencent-secret-id
+    secret-key: your-tencent-secret-key
+    sdk-app-id: your-sdk-app-id  # SMS SDK App ID
+    sign-name: your-sign-name  # SMS signature
+    template-id: "123456"  # SMS template ID
+    region: ap-guangzhou  # Region (default: ap-guangzhou)
 
 mybatis-plus:
   configuration:
@@ -43,9 +65,18 @@ security:
   token-cache:
     max-size: 10000
     expire-after-write-seconds: 600  # Cache expiry time (10 minutes)
+  tenant-cache:
+    # Tenant cache configuration with independent TTL for ultra-high traffic scenarios
+    # Longer TTL reduces database queries for tenant validation
+    max-size: 1000  # Maximum number of tenants to cache
+    expire-after-write-seconds: 1800  # Cache expiry time (30 minutes)
   code:
     ttl-minutes: 10
     phone-ttl-minutes: 5
+    # OTP protection settings
+    cooldown-seconds: 60  # Minimum time between code requests
+    max-daily-requests: 20  # Maximum code requests per day per identifier
+    max-verify-attempts: 5  # Maximum verification attempts before lockout
   rate-limit:
     # Rate limiting configuration for various auth operations
     # max-attempts: Maximum number of requests allowed within the window
@@ -75,6 +106,21 @@ security:
     refresh-token:
       max-attempts: 10
       window-minutes: 1
+    
+    # Daily registration limits per tenant/IP
+    # Limits the number of new user registrations from the same IP per tenant per day
+    # This prevents abuse and mass account creation
+    daily-registration:
+      enabled: true  # Enable/disable daily registration limit
+      max-registrations-per-day: 10  # Maximum registrations per IP per tenant per day
+  
+  # User count cache configuration
+  # Redis-based caching for tenant user counts with auto-recovery
+  user-count-cache:
+    enabled: true  # Enable/disable Redis caching for user counts
+    ttl-hours: 24  # Cache TTL (time to live) in hours
+    validation-threshold-minutes: 60  # Re-sync from DB if counter older than this
+  
   blacklist:
     ip-enabled: true
     token-enabled: true

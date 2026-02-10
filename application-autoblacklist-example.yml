@@ -72,6 +72,29 @@ redis:
   port: ${REDIS_PORT:6379}
   password: ${REDIS_PASSWORD:}
   database: 0
+
+# SMS Configuration (optional)
+# Configure either Aliyun or Tencent Cloud SMS provider
+# Only one provider needs to be configured
+sms:
+  # Alibaba Cloud (Aliyun) SMS Configuration
+  aliyun:
+    enabled: false  # Set to true to enable Aliyun SMS
+    access-key-id: ${SMS_ALIYUN_ACCESS_KEY_ID:your-aliyun-access-key-id}
+    access-key-secret: ${SMS_ALIYUN_ACCESS_KEY_SECRET:your-aliyun-access-key-secret}
+    sign-name: ${SMS_ALIYUN_SIGN_NAME:your-sign-name}  # SMS signature
+    template-code: ${SMS_ALIYUN_TEMPLATE_CODE:SMS_123456789}  # SMS template code
+    region-id: ${SMS_ALIYUN_REGION_ID:cn-hangzhou}  # Region ID (default: cn-hangzhou)
+  
+  # Tencent Cloud SMS Configuration
+  tencent:
+    enabled: false  # Set to true to enable Tencent SMS
+    secret-id: ${SMS_TENCENT_SECRET_ID:your-tencent-secret-id}
+    secret-key: ${SMS_TENCENT_SECRET_KEY:your-tencent-secret-key}
+    sdk-app-id: ${SMS_TENCENT_SDK_APP_ID:your-sdk-app-id}  # SMS SDK App ID
+    sign-name: ${SMS_TENCENT_SIGN_NAME:your-sign-name}  # SMS signature
+    template-id: ${SMS_TENCENT_TEMPLATE_ID:123456}  # SMS template ID
+    region: ${SMS_TENCENT_REGION:ap-guangzhou}  # Region (default: ap-guangzhou)
   
 # Database Configuration
 datasource:
