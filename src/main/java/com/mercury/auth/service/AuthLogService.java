@@ -67,7 +67,9 @@ public class AuthLogService {
             return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
             logger.error("Failed to record async audit log action={} tenant={} userId={}", action.name(), tenantId, userId, e);
-            return CompletableFuture.failedFuture(e);
+            CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+            failedFuture.completeExceptionally(e);
+            return failedFuture;
         }
     }
 
