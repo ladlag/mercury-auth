@@ -70,8 +70,11 @@ public class TenantUserCountService {
      * Check if tenant has reached maximum users limit.
      * Uses cached count with automatic fallback and recovery.
      * 
+     * CRITICAL: When limit appears reached, verify with database to prevent
+     * false rejections due to counter drift or bugs.
+     * 
      * @param tenantId The tenant ID to check
-     * @throws ApiException if max users limit is reached
+     * @throws ApiException if max users limit is ACTUALLY reached (verified from database)
      */
     public void checkMaxUsersLimit(String tenantId) {
         // Get tenant configuration (already cached by TenantService)
@@ -87,10 +90,29 @@ public class TenantUserCountService {
         
         // Check if limit is reached
         if (currentUserCount >= tenant.getMaxUsers()) {
-            logger.warn("Max users limit reached for tenant={} current={} max={}", 
-                tenantId, currentUserCount, tenant.getMaxUsers());
-            throw new ApiException(ErrorCodes.TENANT_MAX_USERS_REACHED, 
-                "tenant has reached maximum users limit");
+            // CRITICAL: Verify with database before rejecting
+            // This prevents false rejections due to:
+            // 1. Counter drift (Redis count > actual count)
+            // 2. Redis bugs or corruption
+            // 3. Race conditions during recovery
+            logger.info("Cached count suggests limit reached for tenant={}, verifying with database", 
+                tenantId);
+            
+            long actualCount = countUsersFromDatabase(tenantId);
+            
+            if (actualCount >= tenant.getMaxUsers()) {
+                // Actually at limit - reject registration
+                logger.warn("Max users limit CONFIRMED for tenant={} actual={} max={}", 
+                    tenantId, actualCount, tenant.getMaxUsers());
+                throw new ApiException(ErrorCodes.TENANT_MAX_USERS_REACHED, 
+                    "tenant has reached maximum users limit");
+            } else {
+                // False alarm - counter was wrong, sync and allow registration
+                logger.warn("False limit alarm for tenant={}: cached={} actual={} max={}. Syncing counter.", 
+                    tenantId, currentUserCount, actualCount, tenant.getMaxUsers());
+                syncUserCountFromDatabase(tenantId);
+                // Continue - registration is allowed
+            }
         }
     }
     

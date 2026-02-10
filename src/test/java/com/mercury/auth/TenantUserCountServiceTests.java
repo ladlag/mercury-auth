@@ -89,6 +89,9 @@ public class TenantUserCountServiceTests {
         when(valueOps.get("tenant:users:count:t1")).thenReturn("10");
         when(valueOps.get("tenant:users:sync:t1")).thenReturn(String.valueOf(System.currentTimeMillis()));
         
+        // Database also confirms 10 users (actually at limit)
+        when(userMapper.selectCount(any())).thenReturn(10L);
+        
         // When/Then: Check limit throws exception
         assertThatThrownBy(() -> tenantUserCountService.checkMaxUsersLimit("t1"))
             .isInstanceOf(ApiException.class)
@@ -223,5 +226,76 @@ public class TenantUserCountServiceTests {
         // Then: Both keys deleted from Redis
         verify(redisTemplate).delete("tenant:users:count:t1");
         verify(redisTemplate).delete("tenant:users:sync:t1");
+    }
+    
+    @Test
+    void checkMaxUsersLimit_verifiesWithDatabase_whenCachedCountAtLimit() {
+        // Given: Tenant with max 10 users
+        Tenant tenant = new Tenant();
+        tenant.setTenantId("t1");
+        tenant.setMaxUsers(10);
+        when(tenantService.getById("t1")).thenReturn(tenant);
+        
+        // Redis shows 10 users (at limit)
+        when(valueOps.get("tenant:users:count:t1")).thenReturn("10");
+        when(valueOps.get("tenant:users:sync:t1")).thenReturn(String.valueOf(System.currentTimeMillis()));
+        
+        // But database only has 8 users (counter drift!)
+        when(userMapper.selectCount(any())).thenReturn(8L);
+        
+        // When: Check limit (should NOT throw)
+        tenantUserCountService.checkMaxUsersLimit("t1");
+        
+        // Then: Verifies with database (called twice: once for getUserCount, once for verification)
+        verify(userMapper, atLeast(1)).selectCount(any());
+        // Counter should be synced
+        verify(valueOps).set(eq("tenant:users:count:t1"), eq("8"), anyLong(), any());
+    }
+    
+    @Test
+    void checkMaxUsersLimit_rejectsWhenActuallyAtLimit() {
+        // Given: Tenant with max 10 users
+        Tenant tenant = new Tenant();
+        tenant.setTenantId("t1");
+        tenant.setMaxUsers(10);
+        when(tenantService.getById("t1")).thenReturn(tenant);
+        
+        // Redis shows 10 users
+        when(valueOps.get("tenant:users:count:t1")).thenReturn("10");
+        when(valueOps.get("tenant:users:sync:t1")).thenReturn(String.valueOf(System.currentTimeMillis()));
+        
+        // Database also has 10 users (actually at limit)
+        when(userMapper.selectCount(any())).thenReturn(10L);
+        
+        // When/Then: Should reject
+        assertThatThrownBy(() -> tenantUserCountService.checkMaxUsersLimit("t1"))
+            .isInstanceOf(ApiException.class)
+            .hasFieldOrPropertyWithValue("code", ErrorCodes.TENANT_MAX_USERS_REACHED);
+        
+        // Verifies with database
+        verify(userMapper, atLeast(1)).selectCount(any());
+    }
+    
+    @Test
+    void checkMaxUsersLimit_allowsRegistration_whenCachedCountWrong() {
+        // Given: Tenant with max 10 users
+        Tenant tenant = new Tenant();
+        tenant.setTenantId("t1");
+        tenant.setMaxUsers(10);
+        when(tenantService.getById("t1")).thenReturn(tenant);
+        
+        // Redis shows 12 users (over limit due to bug!)
+        when(valueOps.get("tenant:users:count:t1")).thenReturn("12");
+        when(valueOps.get("tenant:users:sync:t1")).thenReturn(String.valueOf(System.currentTimeMillis()));
+        
+        // But database only has 7 users
+        when(userMapper.selectCount(any())).thenReturn(7L);
+        
+        // When: Check limit (should NOT throw despite Redis showing 12)
+        tenantUserCountService.checkMaxUsersLimit("t1");
+        
+        // Then: Corrects the counter
+        verify(userMapper, atLeast(1)).selectCount(any());
+        verify(valueOps).set(eq("tenant:users:count:t1"), eq("7"), anyLong(), any());
     }
 }
