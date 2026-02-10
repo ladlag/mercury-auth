@@ -32,6 +32,8 @@ public final class SecurityConstants {
         "/v3/api-docs/**",             // API docs (use ** for nested paths)
         "/swagger-ui/**",              // Swagger UI (use ** for nested paths)
         "/swagger-ui.html",
+        "/swagger-resources/**",       // Swagger resources
+        "/webjars/**",                 // Swagger UI static resources (CSS, JS)
         "/actuator/health",
         "/actuator/health/**"          // Health checks (use ** for nested paths)
     };
@@ -58,9 +60,16 @@ public final class SecurityConstants {
     };
     
     // Documentation and health check endpoints
+    // Note: These patterns use .* which matches any characters including slashes and query strings
+    // Examples that match:
+    // - /v3/api-docs, /v3/api-docs/swagger-config, /v3/api-docs/swagger-config?group=default
+    // - /swagger-ui.html, /swagger-ui/index.html, /swagger-ui/swagger-ui.css
+    // - /actuator/health, /actuator/health/liveness, /actuator/health/readiness
     private static final Pattern[] DOCUMENTATION_PATTERNS = {
         Pattern.compile("^/v3/api-docs.*"),
         Pattern.compile("^/swagger-ui.*"),
+        Pattern.compile("^/swagger-resources.*"),  // Additional Swagger resource endpoint
+        Pattern.compile("^/webjars/.*"),  // Swagger UI uses webjars for static resources
         Pattern.compile("^/actuator/health.*"),
     };
     
