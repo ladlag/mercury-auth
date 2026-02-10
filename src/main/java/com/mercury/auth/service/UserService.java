@@ -27,6 +27,8 @@ public class UserService {
     private final AuthLogService authLogService;
     @Lazy
     private final TokenCacheService tokenCacheService;
+    @Lazy
+    private final TenantUserCountService tenantUserCountService;
 
     /**
      * Update user's enabled/disabled status
@@ -107,6 +109,53 @@ public class UserService {
         QueryWrapper<User> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId).eq("phone", phone);
         return userMapper.selectCount(qw) > 0;
+    }
+    
+    /**
+     * Count total users for a tenant
+     */
+    public long countUsersByTenant(String tenantId) {
+        QueryWrapper<User> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId);
+        return userMapper.selectCount(qw);
+    }
+    
+    /**
+     * Check if tenant has reached maximum users limit.
+     * Uses TenantUserCountService for optimized counting with Redis cache and auto-recovery.
+     * 
+     * @param tenantId The tenant ID to check
+     * @throws ApiException if max users limit is reached
+     */
+    public void checkMaxUsersLimit(String tenantId) {
+        // Delegate to TenantUserCountService which handles:
+        // - Redis caching for performance
+        // - Auto-recovery from cache misses
+        // - Fallback to database on Redis failures
+        // - Stale counter detection and re-sync
+        tenantUserCountService.checkMaxUsersLimit(tenantId);
+    }
+    
+    /**
+     * Notify the count service that a user was created.
+     * This increments the cached counter in Redis.
+     * Safe to call even if Redis is unavailable.
+     * 
+     * @param tenantId The tenant ID
+     */
+    public void notifyUserCreated(String tenantId) {
+        tenantUserCountService.incrementUserCount(tenantId);
+    }
+    
+    /**
+     * Notify the count service that a user was deleted.
+     * This decrements the cached counter in Redis.
+     * Safe to call even if Redis is unavailable.
+     * 
+     * @param tenantId The tenant ID
+     */
+    public void notifyUserDeleted(String tenantId) {
+        tenantUserCountService.decrementUserCount(tenantId);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {

@@ -28,6 +28,7 @@ public class AuthServiceTests {
     private AuthLogService authLogService;
     private CaptchaService captchaService;
     private PasswordEncryptionService passwordEncryptionService;
+    private UserService userService;
     private PasswordAuthService passwordAuthService;
     private EmailAuthService emailAuthService;
 
@@ -42,6 +43,7 @@ public class AuthServiceTests {
         authLogService = Mockito.mock(AuthLogService.class);
         captchaService = Mockito.mock(CaptchaService.class);
         passwordEncryptionService = Mockito.mock(PasswordEncryptionService.class);
+        userService = Mockito.mock(UserService.class);
         
         // Mock password encryption service to return input as-is (no encryption)
         try {
@@ -52,9 +54,9 @@ public class AuthServiceTests {
         }
         
         passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, 
-            verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService);
+            verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService, userService);
         emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, 
-            verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService);
+            verificationService, rateLimitService, tenantService, authLogService, captchaService, passwordEncryptionService, userService);
     }
 
     @Test

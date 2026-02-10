@@ -26,6 +26,7 @@ public enum ErrorCodes {
     TENANT_MISMATCH      ("400403", "error.400403", HttpStatus.FORBIDDEN),
     DUPLICATE_TENANT     ("400404", "error.400404", HttpStatus.CONFLICT),
     MISSING_TENANT_HEADER("400405", "error.400405", HttpStatus.BAD_REQUEST),
+    TENANT_MAX_USERS_REACHED("400406", "error.400406", HttpStatus.FORBIDDEN),
 
     // ========== 40 06 验证码/人机校验 ==========
     INVALID_CODE         ("400601", "error.400601", HttpStatus.BAD_REQUEST),
@@ -35,6 +36,7 @@ public enum ErrorCodes {
     // ========== 40 07 限流/风控 ==========
     RATE_LIMITED         ("400701", "error.400701", HttpStatus.TOO_MANY_REQUESTS),
     IP_BLACKLISTED       ("400702", "error.400702", HttpStatus.FORBIDDEN),
+    DAILY_REGISTRATION_LIMIT_REACHED("400703", "error.400703", HttpStatus.TOO_MANY_REQUESTS),
 
     // ========== 40 08 参数校验 ==========
     VALIDATION_FAILED    ("400801", "error.400801", HttpStatus.BAD_REQUEST),

@@ -32,6 +32,7 @@ public class PhoneAuthService {
     private final TenantService tenantService;
     private final AuthLogService authLogService;
     private final CaptchaService captchaService;
+    private final UserService userService;
     @Value("${security.code.phone-ttl-minutes:5}")
     private long phoneTtlMinutes;
 
@@ -92,6 +93,13 @@ public class PhoneAuthService {
 
     public User registerPhone(String tenantId, String phone, String code, String username) {
         tenantService.requireEnabled(tenantId);
+        
+        // Check tenant max users limit
+        userService.checkMaxUsersLimit(tenantId);
+        
+        // Check daily registration limit per tenant/IP
+        rateLimitService.checkDailyRegistrationLimit(tenantId);
+        
         if (!verificationService.verifyAndConsume(buildPhoneKey(tenantId, phone), code)) {
             logger.warn("registerPhone invalid code tenant={} phone={}", tenantId, phone);
             recordFailure(tenantId, null, AuthAction.REGISTER_PHONE);
@@ -117,6 +125,10 @@ public class PhoneAuthService {
         user.setPasswordHash("");
         user.setEnabled(true);
         userMapper.insert(user);
+        
+        // Notify counter service about new user
+        userService.notifyUserCreated(tenantId);
+        
         safeRecord(tenantId, user.getId(), AuthAction.REGISTER_PHONE, true);
         return user;
     }
@@ -188,6 +200,12 @@ public class PhoneAuthService {
         
         if (user == null) {
             // User doesn't exist - register new user
+            // Check tenant max users limit before creating new user
+            userService.checkMaxUsersLimit(tenantId);
+            
+            // Check daily registration limit per tenant/IP
+            rateLimitService.checkDailyRegistrationLimit(tenantId);
+            
             // Use phone number directly as username
             String username = phone;
             
@@ -210,6 +228,10 @@ public class PhoneAuthService {
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
+            
+            // Notify counter service about new user
+            userService.notifyUserCreated(tenantId);
+            
             logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, username);
         } else {
             // User exists - check if enabled

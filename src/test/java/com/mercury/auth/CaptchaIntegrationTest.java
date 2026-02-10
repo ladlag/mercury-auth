@@ -16,6 +16,7 @@ import com.mercury.auth.service.PasswordEncryptionService;
 import com.mercury.auth.service.RateLimitService;
 import com.mercury.auth.service.TenantService;
 import com.mercury.auth.service.TokenService;
+import com.mercury.auth.service.UserService;
 import com.mercury.auth.service.VerificationService;
 import com.mercury.auth.store.UserMapper;
 import com.mercury.auth.util.KeyUtils;
@@ -65,6 +66,7 @@ public class CaptchaIntegrationTest {
         tenantService = Mockito.mock(TenantService.class);
         AuthLogService authLogService = Mockito.mock(AuthLogService.class);
         PasswordEncryptionService passwordEncryptionService = Mockito.mock(PasswordEncryptionService.class);
+        UserService userService = Mockito.mock(UserService.class);
         
         // Mock password encryption service to return input as-is (no encryption)
         try {
@@ -76,10 +78,10 @@ public class CaptchaIntegrationTest {
         
         passwordAuthService = new PasswordAuthService(userMapper, passwordEncoder, jwtService, 
             verificationService, rateLimitService, tenantService, 
-            authLogService, captchaService, passwordEncryptionService);
+            authLogService, captchaService, passwordEncryptionService, userService);
         emailAuthService = new EmailAuthService(userMapper, passwordEncoder, jwtService, 
             verificationService, rateLimitService, tenantService, 
-            authLogService, captchaService, passwordEncryptionService);
+            authLogService, captchaService, passwordEncryptionService, userService);
     }
 
     @Test

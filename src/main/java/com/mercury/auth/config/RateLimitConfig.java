@@ -49,6 +49,12 @@ public class RateLimitConfig {
      */
     private OperationRateLimit refreshToken = new OperationRateLimit(10, 1);
     
+    /**
+     * Daily registration limits per tenant/IP
+     * This limits how many users can register from same IP per tenant per day
+     */
+    private DailyRegistrationLimit dailyRegistration = new DailyRegistrationLimit();
+    
     @Data
     public static class IpRateLimit {
         private long maxAttempts = 50;
@@ -111,5 +117,22 @@ public class RateLimitConfig {
             this.maxAttempts = maxAttempts;
             this.windowMinutes = windowMinutes;
         }
+    }
+    
+    /**
+     * Daily registration limit configuration
+     * Limits number of registrations per tenant/per IP per day
+     */
+    @Data
+    public static class DailyRegistrationLimit {
+        /**
+         * Maximum number of registrations allowed per tenant per IP per day
+         */
+        private long maxRegistrationsPerDay = 10;
+        
+        /**
+         * Whether to enable this limit
+         */
+        private boolean enabled = true;
     }
 }

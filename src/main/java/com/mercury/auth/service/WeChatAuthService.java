@@ -23,6 +23,8 @@ public class WeChatAuthService {
     private final JwtService jwtService;
     private final TenantService tenantService;
     private final AuthLogService authLogService;
+    private final UserService userService;
+    private final RateLimitService rateLimitService;
 
     // Stub for OAuth2 callback handling: openId is trusted input for demo
     public AuthResponse loginOrRegister(String tenantId, String openId, String username) {
@@ -35,12 +37,21 @@ public class WeChatAuthService {
         wrapper.eq("tenant_id", tenantId).eq("username", effectiveUsername);
         User user = userMapper.selectOne(wrapper);
         if (user == null) {
+            // Check tenant max users limit before creating new user
+            userService.checkMaxUsersLimit(tenantId);
+            
+            // Check daily registration limit per tenant/IP
+            rateLimitService.checkDailyRegistrationLimit(tenantId);
+            
             user = new User();
             user.setTenantId(tenantId);
             user.setUsername(effectiveUsername);
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
+            
+            // Notify counter service about new user
+            userService.notifyUserCreated(tenantId);
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
             logger.warn("wechat login disabled tenant={} username={}", tenantId, effectiveUsername);
