@@ -125,6 +125,10 @@ public class PhoneAuthService {
         user.setPasswordHash("");
         user.setEnabled(true);
         userMapper.insert(user);
+        
+        // Notify counter service about new user
+        userService.notifyUserCreated(tenantId);
+        
         safeRecord(tenantId, user.getId(), AuthAction.REGISTER_PHONE, true);
         return user;
     }
@@ -224,6 +228,10 @@ public class PhoneAuthService {
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
+            
+            // Notify counter service about new user
+            userService.notifyUserCreated(tenantId);
+            
             logger.info("quickLoginPhone registered new user tenant={} phone={} username={}", tenantId, phone, username);
         } else {
             // User exists - check if enabled

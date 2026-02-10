@@ -113,6 +113,9 @@ public class PasswordAuthService {
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);
         userMapper.insert(user);
+        
+        // Notify counter service about new user
+        userService.notifyUserCreated(req.getTenantId());
 
         safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_PASSWORD, true);
         return user;

@@ -49,6 +49,9 @@ public class WeChatAuthService {
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);
+            
+            // Notify counter service about new user
+            userService.notifyUserCreated(tenantId);
         }
         if (Boolean.FALSE.equals(user.getEnabled())) {
             logger.warn("wechat login disabled tenant={} username={}", tenantId, effectiveUsername);

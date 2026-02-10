@@ -153,6 +153,9 @@ public class EmailAuthService {
         user.setEnabled(true);
         userMapper.insert(user);
         
+        // Notify counter service about new user
+        userService.notifyUserCreated(req.getTenantId());
+        
         safeRecord(req.getTenantId(), user.getId(), AuthAction.REGISTER_EMAIL, true);
         return user;
     }

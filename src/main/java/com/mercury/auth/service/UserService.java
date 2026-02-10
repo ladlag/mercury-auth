@@ -27,6 +27,8 @@ public class UserService {
     private final AuthLogService authLogService;
     @Lazy
     private final TokenCacheService tokenCacheService;
+    @Lazy
+    private final TenantUserCountService tenantUserCountService;
 
     /**
      * Update user's enabled/disabled status
@@ -119,29 +121,41 @@ public class UserService {
     }
     
     /**
-     * Check if tenant has reached maximum users limit
+     * Check if tenant has reached maximum users limit.
+     * Uses TenantUserCountService for optimized counting with Redis cache and auto-recovery.
+     * 
      * @param tenantId The tenant ID to check
      * @throws ApiException if max users limit is reached
      */
     public void checkMaxUsersLimit(String tenantId) {
-        // Get tenant configuration
-        com.mercury.auth.entity.Tenant tenant = tenantService.getById(tenantId);
-        
-        // If max_users is null, unlimited users are allowed
-        if (tenant.getMaxUsers() == null) {
-            return;
-        }
-        
-        // Count current users
-        long currentUserCount = countUsersByTenant(tenantId);
-        
-        // Check if limit is reached
-        if (currentUserCount >= tenant.getMaxUsers()) {
-            logger.warn("Max users limit reached for tenant={} current={} max={}", 
-                tenantId, currentUserCount, tenant.getMaxUsers());
-            throw new ApiException(ErrorCodes.TENANT_MAX_USERS_REACHED, 
-                "tenant has reached maximum users limit");
-        }
+        // Delegate to TenantUserCountService which handles:
+        // - Redis caching for performance
+        // - Auto-recovery from cache misses
+        // - Fallback to database on Redis failures
+        // - Stale counter detection and re-sync
+        tenantUserCountService.checkMaxUsersLimit(tenantId);
+    }
+    
+    /**
+     * Notify the count service that a user was created.
+     * This increments the cached counter in Redis.
+     * Safe to call even if Redis is unavailable.
+     * 
+     * @param tenantId The tenant ID
+     */
+    public void notifyUserCreated(String tenantId) {
+        tenantUserCountService.incrementUserCount(tenantId);
+    }
+    
+    /**
+     * Notify the count service that a user was deleted.
+     * This decrements the cached counter in Redis.
+     * Safe to call even if Redis is unavailable.
+     * 
+     * @param tenantId The tenant ID
+     */
+    public void notifyUserDeleted(String tenantId) {
+        tenantUserCountService.decrementUserCount(tenantId);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
