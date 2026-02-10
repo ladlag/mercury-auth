@@ -6,7 +6,7 @@
 --   3. Requirement 2 (daily registration limits per tenant/IP) is handled via configuration and Redis
 
 -- Add max_users column to tenants table
-ALTER TABLE tenants ADD COLUMN max_users INT NULL COMMENT 'Maximum number of users allowed for this tenant. NULL means unlimited.';
+ALTER TABLE tenants ADD COLUMN max_users INT NULL COMMENT '最大用户数';
 
 -- Add index for performance when counting users per tenant
 -- This index already exists implicitly via UNIQUE KEY, but making it explicit for clarity

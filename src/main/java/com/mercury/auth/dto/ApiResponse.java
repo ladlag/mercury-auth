@@ -18,20 +18,20 @@ public class ApiResponse<T> {
      * Create a success response with data
      */
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>("200000", "success", data);
+        return new ApiResponse<>("200", "success", data);
     }
 
     /**
      * Create a success response with data and custom message
      */
     public static <T> ApiResponse<T> success(T data, String message) {
-        return new ApiResponse<>("200000", message, data);
+        return new ApiResponse<>("200", message, data);
     }
 
     /**
      * Create a success response with only message (no data)
      */
     public static <T> ApiResponse<T> successWithMessage(String message) {
-        return new ApiResponse<>("200000", message, null);
+        return new ApiResponse<>("200", message, null);
     }
 }
