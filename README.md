@@ -58,6 +58,30 @@ The following endpoints don't require authentication but are rate limited:
 - Rate limiting and captcha gating after repeated failures
 - Comprehensive security logging
 
+## API Documentation (Swagger UI)
+
+### Accessing Swagger UI
+
+In **development** and **test** environments, the Swagger UI is enabled and can be accessed at:
+
+- **Swagger UI**: `http://localhost:10000/auth-api/swagger-ui.html`
+  - Alternative: `http://localhost:10000/auth-api/swagger-ui/index.html`
+- **OpenAPI Spec (JSON)**: `http://localhost:10000/auth-api/v3/api-docs`
+
+**Note**: 
+- The server runs on port **10000** (configured in `application.yml`)
+- The context path is **/auth-api** (configured in `application.yml`)
+- Swagger UI is **disabled in production** for security reasons (configured in `application-prod.yml`)
+
+### Common Issues
+
+**403 Forbidden Error**: If you're getting a 403 error when accessing Swagger UI:
+1. Verify you're using the correct URL: `http://localhost:10000/auth-api/swagger-ui.html`
+   - ❌ Wrong: `http://localhost:10000/auth-api/auth/swagger-ui/index.html` (extra `/auth`)
+   - ✅ Correct: `http://localhost:10000/auth-api/swagger-ui.html`
+2. Ensure you're running in `dev` or `test` profile (not `prod`)
+3. Check that Swagger is enabled in your active profile's configuration file
+
 ## Documentation
 - [Rate Limiting Guide](RATE_LIMITING.md) - Detailed guide on rate limiting configuration and usage
 - [Identifier Field Guide](IDENTIFIER_GUIDE.md) - Explanation of the identifier field usage in authentication (中英文)
