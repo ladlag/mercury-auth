@@ -152,6 +152,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = Long.valueOf(String.valueOf(userIdObj));
             String username = String.valueOf(usernameObj);
             
+            // CRITICAL: Check if all user tokens have been revoked (e.g., after password change/reset)
+            if (claims.getIssuedAt() != null && 
+                tokenService.isTokenRevokedForUser(tokenTenantId, userId, claims.getIssuedAt().getTime())) {
+                logger.warn("Revoked token attempted for user={} tenant={}", username, tokenTenantId);
+                tokenCacheService.evictToken(tokenHash);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"code\":\"TOKEN_REVOKED\",\"message\":\"token has been revoked\"}");
+                return;
+            }
+            
             // Create authentication token with user details
             JwtUserDetails userDetails = new JwtUserDetails(tokenTenantId, userId, username);
             UsernamePasswordAuthenticationToken authentication = 

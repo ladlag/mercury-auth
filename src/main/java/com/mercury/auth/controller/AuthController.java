@@ -80,6 +80,11 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> resetPassword(@Validated @RequestBody AuthRequests.ResetPassword req) {
         User user = passwordAuthService.resetPassword(req);
+        
+        // Revoke all existing tokens for this user after password reset (security enhancement)
+        // This forces the user to re-login on all devices
+        tokenService.revokeAllUserTokens(req.getTenantId(), user.getId());
+        
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
