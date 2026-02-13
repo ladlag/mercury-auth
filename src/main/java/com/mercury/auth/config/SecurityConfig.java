@@ -38,8 +38,6 @@ public class SecurityConfig {
                 // Public endpoints - authentication APIs defined in SecurityConstants
                 .antMatchers(SecurityConstants.PUBLIC_ENDPOINTS).permitAll()
                 // Protected endpoints requiring JWT authentication
-                // Logout requires valid JWT token
-                .antMatchers("/api/auth/logout").authenticated()
                 .antMatchers("/api/auth/change-password").authenticated()
                 .antMatchers("/api/auth/user-status").authenticated()
                 // Tenant management APIs - require authentication

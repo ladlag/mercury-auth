@@ -36,7 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
-    private static final String LOGOUT_PATH = "/api/auth/logout";
 
     private final JwtService jwtService;
     private final TokenService tokenService;
@@ -85,9 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String tokenHash = tokenCacheService.hashToken(token);
             
             // CRITICAL: Check if token is blacklisted (logout/refresh invalidation)
-            // Skip blacklist check for the logout endpoint so that users can always log out,
-            // even if their token was already revoked (e.g. by admin or token refresh).
-            if (!LOGOUT_PATH.equals(requestPath) && tokenService.isTokenHashBlacklisted(tokenHash)) {
+            if (tokenService.isTokenHashBlacklisted(tokenHash)) {
                 logger.warn("Blacklisted token attempted");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
