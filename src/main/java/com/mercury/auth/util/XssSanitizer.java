@@ -1,7 +1,13 @@
 package com.mercury.auth.util;
 
+import org.springframework.web.util.HtmlUtils;
+
 /**
  * Utility class for sanitizing user input to prevent XSS attacks.
+ * 
+ * Delegates to Spring's {@link HtmlUtils#htmlEscape(String)} which is a
+ * well-tested, comprehensive HTML escaping utility that handles all HTML
+ * special characters including &lt;, &gt;, &amp;, ", and '.
  * 
  * Although this application is a pure REST JSON API (no HTML rendering),
  * sanitizing output data provides defense-in-depth against potential XSS
@@ -14,8 +20,7 @@ public final class XssSanitizer {
     }
 
     /**
-     * Sanitize a string by escaping HTML special characters.
-     * Replaces &lt;, &gt;, &amp;, ", and ' with their HTML entity equivalents.
+     * Sanitize a string by escaping HTML special characters using Spring's HtmlUtils.
      *
      * @param input the string to sanitize
      * @return the sanitized string, or null if input is null
@@ -24,30 +29,6 @@ public final class XssSanitizer {
         if (input == null) {
             return null;
         }
-        StringBuilder sb = new StringBuilder(input.length() + (input.length() / 2));
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-            switch (c) {
-                case '&':
-                    sb.append("&amp;");
-                    break;
-                case '<':
-                    sb.append("&lt;");
-                    break;
-                case '>':
-                    sb.append("&gt;");
-                    break;
-                case '"':
-                    sb.append("&quot;");
-                    break;
-                case '\'':
-                    sb.append("&#x27;");
-                    break;
-                default:
-                    sb.append(c);
-                    break;
-            }
-        }
-        return sb.toString();
+        return HtmlUtils.htmlEscape(input);
     }
 }

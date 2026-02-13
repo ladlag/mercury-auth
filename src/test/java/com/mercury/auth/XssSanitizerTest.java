@@ -43,13 +43,13 @@ class XssSanitizerTest {
 
     @Test
     void sanitize_singleQuote_isEscaped() {
-        assertEquals("it&#x27;s", XssSanitizer.sanitize("it's"));
+        assertEquals("it&#39;s", XssSanitizer.sanitize("it's"));
     }
 
     @Test
     void sanitize_mixedContent_allSpecialCharsEscaped() {
         String input = "<div class=\"test\">'hello' & world</div>";
-        String expected = "&lt;div class=&quot;test&quot;&gt;&#x27;hello&#x27; &amp; world&lt;/div&gt;";
+        String expected = "&lt;div class=&quot;test&quot;&gt;&#39;hello&#39; &amp; world&lt;/div&gt;";
         assertEquals(expected, XssSanitizer.sanitize(input));
     }
 
