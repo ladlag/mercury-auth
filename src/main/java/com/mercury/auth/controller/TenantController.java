@@ -6,6 +6,7 @@ import com.mercury.auth.dto.TenantResponse;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.service.RsaKeyService;
 import com.mercury.auth.service.TenantService;
+import com.mercury.auth.util.XssSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -56,8 +57,8 @@ public class TenantController {
 
     private TenantResponse buildTenantResponse(Tenant tenant, boolean includeEncryptionStatus) {
         TenantResponse.TenantResponseBuilder builder = TenantResponse.builder()
-                .tenantId(tenant.getTenantId())
-                .name(tenant.getName())
+                .tenantId(XssSanitizer.sanitize(tenant.getTenantId()))
+                .name(XssSanitizer.sanitize(tenant.getName()))
                 .enabled(tenant.getEnabled());
         if (includeEncryptionStatus) {
             builder.passwordEncryptionEnabled(tenant.getPasswordEncryptionEnabled());

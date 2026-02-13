@@ -31,6 +31,11 @@ public class SecurityConfig {
         // 3. The API is not rendered in a browser with forms
         // For stateless JWT authentication, CSRF protection is not required
         http.csrf().disable()
+                .headers()
+                .contentTypeOptions().and()
+                .xssProtection().xssProtectionEnabled(true).and()
+                .frameOptions().deny()
+                .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
