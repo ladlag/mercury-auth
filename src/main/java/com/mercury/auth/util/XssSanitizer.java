@@ -24,7 +24,7 @@ public final class XssSanitizer {
         if (input == null) {
             return null;
         }
-        StringBuilder sb = new StringBuilder(input.length());
+        StringBuilder sb = new StringBuilder(input.length() + (input.length() / 2));
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
             switch (c) {
