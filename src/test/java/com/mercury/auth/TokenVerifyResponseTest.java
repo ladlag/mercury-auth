@@ -3,6 +3,7 @@ package com.mercury.auth;
 import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.entity.TokenBlacklist;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.security.JwtService;
@@ -15,6 +16,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.impl.DefaultClaims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,6 +24,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -177,5 +180,54 @@ public class TokenVerifyResponseTest {
         assertThat(response.getPhone()).isNull();
         assertThat(response.getExpiresAt()).isNotNull();
         assertThat(response.getExpiresAt()).isEqualTo(expirationDate.getTime());
+    }
+
+    @Test
+    void blacklistToken_inserts_into_database() {
+        // Setup
+        String tenantId = "tenant1";
+        String token = "valid.jwt.token";
+        Long userId = 123L;
+        String username = "testuser";
+        
+        // Create a future expiration date (2 hours from now)
+        java.util.Date expirationDate = createExpirationDate();
+
+        // Mock JWT parsing
+        Claims claims = new DefaultClaims();
+        claims.put("tenantId", tenantId);
+        claims.put("userId", userId);
+        claims.setExpiration(expirationDate);
+        when(jwtService.parse(token)).thenReturn(claims);
+
+        // Mock token not blacklisted
+        when(redisTemplate.hasKey(anyString())).thenReturn(false);
+
+        // Mock user lookup
+        User user = new User();
+        user.setId(userId);
+        user.setTenantId(tenantId);
+        user.setUsername(username);
+        user.setEnabled(true);
+        when(userMapper.selectOne(any())).thenReturn(user);
+
+        // Mock database insert
+        when(tokenBlacklistMapper.insert(any(TokenBlacklist.class))).thenReturn(1);
+
+        // Execute
+        User result = tokenService.blacklistToken(tenantId, token);
+
+        // Verify - token blacklist entry should be inserted into database
+        ArgumentCaptor<TokenBlacklist> captor = ArgumentCaptor.forClass(TokenBlacklist.class);
+        verify(tokenBlacklistMapper).insert(captor.capture());
+        
+        TokenBlacklist captured = captor.getValue();
+        assertThat(captured.getTokenHash()).isNotNull();
+        assertThat(captured.getTokenHash()).isNotEmpty();
+        assertThat(captured.getTenantId()).isEqualTo(tenantId);
+        assertThat(captured.getExpiresAt()).isNotNull();
+        assertThat(captured.getCreatedAt()).isNotNull();
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
     }
 }

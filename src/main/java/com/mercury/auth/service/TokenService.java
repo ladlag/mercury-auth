@@ -195,7 +195,7 @@ public class TokenService {
         try {
             tokenBlacklistMapper.insert(entry);
         } catch (Exception ex) {
-            logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+            logger.error("token blacklist insert failed tenant={} tokenHash={}: {}", tokenTenant, entry.getTokenHash(), ex.getMessage(), ex);
         }
         safeRecord(tenantId, userId, AuthAction.LOGOUT, true);
         return user;
@@ -251,7 +251,7 @@ public class TokenService {
             try {
                 tokenBlacklistMapper.insert(entry);
             } catch (Exception ex) {
-                logger.warn("token blacklist insert failed tenant={} tokenHash={}", tokenTenant, entry.getTokenHash());
+                logger.error("token blacklist insert failed tenant={} tokenHash={}: {}", tokenTenant, entry.getTokenHash(), ex.getMessage(), ex);
             }
         }
         safeRecord(tenantId, userId, AuthAction.REFRESH_TOKEN, true);
