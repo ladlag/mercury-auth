@@ -104,6 +104,16 @@ public class TokenService {
                 throw new ApiException(ErrorCodes.INVALID_TOKEN, "token expired");
             }
             
+            // SECURITY: Check per-user token revocation even for cached responses
+            // This prevents revoked tokens from being served from cache after password change/reset
+            if (cached.getIssuedAt() != null && 
+                isTokenRevokedForUser(cached.getTenantId(), cached.getUserId(), cached.getIssuedAt())) {
+                logger.warn("verifyToken cached token revoked for user tenant={} userId={}", cached.getTenantId(), cached.getUserId());
+                tokenCacheService.evictToken(tokenHash);
+                recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN);
+                throw new ApiException(ErrorCodes.TOKEN_REVOKED, "token revoked");
+            }
+            
             // Log successful token verification (cache hit) for audit trail
             logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
             safeRecord(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN, true);
@@ -125,10 +135,10 @@ public class TokenService {
         Long userId = requireUserId(claims);
         
         // Check if all user tokens have been revoked (e.g., after password change)
-        long tokenIssuedAt = claims.getIssuedAt().getTime();
-        if (isTokenRevokedForUser(tokenTenant, userId, tokenIssuedAt)) {
+        if (claims.getIssuedAt() != null && 
+            isTokenRevokedForUser(tokenTenant, userId, claims.getIssuedAt().getTime())) {
             logger.warn("verifyToken token revoked for user tenant={} userId={} issuedAt={}", 
-                    tokenTenant, userId, tokenIssuedAt);
+                    tokenTenant, userId, claims.getIssuedAt().getTime());
             recordFailure(tenantId, userId, AuthAction.VERIFY_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_REVOKED, "token revoked");
         }
@@ -143,6 +153,7 @@ public class TokenService {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
+                .issuedAt(claims.getIssuedAt() != null ? claims.getIssuedAt().getTime() : null)
                 .build();
         
         // Cache the verification result to improve performance on subsequent requests

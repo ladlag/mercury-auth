@@ -13,4 +13,5 @@ public class TokenVerifyResponse {
     private String email;
     private String phone;
     private Long expiresAt;  // Unix timestamp in milliseconds
+    private Long issuedAt;   // Unix timestamp in milliseconds (for revocation checks)
 }
