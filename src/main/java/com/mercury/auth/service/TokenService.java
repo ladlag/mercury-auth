@@ -250,13 +250,38 @@ public class TokenService {
 
     /**
      * Check blacklist status using a precomputed token hash.
+     * Checks Redis first for performance, falls back to database if not found in Redis.
+     * If found in database but not in Redis, re-caches in Redis for subsequent checks.
      */
     private boolean isBlacklistedByHash(String tokenHash) {
         if (!blacklistConfig.isTokenEnabled()) {
             logger.debug("Token blacklist checking is disabled");
             return false;
         }
-        return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKeyFromHash(tokenHash)));
+        // Check Redis first (fast path)
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKeyFromHash(tokenHash)))) {
+            return true;
+        }
+        // Fallback to database check (handles Redis restart/eviction)
+        QueryWrapper<TokenBlacklist> wrapper = new QueryWrapper<>();
+        wrapper.eq("token_hash", tokenHash);
+        TokenBlacklist entry = tokenBlacklistMapper.selectOne(wrapper);
+        if (entry != null && entry.getExpiresAt() != null && entry.getExpiresAt().isAfter(LocalDateTime.now())) {
+            // Re-cache in Redis for subsequent checks
+            Duration ttl = Duration.between(LocalDateTime.now(), entry.getExpiresAt());
+            if (!ttl.isNegative() && !ttl.isZero()) {
+                try {
+                    redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), 
+                            entry.getTenantId(), ttl);
+                    logger.info("Token blacklist re-cached from database for tenant={}", 
+                            entry.getTenantId());
+                } catch (Exception ex) {
+                    logger.warn("Failed to re-cache token blacklist in Redis: {}", ex.getMessage());
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
