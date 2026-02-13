@@ -68,7 +68,7 @@ public class TokenService {
         // CRITICAL: Check blacklist BEFORE cache to prevent returning cached responses for blacklisted tokens
         if (isBlacklistedByHash(tokenHash)) {
             logger.warn("verifyToken blacklisted tenant={}", tenantId);
-            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
+            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN, tokenHash);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         
@@ -100,13 +100,12 @@ public class TokenService {
             if (cached.getExpiresAt() != null && cached.getExpiresAt() <= now) {
                 logger.warn("verifyToken cached token expired tenant={} userId={}", cached.getTenantId(), cached.getUserId());
                 tokenCacheService.evictToken(tokenHash);
-                recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN);
+                recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN, tokenHash);
                 throw new ApiException(ErrorCodes.INVALID_TOKEN, "token expired");
             }
             
-            // Log successful token verification (cache hit) for audit trail
+            // Cache hit: skip audit log to avoid duplicate VERIFY_TOKEN entries for the same token
             logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
-            safeRecord(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN, true);
             return cached;
         }
         
@@ -116,7 +115,7 @@ public class TokenService {
         String jti = claims.getId();
         if (jti != null && isJtiBlacklisted(jti)) {
             logger.warn("verifyToken JTI blacklisted tenant={} jti={}", tenantId, jti);
-            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN);
+            recordFailure(tenantId, null, AuthAction.VERIFY_TOKEN, tokenHash);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         
@@ -129,12 +128,12 @@ public class TokenService {
             isTokenRevokedForUser(tokenTenant, userId, claims.getIssuedAt().getTime())) {
             logger.warn("verifyToken token revoked for user tenant={} userId={} issuedAt={}", 
                     tokenTenant, userId, claims.getIssuedAt().getTime());
-            recordFailure(tenantId, userId, AuthAction.VERIFY_TOKEN);
+            recordFailure(tenantId, userId, AuthAction.VERIFY_TOKEN, tokenHash);
             throw new ApiException(ErrorCodes.TOKEN_REVOKED, "token revoked");
         }
         
         User user = loadActiveUser(tokenTenant, userId);
-        safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true);
+        safeRecord(tenantId, userId, AuthAction.VERIFY_TOKEN, true, tokenHash);
         
         TokenVerifyResponse response = TokenVerifyResponse.builder()
                 .tenantId(tokenTenant)
@@ -158,14 +157,14 @@ public class TokenService {
         Long userId = requireUserId(claims);
         User user = loadActiveUser(tokenTenant, userId);
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
+        String tokenHash = TokenHashUtil.hashToken(token);
         if (ttl.isNegative() || ttl.isZero()) {
             logger.warn("logout token expired tenant={} userId={}", tenantId, userId);
-            recordFailure(tenantId, userId, AuthAction.LOGOUT);
+            recordFailure(tenantId, userId, AuthAction.LOGOUT, tokenHash);
             throw new ApiException(ErrorCodes.INVALID_TOKEN, "invalid token");
         }
         
         // Evict from cache immediately
-        String tokenHash = TokenHashUtil.hashToken(token);
         tokenCacheService.evictToken(tokenHash);
         // Blacklist by token hash
         redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
@@ -186,7 +185,7 @@ public class TokenService {
         } catch (Exception ex) {
             logger.error("token blacklist insert failed tenant={} tokenHash={}: {}", tokenTenant, entry.getTokenHash(), ex.getMessage(), ex);
         }
-        safeRecord(tenantId, userId, AuthAction.LOGOUT, true);
+        safeRecord(tenantId, userId, AuthAction.LOGOUT, true, tokenHash);
         return user;
     }
 
@@ -199,7 +198,7 @@ public class TokenService {
         
         if (isBlacklistedByHash(tokenHash)) {
             logger.warn("refreshToken blacklisted tenant={}", tenantId);
-            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
+            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN, tokenHash);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         Claims claims = parseClaims(token);
@@ -208,7 +207,7 @@ public class TokenService {
         String jti = claims.getId();
         if (jti != null && isJtiBlacklisted(jti)) {
             logger.warn("refreshToken JTI blacklisted tenant={} jti={}", tenantId, jti);
-            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
+            recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN, tokenHash);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
         }
         
@@ -245,7 +244,7 @@ public class TokenService {
                 logger.error("token blacklist insert failed tenant={} tokenHash={}: {}", tokenTenant, entry.getTokenHash(), ex.getMessage(), ex);
             }
         }
-        safeRecord(tenantId, userId, AuthAction.REFRESH_TOKEN, true);
+        safeRecord(tenantId, userId, AuthAction.REFRESH_TOKEN, true, tokenHash);
         return new AuthResponse(newToken, jwtService.getTtlSeconds());
     }
 
@@ -390,7 +389,15 @@ public class TokenService {
         authLogService.recordFailure(tenantId, userId, action);
     }
 
+    private void recordFailure(String tenantId, Long userId, AuthAction action, String tokenHash) {
+        authLogService.recordFailure(tenantId, userId, action, tokenHash);
+    }
+
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         authLogService.safeRecord(tenantId, userId, action, success);
+    }
+
+    private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success, String tokenHash) {
+        authLogService.safeRecord(tenantId, userId, action, success, tokenHash);
     }
 }

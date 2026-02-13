@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @TableName("users")
 public class User {
@@ -16,4 +18,6 @@ public class User {
     private String phone;
     private String passwordHash;
     private Boolean enabled;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
