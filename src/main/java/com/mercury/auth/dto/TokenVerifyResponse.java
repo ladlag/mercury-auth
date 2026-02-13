@@ -1,5 +1,6 @@
 package com.mercury.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,5 +14,7 @@ public class TokenVerifyResponse {
     private String email;
     private String phone;
     private Long expiresAt;  // Unix timestamp in milliseconds
-    private Long issuedAt;   // Unix timestamp in milliseconds (for revocation checks)
+
+    @JsonIgnore
+    private Long issuedAt;   // Internal use only: for cached revocation checks, not exposed in API response
 }
