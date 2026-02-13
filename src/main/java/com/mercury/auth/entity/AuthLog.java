@@ -17,5 +17,6 @@ public class AuthLog {
     private String action;
     private Boolean success;
     private String ip;
+    private String tokenHash;
     private LocalDateTime createdAt;
 }

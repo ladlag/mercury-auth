@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(50),
   password_hash VARCHAR(200) NOT NULL,
   enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_tenant_username (tenant_id, username),
   UNIQUE KEY uniq_tenant_email (tenant_id, email),
   UNIQUE KEY uniq_tenant_phone (tenant_id, phone)
@@ -29,6 +31,7 @@ CREATE TABLE IF NOT EXISTS auth_logs (
   action VARCHAR(64) NOT NULL,
   success TINYINT(1) NOT NULL,
   ip VARCHAR(64),
+  token_hash VARCHAR(128),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

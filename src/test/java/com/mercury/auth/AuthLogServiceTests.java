@@ -1,10 +1,12 @@
 package com.mercury.auth;
 
 import com.mercury.auth.dto.AuthAction;
+import com.mercury.auth.entity.AuthLog;
 import com.mercury.auth.service.AuthLogService;
 import com.mercury.auth.store.AuthLogMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -64,9 +66,61 @@ public class AuthLogServiceTests {
         when(authLogMapper.insert(any())).thenReturn(1);
 
         // Act
-        authLogService.record("t1", 1L, AuthAction.LOGIN_PASSWORD, true, "192.168.1.1");
+        authLogService.record("t1", 1L, AuthAction.LOGIN_PASSWORD, true, "192.168.1.1", null);
 
         // Assert
         verify(authLogMapper, times(1)).insert(any());
+    }
+
+    @Test
+    public void record_withTokenHash_persistsTokenHash() {
+        // Arrange
+        when(authLogMapper.insert(any())).thenReturn(1);
+        String tokenHash = "abc123hash";
+
+        // Act
+        authLogService.record("t1", 1L, AuthAction.VERIFY_TOKEN, true, tokenHash);
+
+        // Assert
+        ArgumentCaptor<AuthLog> captor = ArgumentCaptor.forClass(AuthLog.class);
+        verify(authLogMapper, times(1)).insert(captor.capture());
+        AuthLog log = captor.getValue();
+        assertEquals("t1", log.getTenantId());
+        assertEquals(1L, log.getUserId());
+        assertEquals(AuthAction.VERIFY_TOKEN.name(), log.getAction());
+        assertTrue(log.getSuccess());
+        assertEquals(tokenHash, log.getTokenHash());
+    }
+
+    @Test
+    public void record_withoutTokenHash_tokenHashIsNull() {
+        // Arrange
+        when(authLogMapper.insert(any())).thenReturn(1);
+
+        // Act
+        authLogService.record("t1", 1L, AuthAction.LOGIN_PASSWORD, true);
+
+        // Assert
+        ArgumentCaptor<AuthLog> captor = ArgumentCaptor.forClass(AuthLog.class);
+        verify(authLogMapper, times(1)).insert(captor.capture());
+        AuthLog log = captor.getValue();
+        assertNull(log.getTokenHash());
+    }
+
+    @Test
+    public void recordFailure_withTokenHash_persistsTokenHash() {
+        // Arrange
+        when(authLogMapper.insert(any())).thenReturn(1);
+        String tokenHash = "failedTokenHash";
+
+        // Act
+        authLogService.recordFailure("t1", 1L, AuthAction.LOGOUT, tokenHash);
+
+        // Assert
+        ArgumentCaptor<AuthLog> captor = ArgumentCaptor.forClass(AuthLog.class);
+        verify(authLogMapper, times(1)).insert(captor.capture());
+        AuthLog log = captor.getValue();
+        assertFalse(log.getSuccess());
+        assertEquals(tokenHash, log.getTokenHash());
     }
 }

@@ -1,5 +1,6 @@
 package com.mercury.auth;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.TokenVerifyResponse;
@@ -22,7 +23,10 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -107,8 +111,9 @@ public class TokenVerifyResponseTest {
         claims.setExpiration(expirationDate);
         when(jwtService.parse(token)).thenReturn(claims);
 
-        // Mock token not blacklisted
+        // Mock token not blacklisted (neither Redis nor DB)
         when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        when(tokenBlacklistMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
         // Mock tenant enabled
         // tenantService.requireEnabled() will be called but doesn't throw
@@ -155,8 +160,9 @@ public class TokenVerifyResponseTest {
         claims.setExpiration(expirationDate);
         when(jwtService.parse(token)).thenReturn(claims);
 
-        // Mock token not blacklisted
+        // Mock token not blacklisted (neither Redis nor DB)
         when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        when(tokenBlacklistMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
         // Mock user lookup - user with no email/phone
         User user = new User();
@@ -200,8 +206,9 @@ public class TokenVerifyResponseTest {
         claims.setExpiration(expirationDate);
         when(jwtService.parse(token)).thenReturn(claims);
 
-        // Mock token not blacklisted
+        // Mock token not blacklisted (neither Redis nor DB)
         when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        when(tokenBlacklistMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
         // Mock user lookup
         User user = new User();
@@ -229,5 +236,33 @@ public class TokenVerifyResponseTest {
         assertThat(captured.getCreatedAt()).isNotNull();
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(userId);
+    }
+
+    @Test
+    void verifyToken_rejects_blacklisted_token_from_database_fallback() {
+        // Setup: token is blacklisted in database but NOT in Redis (e.g., after Redis restart)
+        String tenantId = "tenant1";
+        String token = "blacklisted.jwt.token";
+        String tokenHash = com.mercury.auth.util.TokenHashUtil.hashToken(token);
+        
+        // Redis does NOT have the blacklist key
+        when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        
+        // Database HAS the blacklist entry (still valid, not expired)
+        TokenBlacklist dbEntry = new TokenBlacklist();
+        dbEntry.setTokenHash(tokenHash);
+        dbEntry.setTenantId(tenantId);
+        dbEntry.setExpiresAt(LocalDateTime.now().plusHours(1));
+        dbEntry.setCreatedAt(LocalDateTime.now().minusMinutes(5));
+        when(tokenBlacklistMapper.selectOne(any(QueryWrapper.class))).thenReturn(dbEntry);
+
+        // Execute & Verify - should throw TOKEN_BLACKLISTED even though Redis is empty
+        assertThatThrownBy(() -> tokenService.verifyToken(tenantId, token))
+                .isInstanceOf(com.mercury.auth.exception.ApiException.class)
+                .extracting(e -> ((com.mercury.auth.exception.ApiException) e).getCode())
+                .isEqualTo(ErrorCodes.TOKEN_BLACKLISTED);
+        
+        // Verify Redis was re-populated from database
+        verify(valueOperations).set(contains("blacklist:"), eq(tenantId), any(java.time.Duration.class));
     }
 }
