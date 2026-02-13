@@ -353,12 +353,11 @@ public class TokenService {
     }
 
     /**
-     * Revoke all tokens for a specific user by invalidating the user status cache.
-     * This forces all subsequent token verifications to check the database,
-     * where the user's lastPasswordChangeAt timestamp can be checked (if implemented).
+     * Revoke all tokens for a specific user by clearing all token caches
+     * and storing a revocation timestamp in Redis.
      * 
-     * Note: This is a lightweight approach that doesn't require tracking all issued tokens.
-     * For immediate revocation, consider maintaining a user-specific token generation timestamp.
+     * After cache eviction, subsequent requests with old tokens will be re-parsed
+     * and rejected if they were issued before the revocation timestamp.
      * 
      * @param tenantId Tenant ID
      * @param userId User ID whose tokens should be revoked
