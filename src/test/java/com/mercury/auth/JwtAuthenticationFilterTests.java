@@ -118,6 +118,41 @@ public class JwtAuthenticationFilterTests {
     }
 
     @Test
+    public void testLogoutIsPublicEndpointAndSkipsBlacklistCheck() throws Exception {
+        ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager(
+                "tokenCache",
+                "tokenVerifyCache",
+                "tenantStatusCache",
+                "userStatusCache"
+        );
+        TokenCacheService tokenCacheService = new TokenCacheService(cacheManager);
+
+        JwtService jwtService = mock(JwtService.class);
+        TokenService tokenService = mock(TokenService.class);
+        BlacklistService blacklistService = mock(BlacklistService.class);
+
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, tokenService, tokenCacheService, blacklistService);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setServletPath("/api/auth/logout");
+        request.addHeader("Authorization", "Bearer some-token");
+        request.addHeader("X-Tenant-Id", "tenant1");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        try {
+            filter.doFilter(request, response, chain);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+
+        assertEquals(200, response.getStatus());
+        verify(chain).doFilter(any(), any());
+        verify(tokenService, never()).isTokenHashBlacklisted(anyString());
+        verify(jwtService, never()).parse(anyString());
+    }
+
+    @Test
     public void testValidTokenPassesAllChecks() throws Exception {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager(
                 "tokenCache",

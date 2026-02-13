@@ -25,6 +25,7 @@ public final class SecurityConstants {
         "/api/auth/quick-login-*",     // Matches /api/auth/quick-login-phone, etc.
         "/api/auth/refresh-token",
         "/api/auth/verify-token",
+        "/api/auth/logout",
         "/api/auth/captcha",
         "/api/auth/forgot-password",
         "/api/auth/reset-password",
@@ -51,6 +52,7 @@ public final class SecurityConstants {
     private static final String[] EXACT_PUBLIC_ENDPOINTS = {
         "/api/auth/refresh-token",
         "/api/auth/verify-token",
+        "/api/auth/logout",
         "/api/auth/captcha",
         "/api/auth/forgot-password",
         "/api/auth/reset-password",
