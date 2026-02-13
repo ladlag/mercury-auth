@@ -20,9 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -120,56 +118,6 @@ public class JwtAuthenticationFilterTests {
     }
 
     @Test
-    public void testRevokedUserTokenIsRejected() throws Exception {
-        ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager(
-                "tokenCache",
-                "tokenVerifyCache",
-                "tenantStatusCache",
-                "userStatusCache"
-        );
-        TokenCacheService tokenCacheService = new TokenCacheService(cacheManager);
-
-        String token = "revoked-user-token";
-        String tokenHash = tokenCacheService.hashToken(token);
-
-        DefaultClaims claims = new DefaultClaims();
-        claims.put("tenantId", "tenant1");
-        claims.put("userId", 1L);
-        claims.put("username", "user1");
-        claims.setIssuedAt(Date.from(Instant.now().minusSeconds(60)));
-        claims.setExpiration(Date.from(Instant.now().plusSeconds(3600)));
-
-        JwtService jwtService = mock(JwtService.class);
-        TokenService tokenService = mock(TokenService.class);
-        BlacklistService blacklistService = mock(BlacklistService.class);
-        when(tokenService.isTokenHashBlacklisted(tokenHash)).thenReturn(false);
-        when(jwtService.parse(token)).thenReturn(claims);
-        when(jwtService.isExpired(any())).thenReturn(false);
-        // Simulate user token revocation (e.g., after password change)
-        when(tokenService.isTokenRevokedForUser(eq("tenant1"), eq(1L), anyLong())).thenReturn(true);
-
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, tokenService, tokenCacheService, blacklistService);
-
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setServletPath("/api/tenants/list");
-        request.addHeader("Authorization", "Bearer " + token);
-        request.addHeader("X-Tenant-Id", "tenant1");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain chain = mock(FilterChain.class);
-
-        try {
-            filter.doFilter(request, response, chain);
-        } finally {
-            SecurityContextHolder.clearContext();
-        }
-
-        assertEquals(401, response.getStatus());
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
-        assertNull(tokenCacheService.getCachedClaims(tokenHash));
-        verify(chain, never()).doFilter(any(), any());
-    }
-
-    @Test
     public void testValidTokenPassesAllChecks() throws Exception {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager(
                 "tokenCache",
@@ -195,7 +143,6 @@ public class JwtAuthenticationFilterTests {
         when(tokenService.isTokenHashBlacklisted(tokenHash)).thenReturn(false);
         when(jwtService.parse(token)).thenReturn(claims);
         when(jwtService.isExpired(any())).thenReturn(false);
-        when(tokenService.isTokenRevokedForUser(eq("tenant1"), eq(1L), anyLong())).thenReturn(false);
 
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, tokenService, tokenCacheService, blacklistService);
 

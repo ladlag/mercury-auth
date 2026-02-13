@@ -104,17 +104,6 @@ public class TokenService {
                 throw new ApiException(ErrorCodes.INVALID_TOKEN, "token expired");
             }
             
-            // SECURITY: Check per-user token revocation even for cached responses
-            // This prevents revoked tokens from being served from cache after password change/reset
-            Long cachedIssuedAt = tokenCacheService.getCachedTokenIssuedAt(tokenHash);
-            if (cachedIssuedAt != null && 
-                isTokenRevokedForUser(cached.getTenantId(), cached.getUserId(), cachedIssuedAt)) {
-                logger.warn("verifyToken cached token revoked for user tenant={} userId={}", cached.getTenantId(), cached.getUserId());
-                tokenCacheService.evictToken(tokenHash);
-                recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN);
-                throw new ApiException(ErrorCodes.TOKEN_REVOKED, "token revoked");
-            }
-            
             // Log successful token verification (cache hit) for audit trail
             logger.debug("Token verification cache hit for hash: {}", tokenHash.substring(0, Math.min(10, tokenHash.length())));
             safeRecord(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN, true);
@@ -158,9 +147,6 @@ public class TokenService {
         
         // Cache the verification result to improve performance on subsequent requests
         tokenCacheService.cacheVerifyResponse(tokenHash, response);
-        // Cache issuedAt separately for per-user revocation checks (not part of the user-facing DTO)
-        tokenCacheService.cacheTokenIssuedAt(tokenHash, 
-                claims.getIssuedAt() != null ? claims.getIssuedAt().getTime() : null);
         
         return response;
     }
@@ -380,14 +366,11 @@ public class TokenService {
     public void revokeAllUserTokens(String tenantId, Long userId) {
         logger.info("Revoking all tokens for tenant={} userId={}", tenantId, userId);
         
-        // Evict user from cache to force fresh database checks on next token verification
-        tokenCacheService.evictUser(tenantId, userId);
+        // Clear all token caches to force re-validation on next request
+        // Old tokens will be re-parsed and checked against the revocation timestamp below
+        tokenCacheService.evictAllForUserStatusChange(tenantId, userId);
         
-        // Evict tenant status cache to ensure fresh validation
-        tokenCacheService.evictTenant(tenantId);
-        
-        // Optional: Store a revocation timestamp in Redis for additional checking
-        // This can be checked during token verification for immediate revocation
+        // Store a revocation timestamp in Redis so re-validated tokens issued before this time are rejected
         String revocationKey = "token:revocation:" + tenantId + ":" + userId;
         redisTemplate.opsForValue().set(revocationKey, 
                 String.valueOf(System.currentTimeMillis()), 
