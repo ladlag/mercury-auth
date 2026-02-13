@@ -11,10 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 
 @Service
@@ -203,39 +200,48 @@ public class RateLimitService {
      * attackers from bypassing rate limits by triggering IP extraction failures.
      */
     public void checkIpRateLimit(String action) {
+        String clientIp = requireCurrentRequestIp(ErrorCodes.RATE_LIMITED, 
+            "unable to verify request source", "IP rate limiting", action);
+        
+        String ipKey = "rate:ip:" + action + ":" + clientIp;
+        
+        Long count = redisTemplate.execute(
+            RATE_LIMIT_REDIS_SCRIPT,
+            Collections.singletonList(ipKey),
+            String.valueOf(rateLimitConfig.getIp().getWindowMinutes() * 60) // Convert to seconds
+        );
+        if (count != null && count > rateLimitConfig.getIp().getMaxAttempts()) {
+            throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests from your IP");
+        }
+    }
+    
+    /**
+     * Get current request IP address, throwing ApiException if IP cannot be determined.
+     * This enforces a fail-closed security approach: if we cannot identify the client,
+     * the request is rejected rather than silently bypassing protection.
+     *
+     * @param errorCode Error code to use in the exception
+     * @param errorMessage Error message to use in the exception
+     * @param context Description of what operation needs the IP (for logging)
+     * @param action The action being rate-limited (for logging)
+     * @return The client IP address (never null)
+     * @throws ApiException if IP cannot be determined
+     */
+    private String requireCurrentRequestIp(ErrorCodes errorCode, String errorMessage, 
+                                           String context, String action) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes == null) {
-                // No request context - fail closed for security
-                throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
+            String clientIp = IpUtils.getClientIpOrNull();
+            if (clientIp == null) {
+                logger.warn("IP extraction failed for {} action={}, rejecting request", context, action);
+                throw new ApiException(errorCode, errorMessage);
             }
-            
-            HttpServletRequest request = attributes.getRequest();
-            String clientIp = IpUtils.getClientIp(request);
-            
-            // If IP extraction returns "unknown", fail closed for security
-            if ("unknown".equals(clientIp)) {
-                logger.warn("IP extraction failed for rate limiting action={}, rejecting request", action);
-                throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
-            }
-            
-            String ipKey = "rate:ip:" + action + ":" + clientIp;
-            
-            Long count = redisTemplate.execute(
-                RATE_LIMIT_REDIS_SCRIPT,
-                Collections.singletonList(ipKey),
-                String.valueOf(rateLimitConfig.getIp().getWindowMinutes() * 60) // Convert to seconds
-            );
-            if (count != null && count > rateLimitConfig.getIp().getMaxAttempts()) {
-                throw new ApiException(ErrorCodes.RATE_LIMITED, "too many requests from your IP");
-            }
+            return clientIp;
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            // Any unexpected exception during rate limiting should fail closed for security
-            logger.error("Unexpected error during IP rate limiting action={}, rejecting request: {}", 
-                       action, e.getMessage(), e);
-            throw new ApiException(ErrorCodes.RATE_LIMITED, "unable to verify request source");
+            logger.error("Unexpected error during {} action={}, rejecting request: {}", 
+                       context, action, e.getMessage(), e);
+            throw new ApiException(errorCode, errorMessage);
         }
     }
     
@@ -243,24 +249,7 @@ public class RateLimitService {
      * Get current request IP address
      */
     private String getCurrentRequestIp() {
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes == null) {
-                return null;
-            }
-            
-            HttpServletRequest request = attributes.getRequest();
-            String clientIp = IpUtils.getClientIp(request);
-            
-            if ("unknown".equals(clientIp)) {
-                return null;
-            }
-            
-            return clientIp;
-        } catch (Exception e) {
-            logger.warn("Failed to get client IP: {}", e.getMessage());
-            return null;
-        }
+        return IpUtils.getClientIpOrNull();
     }
     
     /**
@@ -275,50 +264,24 @@ public class RateLimitService {
             return;
         }
         
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes == null) {
-                // No request context - fail closed for security
-                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
-                    "unable to verify request source");
-            }
-            
-            HttpServletRequest request = attributes.getRequest();
-            String clientIp = IpUtils.getClientIp(request);
-            
-            // If IP extraction returns "unknown", fail closed for security
-            if ("unknown".equals(clientIp)) {
-                logger.warn("IP extraction failed for daily registration limit check tenantId={}, rejecting request", 
-                    tenantId);
-                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
-                    "unable to verify request source");
-            }
-            
-            // Key format: registration:daily:<tenantId>:<ip>
-            String dailyRegKey = "registration:daily:" + tenantId + ":" + clientIp;
-            
-            // Use 24 hours (86400 seconds) as the window
-            Long count = redisTemplate.execute(
-                RATE_LIMIT_REDIS_SCRIPT,
-                Collections.singletonList(dailyRegKey),
-                String.valueOf(86400) // 24 hours in seconds
-            );
-            
-            if (count != null && count > rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay()) {
-                logger.warn("Daily registration limit exceeded: tenant={} ip={} count={} max={}", 
-                    tenantId, clientIp, count, rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay());
-                throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
-                    "daily registration limit reached");
-            }
-            
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            // Any unexpected exception during rate limiting should fail closed for security
-            logger.error("Unexpected error during daily registration limit check tenantId={}, rejecting request: {}", 
-                       tenantId, e.getMessage(), e);
+        String clientIp = requireCurrentRequestIp(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
+            "unable to verify request source", "daily registration limit check", "tenantId=" + tenantId);
+        
+        // Key format: registration:daily:<tenantId>:<ip>
+        String dailyRegKey = "registration:daily:" + tenantId + ":" + clientIp;
+        
+        // Use 24 hours (86400 seconds) as the window
+        Long count = redisTemplate.execute(
+            RATE_LIMIT_REDIS_SCRIPT,
+            Collections.singletonList(dailyRegKey),
+            String.valueOf(86400) // 24 hours in seconds
+        );
+        
+        if (count != null && count > rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay()) {
+            logger.warn("Daily registration limit exceeded: tenant={} ip={} count={} max={}", 
+                tenantId, clientIp, count, rateLimitConfig.getDailyRegistration().getMaxRegistrationsPerDay());
             throw new ApiException(ErrorCodes.DAILY_REGISTRATION_LIMIT_REACHED, 
-                "unable to verify request source");
+                "daily registration limit reached");
         }
     }
 }

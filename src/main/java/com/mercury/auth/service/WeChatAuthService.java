@@ -64,14 +64,10 @@ public class WeChatAuthService {
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {
-        safeRecord(tenantId, userId, action, false);
+        authLogService.recordFailure(tenantId, userId, action);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
-        try {
-            authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
-        }
+        authLogService.safeRecord(tenantId, userId, action, success);
     }
 }

@@ -245,42 +245,22 @@ public class EmailAuthService {
     
     private void ensureCaptcha(AuthAction action, String tenantId, String identifier, 
                                String captchaId, String captcha) {
-        String key = KeyUtils.buildCaptchaKey(action, tenantId, identifier);
-        if (captchaService.isRequired(key)) {
-            if (captchaId == null || captcha == null) {
-                logger.warn("captcha required action={} tenant={} identifier={}", 
-                    action, tenantId, identifier);
-                throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
-            }
-            if (!captchaService.verifyChallenge(captchaId, captcha)) {
-                logger.warn("captcha invalid action={} tenant={} identifier={}", 
-                    action, tenantId, identifier);
-                throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
-            }
-        }
+        captchaService.ensureCaptcha(action, tenantId, identifier, captchaId, captcha);
     }
 
     private boolean existsByTenantAndUsername(String tenantId, String username) {
-        QueryWrapper<User> qw = new QueryWrapper<>();
-        qw.eq("tenant_id", tenantId).eq("username", username);
-        return userMapper.selectCount(qw) > 0;
+        return userService.existsByTenantAndUsername(tenantId, username);
     }
 
     private boolean existsByTenantAndEmail(String tenantId, String email) {
-        QueryWrapper<User> qw = new QueryWrapper<>();
-        qw.eq("tenant_id", tenantId).eq("email", email);
-        return userMapper.selectCount(qw) > 0;
+        return userService.existsByTenantAndEmail(tenantId, email);
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {
-        safeRecord(tenantId, userId, action, false);
+        authLogService.recordFailure(tenantId, userId, action);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
-        try {
-            authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ex) {
-            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
-        }
+        authLogService.safeRecord(tenantId, userId, action, success);
     }
 }

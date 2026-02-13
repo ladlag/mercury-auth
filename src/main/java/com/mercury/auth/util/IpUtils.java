@@ -51,6 +51,29 @@ public final class IpUtils {
     }
 
     /**
+     * Get the real client IP address from the current HTTP request,
+     * returning {@code null} when the IP cannot be determined.
+     * <p>
+     * This is the preferred method for callers that need to distinguish
+     * between "unknown IP" (null) and a valid IP string.
+     *
+     * @return Client IP address, or {@code null} if not available
+     */
+    public static String getClientIpOrNull() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) {
+                return null;
+            }
+            HttpServletRequest request = attributes.getRequest();
+            String clientIp = getClientIp(request);
+            return "unknown".equals(clientIp) ? null : clientIp;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * Get the real client IP address from an HTTP request.
      * Handles proxy headers like X-Forwarded-For, X-Real-IP, etc.
      * 

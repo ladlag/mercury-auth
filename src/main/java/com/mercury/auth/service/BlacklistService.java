@@ -11,10 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -261,23 +258,6 @@ public class BlacklistService {
     }
     
     private String getCurrentRequestIp() {
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes == null) {
-                return null;
-            }
-            
-            HttpServletRequest request = attributes.getRequest();
-            String clientIp = IpUtils.getClientIp(request);
-            
-            if ("unknown".equals(clientIp)) {
-                return null;
-            }
-            
-            return clientIp;
-        } catch (Exception e) {
-            logger.warn("Failed to get client IP: {}", e.getMessage());
-            return null;
-        }
+        return IpUtils.getClientIpOrNull();
     }
 }

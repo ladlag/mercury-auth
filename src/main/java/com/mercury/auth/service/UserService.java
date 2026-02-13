@@ -159,10 +159,6 @@ public class UserService {
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
-        try {
-            authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ex) {
-            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
-        }
+        authLogService.safeRecord(tenantId, userId, action, success);
     }
 }
