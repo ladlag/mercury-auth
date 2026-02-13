@@ -144,6 +144,33 @@ public class TokenCacheService {
     }
 
     /**
+     * Cache the token's issued-at timestamp for per-user revocation checks on cached responses.
+     * Stored separately from TokenVerifyResponse to keep the DTO clean (no internal fields).
+     */
+    public void cacheTokenIssuedAt(String tokenHash, Long issuedAt) {
+        if (issuedAt == null) return;
+        Cache cache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (cache != null) {
+            cache.put(tokenHash + ":iat", issuedAt);
+        }
+    }
+
+    /**
+     * Get cached token issued-at timestamp for per-user revocation checks.
+     * Returns null if not cached.
+     */
+    public Long getCachedTokenIssuedAt(String tokenHash) {
+        Cache cache = cacheManager.getCache(TOKEN_VERIFY_CACHE_NAME);
+        if (cache != null) {
+            Cache.ValueWrapper wrapper = cache.get(tokenHash + ":iat");
+            if (wrapper != null) {
+                return (Long) wrapper.get();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Evict token from cache when it's blacklisted.
      * This ensures blacklisted tokens are immediately invalidated.
      * 

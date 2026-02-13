@@ -106,8 +106,9 @@ public class TokenService {
             
             // SECURITY: Check per-user token revocation even for cached responses
             // This prevents revoked tokens from being served from cache after password change/reset
-            if (cached.getIssuedAt() != null && 
-                isTokenRevokedForUser(cached.getTenantId(), cached.getUserId(), cached.getIssuedAt())) {
+            Long cachedIssuedAt = tokenCacheService.getCachedTokenIssuedAt(tokenHash);
+            if (cachedIssuedAt != null && 
+                isTokenRevokedForUser(cached.getTenantId(), cached.getUserId(), cachedIssuedAt)) {
                 logger.warn("verifyToken cached token revoked for user tenant={} userId={}", cached.getTenantId(), cached.getUserId());
                 tokenCacheService.evictToken(tokenHash);
                 recordFailure(tenantId, cached.getUserId(), AuthAction.VERIFY_TOKEN);
@@ -153,11 +154,13 @@ public class TokenService {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
-                .issuedAt(claims.getIssuedAt() != null ? claims.getIssuedAt().getTime() : null)
                 .build();
         
         // Cache the verification result to improve performance on subsequent requests
         tokenCacheService.cacheVerifyResponse(tokenHash, response);
+        // Cache issuedAt separately for per-user revocation checks (not part of the user-facing DTO)
+        tokenCacheService.cacheTokenIssuedAt(tokenHash, 
+                claims.getIssuedAt() != null ? claims.getIssuedAt().getTime() : null);
         
         return response;
     }
