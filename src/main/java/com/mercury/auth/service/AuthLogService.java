@@ -93,4 +93,33 @@ public class AuthLogService {
         authLogMapper.insert(log);
         logger.info("audit action={} tenant={} userId={} success={} ip={}", action.name(), tenantId, userId, success, ip);
     }
+
+    /**
+     * Record an authentication action, swallowing any exceptions.
+     * Use this when audit logging should not affect the main operation.
+     *
+     * @param tenantId Tenant ID
+     * @param userId User ID (can be null for failed attempts)
+     * @param action Authentication action type
+     * @param success Whether the action was successful
+     */
+    public void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
+        try {
+            record(tenantId, userId, action, success);
+        } catch (Exception ex) {
+            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
+        }
+    }
+
+    /**
+     * Record a failed authentication action, swallowing any exceptions.
+     * Convenience method equivalent to {@code safeRecord(tenantId, userId, action, false)}.
+     *
+     * @param tenantId Tenant ID
+     * @param userId User ID (can be null for failed attempts)
+     * @param action Authentication action type
+     */
+    public void recordFailure(String tenantId, Long userId, AuthAction action) {
+        safeRecord(tenantId, userId, action, false);
+    }
 }

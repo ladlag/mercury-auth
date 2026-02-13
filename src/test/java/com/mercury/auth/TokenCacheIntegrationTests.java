@@ -379,7 +379,7 @@ public class TokenCacheIntegrationTests {
         assertNotNull(firstResponse);
 
         // Verify logging was called for cache miss (first verification)
-        verify(authLogService, times(1)).record(
+        verify(authLogService, times(1)).safeRecord(
                 eq(tenantId),
                 eq(userId),
                 eq(com.mercury.auth.dto.AuthAction.VERIFY_TOKEN),
@@ -399,7 +399,7 @@ public class TokenCacheIntegrationTests {
         assertNotNull(secondResponse);
 
         // Verify logging was called for cache hit (second verification)
-        verify(authLogService, times(1)).record(
+        verify(authLogService, times(1)).safeRecord(
                 eq(tenantId),
                 eq(userId),
                 eq(com.mercury.auth.dto.AuthAction.VERIFY_TOKEN),

@@ -194,7 +194,10 @@ public class TokenService {
         // Apply rate limiting for refresh token endpoint
         rateLimitService.checkIpRateLimit(AuthAction.RATE_LIMIT_REFRESH_TOKEN.name());
         
-        if (isBlacklisted(token)) {
+        // Hash token once for both blacklist check and later blacklisting
+        String tokenHash = TokenHashUtil.hashToken(token);
+        
+        if (isBlacklistedByHash(tokenHash)) {
             logger.warn("refreshToken blacklisted tenant={}", tenantId);
             recordFailure(tenantId, null, AuthAction.REFRESH_TOKEN);
             throw new ApiException(ErrorCodes.TOKEN_BLACKLISTED, "token blacklisted");
@@ -222,7 +225,6 @@ public class TokenService {
         Duration ttl = Duration.between(Instant.now(), claims.getExpiration().toInstant());
         if (!ttl.isNegative() && !ttl.isZero()) {
             // Evict old token from cache immediately
-            String tokenHash = TokenHashUtil.hashToken(token);
             tokenCacheService.evictToken(tokenHash);
             // Blacklist old token by hash
             redisTemplate.opsForValue().set(buildBlacklistKeyFromHash(tokenHash), tokenTenant, ttl);
@@ -247,15 +249,6 @@ public class TokenService {
         return new AuthResponse(newToken, jwtService.getTtlSeconds());
     }
 
-    private boolean isBlacklisted(String token) {
-        // Skip token blacklist check if disabled
-        if (!blacklistConfig.isTokenEnabled()) {
-            logger.debug("Token blacklist checking is disabled");
-            return false;
-        }
-        return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKey(token)));
-    }
-
     /**
      * Check blacklist status using a precomputed token hash.
      */
@@ -265,13 +258,6 @@ public class TokenService {
             return false;
         }
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildBlacklistKeyFromHash(tokenHash)));
-    }
-    
-    /**
-     * Public method to check if a token is blacklisted (for JWT filter)
-     */
-    public boolean isTokenBlacklisted(String token) {
-        return isBlacklisted(token);
     }
 
     /**
@@ -283,10 +269,6 @@ public class TokenService {
     
     private boolean isJtiBlacklisted(String jti) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(buildJtiBlacklistKey(jti)));
-    }
-
-    private String buildBlacklistKey(String token) {
-        return "blacklist:" + TokenHashUtil.hashToken(token);
     }
 
     /**
@@ -405,14 +387,10 @@ public class TokenService {
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {
-        safeRecord(tenantId, userId, action, false);
+        authLogService.recordFailure(tenantId, userId, action);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
-        try {
-            authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ignored) {
-            // ignore logging failures
-        }
+        authLogService.safeRecord(tenantId, userId, action, success);
     }
 }

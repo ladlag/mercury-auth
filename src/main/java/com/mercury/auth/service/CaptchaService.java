@@ -2,6 +2,8 @@ package com.mercury.auth.service;
 
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.CaptchaChallenge;
+import com.mercury.auth.exception.ApiException;
+import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.util.KeyUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,6 +130,31 @@ public class CaptchaService {
 
     public String buildKey(AuthAction action, String tenantId, String identifier) {
         return KeyUtils.buildCaptchaKey(action, tenantId, identifier);
+    }
+
+    /**
+     * Ensure captcha verification passes if captcha is required for the given key.
+     * Throws ApiException if captcha is required but not provided or invalid.
+     *
+     * @param action The auth action (used for building captcha key)
+     * @param tenantId The tenant identifier
+     * @param identifier The user identifier (username, email, phone, etc.)
+     * @param captchaId The captcha challenge ID (may be null)
+     * @param captcha The user's captcha answer (may be null)
+     */
+    public void ensureCaptcha(AuthAction action, String tenantId, String identifier,
+                              String captchaId, String captcha) {
+        String key = KeyUtils.buildCaptchaKey(action, tenantId, identifier);
+        if (!isRequired(key)) {
+            return;
+        }
+        if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
+            throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
+        }
+        if (!verifyChallenge(captchaId, captcha)) {
+            recordFailure(key);
+            throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
+        }
     }
 
     private String buildChallengeKey(String captchaId) {

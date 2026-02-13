@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 
@@ -257,35 +256,18 @@ public class PhoneAuthService {
     }
 
     private boolean existsByTenantAndPhone(String tenantId, String phone) {
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", tenantId).eq("phone", phone);
-        return userMapper.selectCount(wrapper) > 0;
+        return userService.existsByTenantAndPhone(tenantId, phone);
     }
 
     private void recordFailure(String tenantId, Long userId, AuthAction action) {
-        safeRecord(tenantId, userId, action, false);
+        authLogService.recordFailure(tenantId, userId, action);
     }
 
     private void ensureCaptcha(AuthAction action, String tenantId, String identifier, String captchaId, String captcha) {
-        String key = KeyUtils.buildCaptchaKey(action, tenantId, identifier);
-        if (!captchaService.isRequired(key)) {
-            return;
-        }
-        if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
-            throw new ApiException(ErrorCodes.CAPTCHA_REQUIRED, "captcha required");
-        }
-        if (!captchaService.verifyChallenge(captchaId, captcha)) {
-            captchaService.recordFailure(key);
-            throw new ApiException(ErrorCodes.CAPTCHA_INVALID, "captcha invalid");
-        }
+        captchaService.ensureCaptcha(action, tenantId, identifier, captchaId, captcha);
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
-        try {
-            authLogService.record(tenantId, userId, action, success);
-        } catch (Exception ex) {
-            // Log failure to record audit log, but don't fail the operation
-            logger.error("Failed to record audit log for tenant={} action={}", tenantId, action, ex);
-        }
+        authLogService.safeRecord(tenantId, userId, action, success);
     }
 }
