@@ -188,12 +188,14 @@ public class AuthController {
 
     @GetMapping("/tenant-users")
     public ResponseEntity<ApiResponse<List<TenantUserItem>>> listTenantUsers(
-            @org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId) {
+            @org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId,
+            @org.springframework.web.bind.annotation.RequestParam(value = "page", defaultValue = "1") int page,
+            @org.springframework.web.bind.annotation.RequestParam(value = "size", defaultValue = "20") int size) {
         // Get authenticated user from JWT
         JwtAuthenticationFilter.JwtUserDetails currentUser = 
             (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         
-        List<TenantUserItem> users = userService.listTenantUsers(tenantId, currentUser.getUserId());
+        List<TenantUserItem> users = userService.listTenantUsers(tenantId, currentUser.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.success(users));
     }
 

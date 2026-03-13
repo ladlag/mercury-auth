@@ -78,7 +78,7 @@ public class UserServiceTenantUsersTests {
         // Mock user list
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Arrays.asList(admin, regularUser));
 
-        List<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId);
+        List<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20);
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getUsername()).isEqualTo("admin01");
@@ -107,7 +107,7 @@ public class UserServiceTenantUsersTests {
 
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId, 1, 20))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
@@ -121,7 +121,7 @@ public class UserServiceTenantUsersTests {
         Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId, 1, 20))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND);

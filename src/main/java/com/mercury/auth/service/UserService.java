@@ -164,15 +164,17 @@ public class UserService {
     }
     
     /**
-     * List all users for a specific tenant.
+     * List users for a specific tenant with pagination.
      * Only accessible by tenant admin users (userType = TENANT_ADMIN).
      * 
      * @param tenantId The tenant ID
      * @param requestingUserId The ID of the user making the request
+     * @param page Page number (1-based, default 1)
+     * @param size Page size (default 20, max 100)
      * @return List of tenant user items
      * @throws ApiException if the requesting user is not a tenant admin
      */
-    public List<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId) {
+    public List<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId, int page, int size) {
         tenantService.requireEnabled(tenantId);
         
         // Check that the requesting user is a tenant admin
@@ -190,9 +192,15 @@ public class UserService {
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can access user list");
         }
         
-        // Query all users for this tenant
+        // Sanitize pagination parameters
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, Math.min(100, size));
+        int offset = (safePage - 1) * safeSize;
+        
+        // Query users for this tenant with pagination
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", tenantId).orderByAsc("id");
+        wrapper.last("LIMIT " + safeSize + " OFFSET " + offset);
         List<User> users = userMapper.selectList(wrapper);
         
         return users.stream()
