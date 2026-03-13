@@ -22,6 +22,8 @@ public class AuthRequests {
         @NotBlank(message = "{validation.username.required}")
         @Pattern(regexp = ValidationPatterns.USERNAME, message = "{validation.username.invalid}")
         private String username;
+        @Size(max = 100, message = "{validation.nickname.size}")
+        private String nickname;
         @NotBlank(message = "{validation.password.required}")
         @Size(min = 6, max = 20, message = "{validation.password.size}")
         @Pattern(regexp = ValidationPatterns.PASSWORD, message = "{validation.password.format}")

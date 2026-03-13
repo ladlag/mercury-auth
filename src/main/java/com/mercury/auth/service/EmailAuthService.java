@@ -148,6 +148,7 @@ public class EmailAuthService {
         User user = new User();
         user.setTenantId(req.getTenantId());
         user.setUsername(req.getUsername());
+        user.setUserType("USER");
         user.setEmail(req.getEmail());
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);

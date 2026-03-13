@@ -120,6 +120,7 @@ public class PhoneAuthService {
         User user = new User();
         user.setTenantId(tenantId);
         user.setUsername(username);
+        user.setUserType("USER");
         user.setPhone(phone);
         user.setPasswordHash("");
         user.setEnabled(true);
@@ -223,6 +224,7 @@ public class PhoneAuthService {
             user = new User();
             user.setTenantId(tenantId);
             user.setUsername(username);
+            user.setUserType("USER");
             user.setPhone(phone);
             user.setPasswordHash("");
             user.setEnabled(true);

@@ -14,4 +14,6 @@ public class BaseAuthResponse {
     private String tenantId;
     private Long userId;
     private String username;
+    private String nickname;
+    private String userType;
 }

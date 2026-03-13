@@ -46,6 +46,7 @@ public class WeChatAuthService {
             user = new User();
             user.setTenantId(tenantId);
             user.setUsername(effectiveUsername);
+            user.setUserType("USER");
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);

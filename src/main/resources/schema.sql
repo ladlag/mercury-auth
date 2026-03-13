@@ -2,6 +2,8 @@ CREATE TABLE IF NOT EXISTS users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   tenant_id VARCHAR(64) NOT NULL,
   username VARCHAR(100) NOT NULL,
+  nickname VARCHAR(100) COMMENT 'User display name',
+  user_type VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT 'User category: USER, TENANT_ADMIN',
   email VARCHAR(150),
   phone VARCHAR(50),
   password_hash VARCHAR(200) NOT NULL,

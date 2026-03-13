@@ -108,6 +108,8 @@ public class PasswordAuthService {
         User user = new User();
         user.setTenantId(req.getTenantId());
         user.setUsername(req.getUsername());
+        user.setNickname(req.getNickname());
+        user.setUserType("USER");
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
         user.setPasswordHash(passwordEncoder.encode(password));

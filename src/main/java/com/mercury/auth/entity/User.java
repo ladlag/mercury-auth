@@ -14,6 +14,8 @@ public class User {
     private Long id;
     private String tenantId;
     private String username;
+    private String nickname;
+    private String userType;
     private String email;
     private String phone;
     private String passwordHash;

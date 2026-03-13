@@ -7,20 +7,25 @@ import com.mercury.auth.dto.AuthResponse;
 import com.mercury.auth.dto.BaseAuthResponse;
 import com.mercury.auth.dto.CaptchaChallenge;
 import com.mercury.auth.dto.PublicKeyResponse;
+import com.mercury.auth.dto.TenantUserItem;
 import com.mercury.auth.dto.TokenVerifyResponse;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
+import com.mercury.auth.security.JwtAuthenticationFilter;
 import com.mercury.auth.service.*;
 import com.mercury.auth.util.XssSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -63,6 +68,13 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> changePassword(@Validated @RequestBody AuthRequests.ChangePassword req) {
+        // SECURITY: Ensure the authenticated user can only change their own password
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!currentUser.getUsername().equals(req.getUsername())) {
+            throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "can only change own password");
+        }
+        
         User user = passwordAuthService.changePassword(req);
         
         // Revoke all existing tokens for this user after password change (security enhancement)
@@ -174,6 +186,17 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
+    @GetMapping("/tenant-users")
+    public ResponseEntity<ApiResponse<List<TenantUserItem>>> listTenantUsers(
+            @org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId) {
+        // Get authenticated user from JWT
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        List<TenantUserItem> users = userService.listTenantUsers(tenantId, currentUser.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(users));
+    }
+
     // Captcha endpoints
     
     @PostMapping("/captcha")
@@ -207,12 +230,16 @@ public class AuthController {
                     .tenantId(XssSanitizer.sanitize(tenantId))
                     .userId(null)
                     .username(null)
+                    .nickname(null)
+                    .userType(null)
                     .build();
         }
         return BaseAuthResponse.builder()
                 .tenantId(XssSanitizer.sanitize(user.getTenantId()))
                 .userId(user.getId())
                 .username(XssSanitizer.sanitize(user.getUsername()))
+                .nickname(XssSanitizer.sanitize(user.getNickname()))
+                .userType(user.getUserType())
                 .build();
     }
 }
