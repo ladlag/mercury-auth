@@ -1,5 +1,6 @@
 package com.mercury.auth.controller;
 
+import com.mercury.auth.dto.AdminResetPasswordResponse;
 import com.mercury.auth.dto.ApiResponse;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
@@ -188,6 +189,16 @@ public class AuthController {
         
         User user = userService.updateUserStatus(req, currentUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
+    }
+
+    @PostMapping("/admin-reset-password")
+    public ResponseEntity<ApiResponse<AdminResetPasswordResponse>> adminResetPassword(@Validated @RequestBody AuthRequests.AdminResetPassword req) {
+        // Get authenticated user from JWT
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        AdminResetPasswordResponse response = userService.adminResetPassword(req, currentUser.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/tenant-users")

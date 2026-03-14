@@ -1,6 +1,7 @@
 package com.mercury.auth;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mercury.auth.dto.AdminResetPasswordResponse;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.Tenant;
@@ -12,20 +13,23 @@ import com.mercury.auth.store.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests for UserService.updateUserStatus - tenant admin user enable/disable
+ * Tests for UserService.adminResetPassword - tenant admin reset user password
  */
-public class UserServiceUpdateUserStatusTests {
+public class UserServiceAdminResetPasswordTests {
 
     private UserMapper userMapper;
     private TenantService tenantService;
     private AuthLogService authLogService;
+    private PasswordEncoder passwordEncoder;
     private TokenCacheService tokenCacheService;
     private TenantUserCountService tenantUserCountService;
     private UserService userService;
@@ -35,11 +39,11 @@ public class UserServiceUpdateUserStatusTests {
         userMapper = Mockito.mock(UserMapper.class);
         tenantService = Mockito.mock(TenantService.class);
         authLogService = Mockito.mock(AuthLogService.class);
+        passwordEncoder = Mockito.mock(PasswordEncoder.class);
         tokenCacheService = Mockito.mock(TokenCacheService.class);
         tenantUserCountService = Mockito.mock(TenantUserCountService.class);
         userService = new UserService(userMapper, tenantService, authLogService,
-            Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class),
-            tokenCacheService, tenantUserCountService);
+            passwordEncoder, tokenCacheService, tenantUserCountService);
     }
 
     private User createAdminUser(String tenantId, Long userId) {
@@ -64,16 +68,15 @@ public class UserServiceUpdateUserStatusTests {
         return user;
     }
 
-    private AuthRequests.UserStatusUpdate createRequest(String tenantId, String username, boolean enabled) {
-        AuthRequests.UserStatusUpdate req = new AuthRequests.UserStatusUpdate();
+    private AuthRequests.AdminResetPassword createRequest(String tenantId, String username) {
+        AuthRequests.AdminResetPassword req = new AuthRequests.AdminResetPassword();
         req.setTenantId(tenantId);
         req.setUsername(username);
-        req.setEnabled(enabled);
         return req;
     }
 
     @Test
-    void updateUserStatus_admin_disables_user_successfully() {
+    void adminResetPassword_success() {
         String tenantId = "t1";
         Long adminUserId = 1L;
         Long targetUserId = 2L;
@@ -83,46 +86,32 @@ public class UserServiceUpdateUserStatusTests {
         User admin = createAdminUser(tenantId, adminUserId);
         User targetUser = createRegularUser(tenantId, targetUserId, "user01");
 
-        // First selectOne returns admin (for admin check), second returns target user
         when(userMapper.selectOne(any(QueryWrapper.class)))
             .thenReturn(admin)
             .thenReturn(targetUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_hash");
 
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "user01", false);
-        User result = userService.updateUserStatus(req, adminUserId);
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "user01");
+        AdminResetPasswordResponse response = userService.adminResetPassword(req, adminUserId);
 
-        assertThat(result.getEnabled()).isFalse();
+        assertThat(response).isNotNull();
+        assertThat(response.getUserId()).isEqualTo(targetUserId);
+        assertThat(response.getUsername()).isEqualTo("user01");
+        assertThat(response.getNewPassword()).isNotNull();
+        assertThat(response.getNewPassword()).hasSizeGreaterThanOrEqualTo(6);
+        assertThat(response.getNewPassword()).hasSizeLessThanOrEqualTo(20);
+        assertThat(response.getTenantId()).isEqualTo(tenantId);
+        assertThat(response.getNickname()).isEqualTo("Regular User");
+        assertThat(response.getUserType()).isEqualTo(UserType.USER);
+
         verify(userMapper).updateById(any(User.class));
+        verify(passwordEncoder).encode(anyString());
         verify(tokenCacheService).evictAllForUserStatusChange(tenantId, targetUserId);
     }
 
     @Test
-    void updateUserStatus_admin_enables_user_successfully() {
-        String tenantId = "t1";
-        Long adminUserId = 1L;
-        Long targetUserId = 2L;
-
-        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
-
-        User admin = createAdminUser(tenantId, adminUserId);
-        User targetUser = createRegularUser(tenantId, targetUserId, "user01");
-        targetUser.setEnabled(false);
-
-        when(userMapper.selectOne(any(QueryWrapper.class)))
-            .thenReturn(admin)
-            .thenReturn(targetUser);
-        when(userMapper.updateById(any(User.class))).thenReturn(1);
-
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "user01", true);
-        User result = userService.updateUserStatus(req, adminUserId);
-
-        assertThat(result.getEnabled()).isTrue();
-        verify(userMapper).updateById(any(User.class));
-    }
-
-    @Test
-    void updateUserStatus_rejects_non_admin() {
+    void adminResetPassword_rejects_non_admin() {
         String tenantId = "t1";
         Long regularUserId = 2L;
 
@@ -131,69 +120,9 @@ public class UserServiceUpdateUserStatusTests {
         User regularUser = createRegularUser(tenantId, regularUserId, "user01");
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
 
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "user02", false);
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "user02");
 
-        assertThatThrownBy(() -> userService.updateUserStatus(req, regularUserId))
-                .isInstanceOf(ApiException.class)
-                .extracting(e -> ((ApiException) e).getCode())
-                .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
-    }
-
-    @Test
-    void updateUserStatus_rejects_nonexistent_requesting_user() {
-        String tenantId = "t1";
-        Long nonExistentUserId = 999L;
-
-        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
-        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
-
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "user01", false);
-
-        assertThatThrownBy(() -> userService.updateUserStatus(req, nonExistentUserId))
-                .isInstanceOf(ApiException.class)
-                .extracting(e -> ((ApiException) e).getCode())
-                .isEqualTo(ErrorCodes.USER_NOT_FOUND);
-    }
-
-    @Test
-    void updateUserStatus_rejects_nonexistent_target_user() {
-        String tenantId = "t1";
-        Long adminUserId = 1L;
-
-        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
-
-        User admin = createAdminUser(tenantId, adminUserId);
-
-        // First call returns admin, second call returns null (target not found)
-        when(userMapper.selectOne(any(QueryWrapper.class)))
-            .thenReturn(admin)
-            .thenReturn(null);
-
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "nonexistent", false);
-
-        assertThatThrownBy(() -> userService.updateUserStatus(req, adminUserId))
-                .isInstanceOf(ApiException.class)
-                .extracting(e -> ((ApiException) e).getCode())
-                .isEqualTo(ErrorCodes.USER_NOT_FOUND);
-    }
-
-    @Test
-    void updateUserStatus_admin_cannot_disable_self() {
-        String tenantId = "t1";
-        Long adminUserId = 1L;
-
-        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
-
-        User admin = createAdminUser(tenantId, adminUserId);
-
-        // First selectOne returns admin (for admin check), second returns admin again (target is self)
-        when(userMapper.selectOne(any(QueryWrapper.class)))
-            .thenReturn(admin)
-            .thenReturn(admin);
-
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "admin01", false);
-
-        assertThatThrownBy(() -> userService.updateUserStatus(req, adminUserId))
+        assertThatThrownBy(() -> userService.adminResetPassword(req, regularUserId))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
@@ -202,7 +131,23 @@ public class UserServiceUpdateUserStatusTests {
     }
 
     @Test
-    void updateUserStatus_admin_can_enable_self() {
+    void adminResetPassword_rejects_nonexistent_requesting_user() {
+        String tenantId = "t1";
+        Long nonExistentUserId = 999L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
+
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "user01");
+
+        assertThatThrownBy(() -> userService.adminResetPassword(req, nonExistentUserId))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getCode())
+                .isEqualTo(ErrorCodes.USER_NOT_FOUND);
+    }
+
+    @Test
+    void adminResetPassword_rejects_nonexistent_target_user() {
         String tenantId = "t1";
         Long adminUserId = 1L;
 
@@ -212,19 +157,20 @@ public class UserServiceUpdateUserStatusTests {
 
         when(userMapper.selectOne(any(QueryWrapper.class)))
             .thenReturn(admin)
-            .thenReturn(admin);
-        when(userMapper.updateById(any(User.class))).thenReturn(1);
+            .thenReturn(null);
 
-        // Enabling self is allowed (only disabling self is blocked)
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "admin01", true);
-        User result = userService.updateUserStatus(req, adminUserId);
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "nonexistent");
 
-        assertThat(result.getEnabled()).isTrue();
-        verify(userMapper).updateById(any(User.class));
+        assertThatThrownBy(() -> userService.adminResetPassword(req, adminUserId))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getCode())
+                .isEqualTo(ErrorCodes.USER_NOT_FOUND);
+
+        verify(userMapper, never()).updateById(any(User.class));
     }
 
     @Test
-    void updateUserStatus_evicts_token_cache() {
+    void adminResetPassword_generates_valid_password() {
         String tenantId = "t1";
         Long adminUserId = 1L;
         Long targetUserId = 2L;
@@ -238,10 +184,52 @@ public class UserServiceUpdateUserStatusTests {
             .thenReturn(admin)
             .thenReturn(targetUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_hash");
 
-        AuthRequests.UserStatusUpdate req = createRequest(tenantId, "user01", false);
-        userService.updateUserStatus(req, adminUserId);
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "user01");
+        AdminResetPasswordResponse response = userService.adminResetPassword(req, adminUserId);
 
-        verify(tokenCacheService).evictAllForUserStatusChange(tenantId, targetUserId);
+        String password = response.getNewPassword();
+
+        // Length should be 12
+        assertThat(password).hasSize(12);
+
+        // Should contain at least one uppercase
+        assertThat(password).matches(".*[A-Z].*");
+
+        // Should contain at least one lowercase
+        assertThat(password).matches(".*[a-z].*");
+
+        // Should contain at least one digit
+        assertThat(password).matches(".*[0-9].*");
+
+        // Should contain at least one special character
+        assertThat(password).matches(".*[!@#$%^&*].*");
+
+        // Should match the password validation pattern (no whitespace)
+        assertThat(password).matches("^[a-zA-Z0-9\\p{Punct}]+$");
+    }
+
+    @Test
+    void adminResetPassword_produces_different_passwords() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+        Long targetUserId = 2L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = createAdminUser(tenantId, adminUserId);
+        User targetUser = createRegularUser(tenantId, targetUserId, "user01");
+
+        when(userMapper.selectOne(any(QueryWrapper.class)))
+            .thenReturn(admin, targetUser, admin, targetUser);
+        when(userMapper.updateById(any(User.class))).thenReturn(1);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_hash");
+
+        AuthRequests.AdminResetPassword req = createRequest(tenantId, "user01");
+        String password1 = userService.adminResetPassword(req, adminUserId).getNewPassword();
+        String password2 = userService.adminResetPassword(req, adminUserId).getNewPassword();
+        // While there's a tiny chance these could be equal, it's astronomically unlikely
+        assertThat(password1).isNotEqualTo(password2);
     }
 }

@@ -236,4 +236,11 @@ public class AuthRequests {
         @NotBlank(message = "{validation.code.required}")
         private String code;
     }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class AdminResetPassword extends BaseTenantRequest {
+        @NotBlank(message = "{validation.username.required}")
+        private String username;
+    }
 }
