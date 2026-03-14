@@ -3,15 +3,21 @@ package com.mercury.auth.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
+import com.mercury.auth.dto.TenantUserItem;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
 import com.mercury.auth.store.UserMapper;
+import com.mercury.auth.util.XssSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for user management operations including
@@ -156,6 +162,60 @@ public class UserService {
      */
     public void notifyUserDeleted(String tenantId) {
         tenantUserCountService.decrementUserCount(tenantId);
+    }
+    
+    /**
+     * List users for a specific tenant with pagination.
+     * Only accessible by tenant admin users (userType = TENANT_ADMIN).
+     * 
+     * @param tenantId The tenant ID
+     * @param requestingUserId The ID of the user making the request
+     * @param page Page number (1-based, default 1)
+     * @param size Page size (default 20, max 100)
+     * @return List of tenant user items
+     * @throws ApiException if the requesting user is not a tenant admin
+     */
+    public List<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId, int page, int size) {
+        tenantService.requireEnabled(tenantId);
+        
+        // Check that the requesting user is a tenant admin
+        QueryWrapper<User> adminWrapper = new QueryWrapper<>();
+        adminWrapper.eq("tenant_id", tenantId).eq("id", requestingUserId);
+        User requestingUser = userMapper.selectOne(adminWrapper);
+        
+        if (requestingUser == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        }
+        
+        if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
+            logger.warn("listTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}", 
+                requestingUserId, tenantId);
+            throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can access user list");
+        }
+        
+        // Sanitize pagination parameters
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, Math.min(100, size));
+        int offset = (safePage - 1) * safeSize;
+        
+        // Query users for this tenant with pagination
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId).orderByAsc("id");
+        wrapper.last("LIMIT " + safeSize + " OFFSET " + offset);
+        List<User> users = userMapper.selectList(wrapper);
+        
+        return users.stream()
+                .map(user -> TenantUserItem.builder()
+                        .userId(user.getId())
+                        .username(XssSanitizer.sanitize(user.getUsername()))
+                        .nickname(XssSanitizer.sanitize(user.getNickname()))
+                        .userType(user.getUserType())
+                        .email(XssSanitizer.sanitize(user.getEmail()))
+                        .phone(XssSanitizer.sanitize(user.getPhone()))
+                        .enabled(user.getEnabled())
+                        .createdAt(user.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {

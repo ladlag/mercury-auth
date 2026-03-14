@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
@@ -148,6 +149,7 @@ public class EmailAuthService {
         User user = new User();
         user.setTenantId(req.getTenantId());
         user.setUsername(req.getUsername());
+        user.setUserType(UserType.USER);
         user.setEmail(req.getEmail());
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);

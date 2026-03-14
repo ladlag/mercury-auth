@@ -4,16 +4,22 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
- * Base response for authentication operations
+ * Response DTO for tenant user list items.
+ * Used in tenant user management queries.
  */
 @Data
 @Builder
 @AllArgsConstructor
-public class BaseAuthResponse {
-    private String tenantId;
+public class TenantUserItem {
     private Long userId;
     private String username;
     private String nickname;
     private UserType userType;
+    private String email;
+    private String phone;
+    private Boolean enabled;
+    private LocalDateTime createdAt;
 }

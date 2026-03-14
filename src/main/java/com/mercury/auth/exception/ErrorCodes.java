@@ -28,6 +28,9 @@ public enum ErrorCodes {
     MISSING_TENANT_HEADER("400405", "error.400405", HttpStatus.BAD_REQUEST),
     TENANT_MAX_USERS_REACHED("400406", "error.400406", HttpStatus.FORBIDDEN),
 
+    // ========== 40 05 权限 ==========
+    FORBIDDEN_OPERATION  ("400501", "error.400501", HttpStatus.FORBIDDEN),
+
     // ========== 40 06 验证码/人机校验 ==========
     INVALID_CODE         ("400601", "error.400601", HttpStatus.BAD_REQUEST),
     CAPTCHA_REQUIRED     ("400602", "error.400602", HttpStatus.PRECONDITION_REQUIRED),

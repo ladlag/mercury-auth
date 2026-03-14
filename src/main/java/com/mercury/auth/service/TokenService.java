@@ -139,6 +139,8 @@ public class TokenService {
                 .tenantId(tokenTenant)
                 .userId(userId)
                 .userName(user.getUsername())
+                .nickname(user.getNickname())
+                .userType(user.getUserType())
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .expiresAt(claims.getExpiration().getTime())  // Convert Date to timestamp
