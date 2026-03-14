@@ -107,7 +107,6 @@ public class UserServiceAdminResetPasswordTests {
 
         verify(userMapper).updateById(any(User.class));
         verify(passwordEncoder).encode(anyString());
-        verify(tokenCacheService).evictAllForUserStatusChange(tenantId, targetUserId);
     }
 
     @Test

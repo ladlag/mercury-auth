@@ -145,9 +145,6 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
         
-        // SECURITY: Evict all token caches to force the user to re-login
-        tokenCacheService.evictAllForUserStatusChange(req.getTenantId(), user.getId());
-        
         logger.info("Admin reset password tenant={} username={} by adminUserId={}", 
             req.getTenantId(), req.getUsername(), requestingUserId);
         safeRecord(req.getTenantId(), user.getId(), AuthAction.ADMIN_RESET_PASSWORD, true);

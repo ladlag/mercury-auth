@@ -198,6 +198,11 @@ public class AuthController {
             (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         
         AdminResetPasswordResponse response = userService.adminResetPassword(req, currentUser.getUserId());
+        
+        // Revoke all existing tokens for this user after password reset (security enhancement)
+        // This forces the user to re-login on all devices
+        tokenService.revokeAllUserTokens(req.getTenantId(), response.getUserId());
+        
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
