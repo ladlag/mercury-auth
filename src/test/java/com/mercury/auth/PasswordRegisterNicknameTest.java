@@ -72,7 +72,7 @@ public class PasswordRegisterNicknameTest {
         req.setPassword("password123");
         req.setConfirmPassword("password123");
 
-        User result = passwordAuthService.registerPassword(req);
+        passwordAuthService.registerPassword(req);
 
         // Capture the User entity passed to userMapper.insert
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -99,7 +99,7 @@ public class PasswordRegisterNicknameTest {
         req.setConfirmPassword("password123");
         // nickname is NOT set
 
-        User result = passwordAuthService.registerPassword(req);
+        passwordAuthService.registerPassword(req);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         Mockito.verify(userMapper).insert(captor.capture());
