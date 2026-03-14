@@ -3,6 +3,7 @@ package com.mercury.auth.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthResponse;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
@@ -46,7 +47,7 @@ public class WeChatAuthService {
             user = new User();
             user.setTenantId(tenantId);
             user.setUsername(effectiveUsername);
-            user.setUserType("USER");
+            user.setUserType(UserType.USER);
             user.setPasswordHash("");
             user.setEnabled(true);
             userMapper.insert(user);

@@ -17,7 +17,7 @@ public class TenantUserItem {
     private Long userId;
     private String username;
     private String nickname;
-    private String userType;
+    private UserType userType;
     private String email;
     private String phone;
     private Boolean enabled;

@@ -3,6 +3,7 @@ package com.mercury.auth;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.config.BlacklistConfig;
 import com.mercury.auth.dto.TokenVerifyResponse;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.security.JwtService;
 import com.mercury.auth.service.*;
@@ -91,7 +92,7 @@ public class TokenVerifyResponseUserTypeNicknameTest {
         user.setTenantId(tenantId);
         user.setUsername("testuser");
         user.setNickname("Test User Nickname");
-        user.setUserType("TENANT_ADMIN");
+        user.setUserType(UserType.TENANT_ADMIN);
         user.setEmail("test@example.com");
         user.setPhone("13800138000");
         user.setEnabled(true);
@@ -102,7 +103,7 @@ public class TokenVerifyResponseUserTypeNicknameTest {
         assertThat(response).isNotNull();
         assertThat(response.getUserName()).isEqualTo("testuser");
         assertThat(response.getNickname()).isEqualTo("Test User Nickname");
-        assertThat(response.getUserType()).isEqualTo("TENANT_ADMIN");
+        assertThat(response.getUserType()).isEqualTo(UserType.TENANT_ADMIN);
         assertThat(response.getEmail()).isEqualTo("test@example.com");
         assertThat(response.getPhone()).isEqualTo("13800138000");
     }
@@ -129,7 +130,7 @@ public class TokenVerifyResponseUserTypeNicknameTest {
         user.setTenantId(tenantId);
         user.setUsername("regularuser");
         user.setNickname(null);
-        user.setUserType("USER");
+        user.setUserType(UserType.USER);
         user.setEnabled(true);
         when(userMapper.selectOne(any())).thenReturn(user);
 
@@ -137,6 +138,6 @@ public class TokenVerifyResponseUserTypeNicknameTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getNickname()).isNull();
-        assertThat(response.getUserType()).isEqualTo("USER");
+        assertThat(response.getUserType()).isEqualTo(UserType.USER);
     }
 }

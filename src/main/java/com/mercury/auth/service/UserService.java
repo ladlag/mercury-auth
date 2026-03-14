@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.TenantUserItem;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
 import com.mercury.auth.exception.ErrorCodes;
@@ -186,7 +187,7 @@ public class UserService {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         
-        if (!"TENANT_ADMIN".equals(requestingUser.getUserType())) {
+        if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
             logger.warn("listTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}", 
                 requestingUserId, tenantId);
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can access user list");

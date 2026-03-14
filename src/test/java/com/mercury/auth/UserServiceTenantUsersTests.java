@@ -3,6 +3,7 @@ package com.mercury.auth;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.TenantUserItem;
+import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.Tenant;
 import com.mercury.auth.entity.User;
 import com.mercury.auth.exception.ApiException;
@@ -57,7 +58,7 @@ public class UserServiceTenantUsersTests {
         admin.setId(adminUserId);
         admin.setTenantId(tenantId);
         admin.setUsername("admin01");
-        admin.setUserType("TENANT_ADMIN");
+        admin.setUserType(UserType.TENANT_ADMIN);
         admin.setNickname("Admin");
         admin.setEnabled(true);
 
@@ -66,7 +67,7 @@ public class UserServiceTenantUsersTests {
         regularUser.setId(2L);
         regularUser.setTenantId(tenantId);
         regularUser.setUsername("user01");
-        regularUser.setUserType("USER");
+        regularUser.setUserType(UserType.USER);
         regularUser.setNickname("Regular User");
         regularUser.setEmail("user@test.com");
         regularUser.setPhone("13800138000");
@@ -82,10 +83,10 @@ public class UserServiceTenantUsersTests {
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getUsername()).isEqualTo("admin01");
-        assertThat(result.get(0).getUserType()).isEqualTo("TENANT_ADMIN");
+        assertThat(result.get(0).getUserType()).isEqualTo(UserType.TENANT_ADMIN);
         assertThat(result.get(0).getNickname()).isEqualTo("Admin");
         assertThat(result.get(1).getUsername()).isEqualTo("user01");
-        assertThat(result.get(1).getUserType()).isEqualTo("USER");
+        assertThat(result.get(1).getUserType()).isEqualTo(UserType.USER);
         assertThat(result.get(1).getEmail()).isEqualTo("user@test.com");
         assertThat(result.get(1).getPhone()).isEqualTo("13800138000");
     }
@@ -102,7 +103,7 @@ public class UserServiceTenantUsersTests {
         regularUser.setId(regularUserId);
         regularUser.setTenantId(tenantId);
         regularUser.setUsername("user01");
-        regularUser.setUserType("USER");
+        regularUser.setUserType(UserType.USER);
         regularUser.setEnabled(true);
 
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
@@ -130,10 +131,10 @@ public class UserServiceTenantUsersTests {
     @Test
     void user_entity_has_userType_and_nickname() {
         User user = new User();
-        user.setUserType("TENANT_ADMIN");
+        user.setUserType(UserType.TENANT_ADMIN);
         user.setNickname("Test Nickname");
         
-        assertThat(user.getUserType()).isEqualTo("TENANT_ADMIN");
+        assertThat(user.getUserType()).isEqualTo(UserType.TENANT_ADMIN);
         assertThat(user.getNickname()).isEqualTo("Test Nickname");
     }
 
