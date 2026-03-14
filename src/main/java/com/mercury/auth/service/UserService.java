@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AdminResetPasswordResponse;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
+import com.mercury.auth.dto.PageResult;
 import com.mercury.auth.dto.TenantUserItem;
 import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.User;
@@ -293,17 +294,21 @@ public class UserService {
     }
     
     /**
-     * List users for a specific tenant with pagination.
+     * List users for a specific tenant with pagination and optional fuzzy search.
      * Only accessible by tenant admin users (userType = TENANT_ADMIN).
      * 
      * @param tenantId The tenant ID
      * @param requestingUserId The ID of the user making the request
      * @param page Page number (1-based, default 1)
      * @param size Page size (default 20, max 100)
-     * @return List of tenant user items
+     * @param username Optional username for fuzzy search (LIKE match)
+     * @param email Optional email for fuzzy search (LIKE match)
+     * @param phone Optional phone for fuzzy search (LIKE match)
+     * @return Paginated result with total count and list of tenant user items
      * @throws ApiException if the requesting user is not a tenant admin
      */
-    public List<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId, int page, int size) {
+    public PageResult<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId, 
+            int page, int size, String username, String email, String phone) {
         tenantService.requireEnabled(tenantId);
         
         // Check that the requesting user is a tenant admin
@@ -326,13 +331,33 @@ public class UserService {
         int safeSize = Math.max(1, Math.min(100, size));
         int offset = (safePage - 1) * safeSize;
         
-        // Query users for this tenant with pagination
+        // Build query with optional fuzzy search filters
         QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", tenantId).orderByAsc("id");
+        wrapper.eq("tenant_id", tenantId);
+        
+        boolean hasUsername = username != null && !username.trim().isEmpty();
+        boolean hasEmail = email != null && !email.trim().isEmpty();
+        boolean hasPhone = phone != null && !phone.trim().isEmpty();
+        
+        if (hasUsername) {
+            wrapper.like("username", escapeLike(username.trim()));
+        }
+        if (hasEmail) {
+            wrapper.like("email", escapeLike(email.trim()));
+        }
+        if (hasPhone) {
+            wrapper.like("phone", escapeLike(phone.trim()));
+        }
+        
+        // Get total count for pagination metadata
+        long total = userMapper.selectCount(wrapper);
+        
+        // Query users with pagination
+        wrapper.orderByAsc("id");
         wrapper.last("LIMIT " + safeSize + " OFFSET " + offset);
         List<User> users = userMapper.selectList(wrapper);
         
-        return users.stream()
+        List<TenantUserItem> items = users.stream()
                 .map(user -> TenantUserItem.builder()
                         .userId(user.getId())
                         .username(XssSanitizer.sanitize(user.getUsername()))
@@ -344,6 +369,13 @@ public class UserService {
                         .createdAt(user.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+        
+        return PageResult.<TenantUserItem>builder()
+                .items(items)
+                .total(total)
+                .page(safePage)
+                .size(safeSize)
+                .build();
     }
 
     /**
@@ -432,5 +464,12 @@ public class UserService {
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         authLogService.safeRecord(tenantId, userId, action, success);
+    }
+
+    /**
+     * Escape SQL LIKE special characters (%, _, \) so they are treated as literals.
+     */
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }
