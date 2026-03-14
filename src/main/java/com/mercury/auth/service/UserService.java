@@ -340,13 +340,13 @@ public class UserService {
         boolean hasPhone = phone != null && !phone.trim().isEmpty();
         
         if (hasUsername) {
-            wrapper.like("username", username.trim());
+            wrapper.like("username", escapeLike(username.trim()));
         }
         if (hasEmail) {
-            wrapper.like("email", email.trim());
+            wrapper.like("email", escapeLike(email.trim()));
         }
         if (hasPhone) {
-            wrapper.like("phone", phone.trim());
+            wrapper.like("phone", escapeLike(phone.trim()));
         }
         
         // Get total count for pagination metadata
@@ -464,5 +464,12 @@ public class UserService {
 
     private void safeRecord(String tenantId, Long userId, AuthAction action, boolean success) {
         authLogService.safeRecord(tenantId, userId, action, success);
+    }
+
+    /**
+     * Escape SQL LIKE special characters (%, _, \) so they are treated as literals.
+     */
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }
