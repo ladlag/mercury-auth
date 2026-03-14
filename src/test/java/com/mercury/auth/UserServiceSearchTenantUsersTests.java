@@ -42,7 +42,8 @@ public class UserServiceSearchTenantUsersTests {
         authLogService = Mockito.mock(AuthLogService.class);
         tokenCacheService = Mockito.mock(TokenCacheService.class);
         tenantUserCountService = Mockito.mock(TenantUserCountService.class);
-        userService = new UserService(userMapper, tenantService, authLogService, 
+        userService = new UserService(userMapper, tenantService, authLogService,
+            Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class),
             tokenCacheService, tenantUserCountService);
     }
 

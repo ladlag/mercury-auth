@@ -1,6 +1,7 @@
 package com.mercury.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mercury.auth.dto.AdminResetPasswordResponse;
 import com.mercury.auth.dto.AuthAction;
 import com.mercury.auth.dto.AuthRequests;
 import com.mercury.auth.dto.TenantUserItem;
@@ -14,8 +15,10 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,9 +31,17 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
+    private static final String DIGITS = "0123456789";
+    private static final String SPECIAL = "!@#$%^&*";
+    private static final String ALL_CHARS = UPPER + LOWER + DIGITS + SPECIAL;
+    private static final int GENERATED_PASSWORD_LENGTH = 12;
     private final UserMapper userMapper;
     private final TenantService tenantService;
     private final AuthLogService authLogService;
+    private final PasswordEncoder passwordEncoder;
     @Lazy
     private final TokenCacheService tokenCacheService;
     @Lazy
@@ -89,6 +100,95 @@ public class UserService {
             req.getTenantId(), req.getUsername(), req.isEnabled(), requestingUserId);
         safeRecord(req.getTenantId(), user.getId(), AuthAction.UPDATE_USER_STATUS, true);
         return user;
+    }
+
+    /**
+     * Reset a user's password by tenant admin.
+     * Generates a random password that meets password policy requirements and returns it.
+     * Only accessible by tenant admin users (userType = TENANT_ADMIN).
+     * After reset, all tokens for the target user are revoked.
+     *
+     * @param req The admin reset password request containing tenantId and username
+     * @param requestingUserId The ID of the user making the request (from JWT)
+     * @return AdminResetPasswordResponse containing user info and the generated password
+     * @throws ApiException if the requesting user is not a tenant admin, or target user not found
+     */
+    public AdminResetPasswordResponse adminResetPassword(AuthRequests.AdminResetPassword req, Long requestingUserId) {
+        tenantService.requireEnabled(req.getTenantId());
+        
+        // Check that the requesting user is a tenant admin
+        QueryWrapper<User> adminWrapper = new QueryWrapper<>();
+        adminWrapper.eq("tenant_id", req.getTenantId()).eq("id", requestingUserId);
+        User requestingUser = userMapper.selectOne(adminWrapper);
+        
+        if (requestingUser == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "requesting user not found");
+        }
+        
+        if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
+            logger.warn("adminResetPassword forbidden: user {} is not TENANT_ADMIN in tenant {}", 
+                requestingUserId, req.getTenantId());
+            throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can reset user password");
+        }
+        
+        // Find the target user
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
+        User user = userMapper.selectOne(wrapper);
+        
+        if (user == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
+        }
+        
+        // Generate random password and update
+        String newPassword = generateRandomPassword();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+        
+        logger.info("Admin reset password tenant={} username={} by adminUserId={}", 
+            req.getTenantId(), req.getUsername(), requestingUserId);
+        safeRecord(req.getTenantId(), user.getId(), AuthAction.ADMIN_RESET_PASSWORD, true);
+        
+        return AdminResetPasswordResponse.builder()
+                .tenantId(XssSanitizer.sanitize(user.getTenantId()))
+                .userId(user.getId())
+                .username(XssSanitizer.sanitize(user.getUsername()))
+                .nickname(XssSanitizer.sanitize(user.getNickname()))
+                .userType(user.getUserType())
+                .newPassword(newPassword)
+                .build();
+    }
+
+    /**
+     * Generate a random password that meets the password policy requirements.
+     * The generated password contains at least one uppercase letter, one lowercase letter,
+     * one digit, and one special character, with a total length of 12 characters.
+     *
+     * @return A randomly generated password string
+     */
+    String generateRandomPassword() {
+        char[] password = new char[GENERATED_PASSWORD_LENGTH];
+        
+        // Ensure at least one character from each required category
+        password[0] = UPPER.charAt(SECURE_RANDOM.nextInt(UPPER.length()));
+        password[1] = LOWER.charAt(SECURE_RANDOM.nextInt(LOWER.length()));
+        password[2] = DIGITS.charAt(SECURE_RANDOM.nextInt(DIGITS.length()));
+        password[3] = SPECIAL.charAt(SECURE_RANDOM.nextInt(SPECIAL.length()));
+        
+        // Fill remaining positions with random characters from all categories
+        for (int i = 4; i < GENERATED_PASSWORD_LENGTH; i++) {
+            password[i] = ALL_CHARS.charAt(SECURE_RANDOM.nextInt(ALL_CHARS.length()));
+        }
+        
+        // Shuffle the password to avoid predictable pattern
+        for (int i = GENERATED_PASSWORD_LENGTH - 1; i > 0; i--) {
+            int j = SECURE_RANDOM.nextInt(i + 1);
+            char temp = password[i];
+            password[i] = password[j];
+            password[j] = temp;
+        }
+        
+        return new String(password);
     }
 
     /**

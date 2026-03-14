@@ -45,6 +45,7 @@ public class SecurityConfig {
                 // Protected endpoints requiring JWT authentication
                 .antMatchers("/api/auth/change-password").authenticated()
                 .antMatchers("/api/auth/user-status").authenticated()
+                .antMatchers("/api/auth/admin-reset-password").authenticated()
                 .antMatchers("/api/auth/tenant-users").authenticated()
                 .antMatchers("/api/auth/tenant-user-search").authenticated()
                 // Tenant management APIs - require authentication
