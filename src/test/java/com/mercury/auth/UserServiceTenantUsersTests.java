@@ -2,6 +2,7 @@ package com.mercury.auth;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.mercury.auth.dto.AuthAction;
+import com.mercury.auth.dto.PageResult;
 import com.mercury.auth.dto.TenantUserItem;
 import com.mercury.auth.dto.UserType;
 import com.mercury.auth.entity.Tenant;
@@ -16,6 +17,7 @@ import org.mockito.Mockito;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for UserService tenant user list and userType/nickname fields
+ * Tests for UserService tenant user list with pagination and fuzzy search
  */
 public class UserServiceTenantUsersTests {
 
@@ -77,19 +79,24 @@ public class UserServiceTenantUsersTests {
 
         // Mock admin lookup (first selectOne call)
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        // Mock total count
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(2L);
         // Mock user list
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Arrays.asList(admin, regularUser));
 
-        List<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getUsername()).isEqualTo("admin01");
-        assertThat(result.get(0).getUserType()).isEqualTo(UserType.TENANT_ADMIN);
-        assertThat(result.get(0).getNickname()).isEqualTo("Admin");
-        assertThat(result.get(1).getUsername()).isEqualTo("user01");
-        assertThat(result.get(1).getUserType()).isEqualTo(UserType.USER);
-        assertThat(result.get(1).getEmail()).isEqualTo("user@test.com");
-        assertThat(result.get(1).getPhone()).isEqualTo("13800138000");
+        assertThat(result.getItems()).hasSize(2);
+        assertThat(result.getTotal()).isEqualTo(2);
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(20);
+        assertThat(result.getItems().get(0).getUsername()).isEqualTo("admin01");
+        assertThat(result.getItems().get(0).getUserType()).isEqualTo(UserType.TENANT_ADMIN);
+        assertThat(result.getItems().get(0).getNickname()).isEqualTo("Admin");
+        assertThat(result.getItems().get(1).getUsername()).isEqualTo("user01");
+        assertThat(result.getItems().get(1).getUserType()).isEqualTo(UserType.USER);
+        assertThat(result.getItems().get(1).getEmail()).isEqualTo("user@test.com");
+        assertThat(result.getItems().get(1).getPhone()).isEqualTo("13800138000");
     }
 
     @Test
@@ -109,7 +116,7 @@ public class UserServiceTenantUsersTests {
 
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId, 1, 20))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId, 1, 20, null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
@@ -123,10 +130,160 @@ public class UserServiceTenantUsersTests {
         Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId, 1, 20))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId, 1, 20, null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND);
+    }
+
+    @Test
+    void listTenantUsers_returns_pagination_metadata() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(50L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 3, 10, null, null, null);
+
+        assertThat(result.getTotal()).isEqualTo(50);
+        assertThat(result.getPage()).isEqualTo(3);
+        assertThat(result.getSize()).isEqualTo(10);
+    }
+
+    @Test
+    void listTenantUsers_with_fuzzy_username_search() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        User matchingUser = new User();
+        matchingUser.setId(2L);
+        matchingUser.setTenantId(tenantId);
+        matchingUser.setUsername("testuser");
+        matchingUser.setUserType(UserType.USER);
+        matchingUser.setEnabled(true);
+        matchingUser.setCreatedAt(LocalDateTime.now());
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, "test", null, null);
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getTotal()).isEqualTo(1);
+        assertThat(result.getItems().get(0).getUsername()).isEqualTo("testuser");
+    }
+
+    @Test
+    void listTenantUsers_with_fuzzy_email_search() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        User matchingUser = new User();
+        matchingUser.setId(2L);
+        matchingUser.setTenantId(tenantId);
+        matchingUser.setUsername("user01");
+        matchingUser.setUserType(UserType.USER);
+        matchingUser.setEmail("user@example.com");
+        matchingUser.setEnabled(true);
+        matchingUser.setCreatedAt(LocalDateTime.now());
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, "example", null);
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getTotal()).isEqualTo(1);
+        assertThat(result.getItems().get(0).getEmail()).isEqualTo("user@example.com");
+    }
+
+    @Test
+    void listTenantUsers_with_fuzzy_phone_search() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        User matchingUser = new User();
+        matchingUser.setId(2L);
+        matchingUser.setTenantId(tenantId);
+        matchingUser.setUsername("user01");
+        matchingUser.setUserType(UserType.USER);
+        matchingUser.setPhone("13800138000");
+        matchingUser.setEnabled(true);
+        matchingUser.setCreatedAt(LocalDateTime.now());
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, "138");
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getTotal()).isEqualTo(1);
+        assertThat(result.getItems().get(0).getPhone()).isEqualTo("13800138000");
+    }
+
+    @Test
+    void listTenantUsers_with_no_search_returns_all() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null);
+
+        assertThat(result.getItems()).isEmpty();
+        assertThat(result.getTotal()).isEqualTo(0);
     }
 
     @Test
