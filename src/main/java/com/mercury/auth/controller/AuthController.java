@@ -182,7 +182,11 @@ public class AuthController {
     
     @PostMapping("/user-status")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
-        User user = userService.updateUserStatus(req);
+        // Get authenticated user from JWT
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        User user = userService.updateUserStatus(req, currentUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 

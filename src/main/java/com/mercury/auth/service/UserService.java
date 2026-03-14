@@ -37,10 +37,33 @@ public class UserService {
     private final TenantUserCountService tenantUserCountService;
 
     /**
-     * Update user's enabled/disabled status
+     * Update user's enabled/disabled status.
+     * Only accessible by tenant admin users (userType = TENANT_ADMIN).
+     * Admins cannot disable themselves.
+     * When a user is disabled, all their tokens are revoked.
+     *
+     * @param req The status update request containing tenantId, username, and enabled flag
+     * @param requestingUserId The ID of the user making the request (from JWT)
+     * @return The updated user
+     * @throws ApiException if the requesting user is not a tenant admin, or trying to disable self
      */
-    public User updateUserStatus(AuthRequests.UserStatusUpdate req) {
+    public User updateUserStatus(AuthRequests.UserStatusUpdate req, Long requestingUserId) {
         tenantService.requireEnabled(req.getTenantId());
+        
+        // Check that the requesting user is a tenant admin
+        QueryWrapper<User> adminWrapper = new QueryWrapper<>();
+        adminWrapper.eq("tenant_id", req.getTenantId()).eq("id", requestingUserId);
+        User requestingUser = userMapper.selectOne(adminWrapper);
+        
+        if (requestingUser == null) {
+            throw new ApiException(ErrorCodes.USER_NOT_FOUND, "requesting user not found");
+        }
+        
+        if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
+            logger.warn("updateUserStatus forbidden: user {} is not TENANT_ADMIN in tenant {}", 
+                requestingUserId, req.getTenantId());
+            throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can update user status");
+        }
         
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("tenant_id", req.getTenantId()).eq("username", req.getUsername());
@@ -50,6 +73,11 @@ public class UserService {
             throw new ApiException(ErrorCodes.USER_NOT_FOUND, "user not found");
         }
         
+        // Prevent admin from disabling themselves
+        if (!req.isEnabled() && user.getId().equals(requestingUserId)) {
+            throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "cannot disable your own account");
+        }
+        
         user.setEnabled(req.isEnabled());
         userMapper.updateById(user);
         
@@ -57,8 +85,8 @@ public class UserService {
         // This prevents disabled users from continuing to use cached tokens
         tokenCacheService.evictAllForUserStatusChange(req.getTenantId(), user.getId());
         
-        logger.info("User status updated tenant={} username={} enabled={}", 
-            req.getTenantId(), req.getUsername(), req.isEnabled());
+        logger.info("User status updated tenant={} username={} enabled={} by adminUserId={}", 
+            req.getTenantId(), req.getUsername(), req.isEnabled(), requestingUserId);
         safeRecord(req.getTenantId(), user.getId(), AuthAction.UPDATE_USER_STATUS, true);
         return user;
     }
