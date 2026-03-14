@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .antMatchers("/api/auth/change-password").authenticated()
                 .antMatchers("/api/auth/user-status").authenticated()
                 .antMatchers("/api/auth/tenant-users").authenticated()
+                .antMatchers("/api/auth/tenant-user-search").authenticated()
                 // Tenant management APIs - require authentication
                 // These are administrative operations that should not be publicly accessible
                 .antMatchers("/api/tenants/**").authenticated()

@@ -182,7 +182,11 @@ public class AuthController {
     
     @PostMapping("/user-status")
     public ResponseEntity<ApiResponse<BaseAuthResponse>> updateUserStatus(@Validated @RequestBody AuthRequests.UserStatusUpdate req) {
-        User user = userService.updateUserStatus(req);
+        // Get authenticated user from JWT
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        User user = userService.updateUserStatus(req, currentUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(buildBaseAuthResponse(user, req.getTenantId())));
     }
 
@@ -196,6 +200,20 @@ public class AuthController {
             (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         
         List<TenantUserItem> users = userService.listTenantUsers(tenantId, currentUser.getUserId(), page, size);
+        return ResponseEntity.ok(ApiResponse.success(users));
+    }
+
+    @GetMapping("/tenant-user-search")
+    public ResponseEntity<ApiResponse<List<TenantUserItem>>> searchTenantUsers(
+            @org.springframework.web.bind.annotation.RequestHeader("X-Tenant-Id") String tenantId,
+            @org.springframework.web.bind.annotation.RequestParam(value = "username", required = false) String username,
+            @org.springframework.web.bind.annotation.RequestParam(value = "phone", required = false) String phone,
+            @org.springframework.web.bind.annotation.RequestParam(value = "email", required = false) String email) {
+        // Get authenticated user from JWT
+        JwtAuthenticationFilter.JwtUserDetails currentUser = 
+            (JwtAuthenticationFilter.JwtUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        List<TenantUserItem> users = userService.searchTenantUsers(tenantId, currentUser.getUserId(), username, phone, email);
         return ResponseEntity.ok(ApiResponse.success(users));
     }
 
