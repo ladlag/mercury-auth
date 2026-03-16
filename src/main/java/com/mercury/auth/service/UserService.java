@@ -308,7 +308,7 @@ public class UserService {
      * @throws ApiException if the requesting user is not a tenant admin
      */
     public PageResult<TenantUserItem> listTenantUsers(String tenantId, Long requestingUserId, 
-            int page, int size, String username, String email, String phone) {
+            int page, int size, String username, String nickname, String email, String phone) {
         tenantService.requireEnabled(tenantId);
         
         // Check that the requesting user is a tenant admin
@@ -336,11 +336,15 @@ public class UserService {
         wrapper.eq("tenant_id", tenantId);
         
         boolean hasUsername = username != null && !username.trim().isEmpty();
+        boolean hasNickname = nickname != null && !nickname.trim().isEmpty();
         boolean hasEmail = email != null && !email.trim().isEmpty();
         boolean hasPhone = phone != null && !phone.trim().isEmpty();
         
         if (hasUsername) {
             wrapper.like("username", escapeLike(username.trim()));
+        }
+        if (hasNickname) {
+            wrapper.like("nickname", escapeLike(nickname.trim()));
         }
         if (hasEmail) {
             wrapper.like("email", escapeLike(email.trim()));
@@ -392,7 +396,7 @@ public class UserService {
      * @throws ApiException if the requesting user is not a tenant admin or no search criteria provided
      */
     public List<TenantUserItem> searchTenantUsers(String tenantId, Long requestingUserId, 
-            String username, String phone, String email) {
+            String username, String nickname, String phone, String email) {
         tenantService.requireEnabled(tenantId);
         
         // Check that the requesting user is a tenant admin
@@ -412,12 +416,13 @@ public class UserService {
         
         // At least one search parameter must be provided
         boolean hasUsername = username != null && !username.trim().isEmpty();
+        boolean hasNickname = nickname != null && !nickname.trim().isEmpty();
         boolean hasPhone = phone != null && !phone.trim().isEmpty();
         boolean hasEmail = email != null && !email.trim().isEmpty();
         
-        if (!hasUsername && !hasPhone && !hasEmail) {
+        if (!hasUsername && !hasNickname && !hasPhone && !hasEmail) {
             throw new ApiException(ErrorCodes.VALIDATION_FAILED, 
-                "at least one search parameter (username, phone, email) is required");
+                "at least one search parameter (username, nickname, phone, email) is required");
         }
         
         // Build OR query for matching users in this tenant
@@ -427,6 +432,13 @@ public class UserService {
             boolean first = true;
             if (hasUsername) {
                 w.eq("username", username.trim());
+                first = false;
+            }
+            if (hasNickname) {
+                if (!first) {
+                    w.or();
+                }
+                w.eq("nickname", nickname.trim());
                 first = false;
             }
             if (hasPhone) {
