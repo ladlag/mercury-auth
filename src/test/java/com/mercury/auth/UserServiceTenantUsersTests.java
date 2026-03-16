@@ -84,7 +84,7 @@ public class UserServiceTenantUsersTests {
         // Mock user list
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Arrays.asList(admin, regularUser));
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null, null);
 
         assertThat(result.getItems()).hasSize(2);
         assertThat(result.getTotal()).isEqualTo(2);
@@ -116,7 +116,7 @@ public class UserServiceTenantUsersTests {
 
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId, 1, 20, null, null, null))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, regularUserId, 1, 20, null, null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
@@ -130,7 +130,7 @@ public class UserServiceTenantUsersTests {
         Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId, 1, 20, null, null, null))
+        assertThatThrownBy(() -> userService.listTenantUsers(tenantId, nonExistentUserId, 1, 20, null, null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND);
@@ -154,7 +154,7 @@ public class UserServiceTenantUsersTests {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(50L);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 3, 10, null, null, null);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 3, 10, null, null, null, null);
 
         assertThat(result.getTotal()).isEqualTo(50);
         assertThat(result.getPage()).isEqualTo(3);
@@ -187,7 +187,7 @@ public class UserServiceTenantUsersTests {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, "test", null, null);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, "test", null, null, null);
 
         assertThat(result.getItems()).hasSize(1);
         assertThat(result.getTotal()).isEqualTo(1);
@@ -221,7 +221,7 @@ public class UserServiceTenantUsersTests {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, "example", null);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, "example", null);
 
         assertThat(result.getItems()).hasSize(1);
         assertThat(result.getTotal()).isEqualTo(1);
@@ -255,11 +255,45 @@ public class UserServiceTenantUsersTests {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, "138");
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null, "138");
 
         assertThat(result.getItems()).hasSize(1);
         assertThat(result.getTotal()).isEqualTo(1);
         assertThat(result.getItems().get(0).getPhone()).isEqualTo("13800138000");
+    }
+
+    @Test
+    void listTenantUsers_with_fuzzy_nickname_search() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setTenantId(tenantId);
+        admin.setUsername("admin01");
+        admin.setUserType(UserType.TENANT_ADMIN);
+        admin.setEnabled(true);
+
+        User matchingUser = new User();
+        matchingUser.setId(2L);
+        matchingUser.setTenantId(tenantId);
+        matchingUser.setUsername("user01");
+        matchingUser.setUserType(UserType.USER);
+        matchingUser.setNickname("John Doe");
+        matchingUser.setEnabled(true);
+        matchingUser.setCreatedAt(LocalDateTime.now());
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(1L);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(matchingUser));
+
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, "John", null, null);
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getTotal()).isEqualTo(1);
+        assertThat(result.getItems().get(0).getNickname()).isEqualTo("John Doe");
     }
 
     @Test
@@ -280,7 +314,7 @@ public class UserServiceTenantUsersTests {
         when(userMapper.selectCount(any(QueryWrapper.class))).thenReturn(0L);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
 
-        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null);
+        PageResult<TenantUserItem> result = userService.listTenantUsers(tenantId, adminUserId, 1, 20, null, null, null, null);
 
         assertThat(result.getItems()).isEmpty();
         assertThat(result.getTotal()).isEqualTo(0);

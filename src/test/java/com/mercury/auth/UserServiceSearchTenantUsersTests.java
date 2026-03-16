@@ -85,7 +85,7 @@ public class UserServiceSearchTenantUsersTests {
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(regularUser));
 
-        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "user01", null, null);
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "user01", null, null, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getUsername()).isEqualTo("user01");
@@ -108,7 +108,7 @@ public class UserServiceSearchTenantUsersTests {
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(regularUser));
 
-        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, null, "13800138000", null);
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, null, null, "13800138000", null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getPhone()).isEqualTo("13800138000");
@@ -127,10 +127,29 @@ public class UserServiceSearchTenantUsersTests {
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(regularUser));
 
-        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, null, null, "user@test.com");
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, null, null, null, "user@test.com");
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getEmail()).isEqualTo("user@test.com");
+    }
+
+    @Test
+    void searchTenantUsers_by_nickname_returns_matching_user() {
+        String tenantId = "t1";
+        Long adminUserId = 1L;
+
+        Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
+
+        User admin = createAdminUser(tenantId, adminUserId);
+        User regularUser = createRegularUser(tenantId, 2L);
+
+        when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
+        when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.singletonList(regularUser));
+
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, null, "Regular User", null, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getNickname()).isEqualTo("Regular User");
     }
 
     @Test
@@ -149,7 +168,7 @@ public class UserServiceSearchTenantUsersTests {
 
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(regularUser);
 
-        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, regularUserId, "user01", null, null))
+        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, regularUserId, "user01", null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.FORBIDDEN_OPERATION);
@@ -163,7 +182,7 @@ public class UserServiceSearchTenantUsersTests {
         Mockito.doReturn(new Tenant()).when(tenantService).requireEnabled(tenantId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
-        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, nonExistentUserId, "user01", null, null))
+        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, nonExistentUserId, "user01", null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND);
@@ -179,7 +198,7 @@ public class UserServiceSearchTenantUsersTests {
         User admin = createAdminUser(tenantId, adminUserId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
 
-        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, adminUserId, null, null, null))
+        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, adminUserId, null, null, null, null))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.VALIDATION_FAILED);
@@ -195,7 +214,7 @@ public class UserServiceSearchTenantUsersTests {
         User admin = createAdminUser(tenantId, adminUserId);
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
 
-        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, adminUserId, "", "", ""))
+        assertThatThrownBy(() -> userService.searchTenantUsers(tenantId, adminUserId, "", "", "", ""))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getCode())
                 .isEqualTo(ErrorCodes.VALIDATION_FAILED);
@@ -212,7 +231,7 @@ public class UserServiceSearchTenantUsersTests {
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
 
-        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "nonexistent", null, null);
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "nonexistent", null, null, null);
 
         assertThat(result).isEmpty();
     }
@@ -240,7 +259,7 @@ public class UserServiceSearchTenantUsersTests {
         when(userMapper.selectOne(any(QueryWrapper.class))).thenReturn(admin);
         when(userMapper.selectList(any(QueryWrapper.class))).thenReturn(Arrays.asList(user1, user2));
 
-        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "user01", "13900139000", null);
+        List<TenantUserItem> result = userService.searchTenantUsers(tenantId, adminUserId, "user01", null, "13900139000", null);
 
         assertThat(result).hasSize(2);
     }
