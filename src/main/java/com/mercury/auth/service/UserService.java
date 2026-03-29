@@ -72,8 +72,8 @@ public class UserService {
         }
         
         if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
-            logger.warn("updateUserStatus forbidden: user {} is not TENANT_ADMIN in tenant {}", 
-                requestingUserId, req.getTenantId());
+            logger.warn("updateUserStatus forbidden: user {} is not TENANT_ADMIN in tenant {}, actual userType={}", 
+                requestingUserId, req.getTenantId(), requestingUser.getUserType());
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can update user status");
         }
         
@@ -127,8 +127,8 @@ public class UserService {
         }
         
         if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
-            logger.warn("adminResetPassword forbidden: user {} is not TENANT_ADMIN in tenant {}", 
-                requestingUserId, req.getTenantId());
+            logger.warn("adminResetPassword forbidden: user {} is not TENANT_ADMIN in tenant {}, actual userType={}", 
+                requestingUserId, req.getTenantId(), requestingUser.getUserType());
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can reset user password");
         }
         
@@ -321,8 +321,8 @@ public class UserService {
         }
         
         if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
-            logger.warn("listTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}", 
-                requestingUserId, tenantId);
+            logger.warn("listTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}, actual userType={}", 
+                requestingUserId, tenantId, requestingUser.getUserType());
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can access user list");
         }
         
@@ -409,8 +409,8 @@ public class UserService {
         }
         
         if (UserType.TENANT_ADMIN != requestingUser.getUserType()) {
-            logger.warn("searchTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}", 
-                requestingUserId, tenantId);
+            logger.warn("searchTenantUsers forbidden: user {} is not TENANT_ADMIN in tenant {}, actual userType={}", 
+                requestingUserId, tenantId, requestingUser.getUserType());
             throw new ApiException(ErrorCodes.FORBIDDEN_OPERATION, "only tenant admin can search users");
         }
         
