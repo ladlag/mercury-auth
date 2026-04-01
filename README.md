@@ -64,6 +64,7 @@ The following endpoints don't require authentication but are rate limited:
 - [Redis Sentinel Configuration](REDIS_SENTINEL.md) - Guide for configuring Redis Sentinel mode for high availability (哨兵模式配置)
 - [Requirements](REQUIREMENTS.md) - Full system requirements (中文)
 - [Token Cache & Logs](TOKEN_CACHE_AND_LOGS.md) - Token verification cache + auth log/blacklist write flow (中文)
+- [SSO Analysis](SSO_ANALYSIS.md) - SSO 可用性分析与主流统一认证差距
 
 ## Configuration
 Key properties (see `application.yml`, with overrides in `application-dev.yml`, `application-test.yml`, `application-prod.yml`):
